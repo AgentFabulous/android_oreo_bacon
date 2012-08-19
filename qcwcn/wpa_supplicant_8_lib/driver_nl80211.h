@@ -97,6 +97,7 @@ struct i802_bss {
 	unsigned int beacon_set:1;
 	unsigned int added_if_into_bridge:1;
 	unsigned int added_bridge:1;
+	unsigned int in_deinit:1;
 
 	u8 addr[ETH_ALEN];
 
