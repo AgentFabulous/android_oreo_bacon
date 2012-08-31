@@ -52,6 +52,8 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/almk.h>
 
+#include <trace/events/memkill.h>
+
 #ifdef CONFIG_HIGHMEM
 #define _ZONE ZONE_HIGHMEM
 #else
@@ -535,7 +537,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		}
 
 		lowmem_deathpending_timeout = jiffies + HZ;
-		set_tsk_thread_flag(selected, TIF_MEMDIE);
+		set_tsk_thread_flag(selected, TIF_MEMDIE);                
+		trace_lmk_kill(selected->pid, selected->comm,
+				selected_oom_score_adj, selected_tasksize,
+				min_score_adj);
 		send_sig(SIGKILL, selected, 0);
 		rem -= selected_tasksize;
 		rcu_read_unlock();
