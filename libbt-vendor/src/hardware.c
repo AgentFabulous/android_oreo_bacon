@@ -65,7 +65,7 @@ int hw_config(int nState)
 
 int readTrpState()
 {
-    char szBtStatus[20] = {0, };
+    char szBtStatus[PROPERTY_VALUE_MAX] = {0, };
     if(property_get("bluetooth.status", szBtStatus, "") < 0){
         ALOGE("Fail to get bluetooth satus");
         return FALSE;
