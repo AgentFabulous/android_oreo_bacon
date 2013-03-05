@@ -39,8 +39,10 @@ WPA_SUPPL_DIR_INCLUDE += external/libnl-headers
 WPA_SRC_FILE += driver_cmd_nl80211.c
 endif
 
+ifeq ($(TARGET_ARCH),arm)
 # To force sizeof(enum) = 4
 L_CFLAGS += -mabi=aapcs-linux
+endif
 
 ifdef CONFIG_ANDROID_LOG
 L_CFLAGS += -DCONFIG_ANDROID_LOG
