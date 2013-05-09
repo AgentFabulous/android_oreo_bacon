@@ -20,6 +20,7 @@
 #include "bt_vendor_lib.h"
 #include "vnd_buildcfg.h"
 #include "userial_vendor.h"
+#include "utils.h"
 
 #ifndef FALSE
 #define FALSE  0
@@ -35,6 +36,22 @@ extern int fd;
 extern bt_hci_transport_device_type bt_hci_transport_device;
 
 extern bt_vendor_callbacks_t *bt_vendor_cbacks;
+/* HW_NEED_END_WITH_HCI_RESET
+
+    code implementation of sending a HCI_RESET command during the epilog
+    process. It calls back to the callers after command complete of HCI_RESET
+    is received.
+
+    Default TRUE .
+*/
+#ifndef HW_NEED_END_WITH_HCI_RESET
+#define HW_NEED_END_WITH_HCI_RESET TRUE
+#endif
+
+#define HCI_RESET  0x0C03
+#define HCI_CMD_PREAMBLE_SIZE 3
+#define HCI_EVT_CMD_CMPL_STATUS_RET_BYTE   5
+#define HCI_EVT_CMD_CMPL_OPCODE        3
 
 #endif /* BT_VENDOR_BRCM_H */
 

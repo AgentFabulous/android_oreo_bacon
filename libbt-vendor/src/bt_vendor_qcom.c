@@ -46,6 +46,11 @@ bt_hci_transport_device_type bt_hci_transport_device;
 bt_vendor_callbacks_t *bt_vendor_cbacks = NULL;
 uint8_t vnd_local_bd_addr[6]={0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+#if (HW_NEED_END_WITH_HCI_RESET == TRUE)
+void hw_epilog_process(void);
+#endif
+
+
 /******************************************************************************
 **  Local type definitions
 ******************************************************************************/
@@ -166,6 +171,18 @@ static int op(bt_vendor_opcode_t opcode, void *param)
             break;
 
         case BT_VND_OP_LPM_WAKE_SET_STATE:
+            break;
+        case BT_VND_OP_EPILOG:
+            {
+#if (HW_NEED_END_WITH_HCI_RESET == FALSE)
+                if (bt_vendor_cbacks)
+                {
+                    bt_vendor_cbacks->epilog_cb(BT_VND_OP_RESULT_SUCCESS);
+                }
+#else
+                hw_epilog_process();
+#endif
+            }
             break;
     }
 

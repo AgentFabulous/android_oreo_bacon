@@ -93,3 +93,88 @@ int is_hw_ready()
 
     return (i==0)? FALSE:TRUE;
 }
+
+#if (HW_NEED_END_WITH_HCI_RESET == TRUE)
+/*******************************************************************************
+**
+** Function         hw_epilog_cback
+**
+** Description      Callback function for Command Complete Events from HCI
+**                  commands sent in epilog process.
+**
+** Returns          None
+**
+*******************************************************************************/
+void hw_epilog_cback(void *p_mem)
+{
+    HC_BT_HDR *p_evt_buf = (HC_BT_HDR *) p_mem;
+    char        *p_name, *p_tmp;
+    uint8_t     *p, status;
+    uint16_t    opcode;
+
+    status = *((uint8_t *)(p_evt_buf + 1) + HCI_EVT_CMD_CMPL_STATUS_RET_BYTE);
+    p = (uint8_t *)(p_evt_buf + 1) + HCI_EVT_CMD_CMPL_OPCODE;
+    STREAM_TO_UINT16(opcode,p);
+
+    ALOGI("%s Opcode:0x%04X Status: %d", __FUNCTION__, opcode, status);
+
+    if (bt_vendor_cbacks)
+    {
+        /* Must free the RX event buffer */
+        bt_vendor_cbacks->dealloc(p_evt_buf);
+
+        /* Once epilog process is done, must call callback to notify caller */
+        bt_vendor_cbacks->epilog_cb(BT_VND_OP_RESULT_SUCCESS);
+    }
+}
+
+/*******************************************************************************
+**
+** Function         hw_epilog_process
+**
+** Description      Sample implementation of epilog process
+**
+** Returns          None
+**
+*******************************************************************************/
+void hw_epilog_process(void)
+{
+    HC_BT_HDR  *p_buf = NULL;
+    uint8_t     *p;
+
+    ALOGI("hw_epilog_process");
+
+    /* Sending a HCI_RESET */
+    if (bt_vendor_cbacks)
+    {
+        /* Must allocate command buffer via HC's alloc API */
+        p_buf = (HC_BT_HDR *) bt_vendor_cbacks->alloc(BT_HC_HDR_SIZE + \
+                                                       HCI_CMD_PREAMBLE_SIZE);
+    }
+
+    if (p_buf)
+    {
+        p_buf->event = MSG_STACK_TO_HC_HCI_CMD;
+        p_buf->offset = 0;
+        p_buf->layer_specific = 0;
+        p_buf->len = HCI_CMD_PREAMBLE_SIZE;
+
+        p = (uint8_t *) (p_buf + 1);
+        UINT16_TO_STREAM(p, HCI_RESET);
+        *p = 0; /* parameter length */
+
+        /* Send command via HC's xmit_cb API */
+        bt_vendor_cbacks->xmit_cb(HCI_RESET, p_buf, hw_epilog_cback);
+    }
+    else
+    {
+        if (bt_vendor_cbacks)
+        {
+            ALOGE("vendor lib epilog process aborted [no buffer]");
+            bt_vendor_cbacks->epilog_cb(BT_VND_OP_RESULT_FAIL);
+        }
+    }
+}
+#endif // (HW_NEED_END_WITH_HCI_RESET == TRUE)
+
+
