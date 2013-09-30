@@ -582,7 +582,7 @@ QCameraParameters::QCameraParameters()
       m_bHDR1xExtraBufferNeeded(true),
       m_tempMap()
 {
-    char value[32];
+    char value[PROPERTY_VALUE_MAX];
     // TODO: may move to parameter instead of sysprop
     property_get("persist.debug.sf.showfps", value, "0");
     m_bDebugFps = atoi(value) > 0 ? true : false;
@@ -1141,7 +1141,7 @@ int32_t QCameraParameters::setVideoSize(const QCameraParameters& params)
  *==========================================================================*/
 int32_t QCameraParameters::setLiveSnapshotSize(const QCameraParameters& params)
 {
-    char value[32];
+    char value[PROPERTY_VALUE_MAX];
     property_get("persist.camera.opt.livepic", value, "1");
     bool useOptimal = atoi(value) > 0 ? true : false;
 
@@ -2857,7 +2857,7 @@ int32_t QCameraParameters::setCameraMode(const QCameraParameters& params)
 int32_t QCameraParameters::setZslAttributes(const QCameraParameters& params)
 {
     // TODO: may switch to pure param instead of sysprop
-    char prop[32];
+    char prop[PROPERTY_VALUE_MAX];
 
     const char *str = params.get(KEY_QC_ZSL_BURST_INTERVAL);
     if (str != NULL) {
@@ -3002,7 +3002,7 @@ int32_t QCameraParameters::setBurstNum(const QCameraParameters& params)
  *==========================================================================*/
 int32_t QCameraParameters::setSnapshotFDReq(const QCameraParameters& params)
 {
-    char prop[32];
+    char prop[PROPERTY_VALUE_MAX];
     const char *str = params.get(KEY_QC_SNAPSHOT_FD_DATA);
 
     if(str != NULL){
@@ -3880,7 +3880,7 @@ int32_t QCameraParameters::adjustPreviewFpsRange(cam_fps_range_t *fpsRange)
 int32_t QCameraParameters::setPreviewFpsRange(int minFPS, int maxFPS)
 {
     char str[32];
-    char value[32];
+    char value[PROPERTY_VALUE_MAX];
     int fixedFpsValue;
     /*This property get value should be the fps that user needs*/
     property_get("persist.debug.set.fixedfps", value, "0");
