@@ -3029,7 +3029,7 @@ int32_t QCameraParameters::setSnapshotFDReq(const QCameraParameters& params)
  *==========================================================================*/
 int32_t QCameraParameters::setMobicat(const QCameraParameters& )
 {
-    char value [32];
+    char value [PROPERTY_VALUE_MAX];
     property_get("persist.camera.mobicat", value, "0");
     bool enableMobi = atoi(value) > 0 ? true : false;
     int32_t ret = NO_ERROR;;
