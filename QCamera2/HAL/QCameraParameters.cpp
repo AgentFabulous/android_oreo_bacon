@@ -580,6 +580,7 @@ QCameraParameters::QCameraParameters()
       m_HDRSceneEnabled(false),
       m_bHDRThumbnailProcessNeeded(true),
       m_bHDR1xExtraBufferNeeded(true),
+      m_bHDROutputCropEnabled(false),
       m_tempMap()
 {
     char value[PROPERTY_VALUE_MAX];
@@ -647,6 +648,7 @@ QCameraParameters::QCameraParameters(const String8 &params)
     m_HDRSceneEnabled(false),
     m_bHDRThumbnailProcessNeeded(true),
     m_bHDR1xExtraBufferNeeded(true),
+    m_bHDROutputCropEnabled(false),
     m_tempMap()
 {
     memset(&m_LiveSnapshotSize, 0, sizeof(m_LiveSnapshotSize));
@@ -3603,6 +3605,16 @@ int32_t QCameraParameters::initDefaultParameters()
             m_bHDR1xExtraBufferNeeded = false;
             break;
         }
+    }
+
+    // Set HDR output scaling
+    char value[PROPERTY_VALUE_MAX];
+
+    property_get("persist.camera.hdr.outcrop", value, VALUE_DISABLE);
+    if (strncmp(VALUE_ENABLE, value, sizeof(VALUE_ENABLE))) {
+      m_bHDROutputCropEnabled = false;
+    } else {
+      m_bHDROutputCropEnabled = true;
     }
 
     //Set Face Detection
