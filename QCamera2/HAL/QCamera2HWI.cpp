@@ -4338,7 +4338,7 @@ void QCamera2HardwareInterface::returnStreamBuffer(void *data,
 int32_t QCamera2HardwareInterface::processHistogramStats(cam_hist_stats_t &stats_data)
 {
     if (!mParameters.isHistogramEnabled()) {
-        ALOGD("%s: Histogram not enabled, no ops here", __func__);
+        ALOGV("%s: Histogram not enabled, no ops here", __func__);
         return NO_ERROR;
     }
 
@@ -4458,13 +4458,13 @@ int QCamera2HardwareInterface::calcThermalLevel(
         break;
     default:
         {
-            ALOGE("%s: Invalid thermal level %d", __func__, level);
+            ALOGV("%s: Invalid thermal level %d", __func__, level);
             return BAD_VALUE;
         }
         break;
     }
 
-    ALOGI("%s: Thermal level %d, FPS range [%3.2f,%3.2f], frameskip %d",
+    ALOGV("%s: Thermal level %d, FPS range [%3.2f,%3.2f], frameskip %d",
           __func__,
           level,
           adjustedRange.min_fps,
@@ -4901,7 +4901,7 @@ QCameraExif *QCamera2HardwareInterface::getExifData()
                        count,
                        (void *)gpsProcessingMethod);
     } else {
-        ALOGE("%s: getExifGpsProcessingMethod failed", __func__);
+        ALOGV("%s: getExifGpsProcessingMethod failed", __func__);
     }
 
     rat_t latitude[3];
@@ -4917,7 +4917,7 @@ QCameraExif *QCamera2HardwareInterface::getExifData()
                        2,
                        (void *)latRef);
     } else {
-        ALOGE("%s: getExifLatitude failed", __func__);
+        ALOGV("%s: getExifLatitude failed", __func__);
     }
 
     rat_t longitude[3];
@@ -4934,7 +4934,7 @@ QCameraExif *QCamera2HardwareInterface::getExifData()
                        2,
                        (void *)lonRef);
     } else {
-        ALOGE("%s: getExifLongitude failed", __func__);
+        ALOGV("%s: getExifLongitude failed", __func__);
     }
 
     rat_t altitude;
@@ -4951,7 +4951,7 @@ QCameraExif *QCamera2HardwareInterface::getExifData()
                        1,
                        (void *)&altRef);
     } else {
-        ALOGE("%s: getExifAltitude failed", __func__);
+        ALOGV("%s: getExifAltitude failed", __func__);
     }
 
     char gpsDateStamp[20];
