@@ -774,7 +774,7 @@ typedef struct {
 
 typedef struct {
     cam_flash_mode_t flash_mode;
-    float            aperture_value;
+    float aperture_value;
 } cam_sensor_params_t;
 
 typedef struct {

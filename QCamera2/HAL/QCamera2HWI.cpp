@@ -4897,6 +4897,11 @@ QCameraExif *QCamera2HardwareInterface::getExifData()
 
     pthread_mutex_lock(&m_parm_lock);
 
+    //set flash value
+    mFlash = mParameters.getFlashValue();
+    mRedEye = mParameters.getRedEyeValue();
+    mFlashPresence = mParameters.getSupportedFlashModes();
+
     // add exif entries
     char dateTime[20];
     memset(dateTime, 0, sizeof(dateTime));

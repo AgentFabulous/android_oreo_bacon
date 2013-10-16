@@ -459,7 +459,9 @@ public:
                                               // no change in parameters value
     int getJpegQuality();
     int getJpegRotation();
-
+    int32_t getFlashValue();
+    int32_t getSupportedFlashModes();
+    int32_t getRedEyeValue();
     int32_t getExifDateTime(char *dateTime, uint32_t &count);
     int32_t getExifFocalLength(rat_t *focalLenght);
     uint16_t getExifIsoSpeed();

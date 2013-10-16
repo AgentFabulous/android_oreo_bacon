@@ -40,9 +40,41 @@ typedef enum {
   MM_JPEG_FMT_BITSTREAM
 } mm_jpeg_format_t;
 
+typedef enum {
+   FLASH_NOT_FIRED,
+   FLASH_FIRED
+}exif_flash_fired_sate_t;
+
+typedef enum {
+   NO_STROBE_RETURN_DETECT = 0x00,
+   STROBE_RESERVED = 0x01,
+   STROBE_RET_LIGHT_NOT_DETECT = 0x02,
+   STROBE_RET_LIGHT_DETECT = 0x03
+}exif_strobe_state_t;
+
+typedef enum {
+   CAMERA_FLASH_UNKNOWN = 0x00,
+   CAMERA_FLASH_COMPULSORY = 0x08,
+   CAMERA_FLASH_SUPRESSION = 0x10,
+   CAMERA_FLASH_AUTO = 0x18
+}exif_flash_mode_t;
+
+typedef enum {
+   FLASH_FUNC_PRESENT = 0x00,
+   NO_FLASH_FUNC = 0x20
+}exif_flash_func_pre_t;
+
+typedef enum {
+   NO_REDEYE_MODE = 0x00,
+   REDEYE_MODE = 0x40
+}exif_redeye_t;
+
 typedef struct {
   cam_ae_params_t ae_params;
   cam_sensor_params_t sensor_params;
+  cam_flash_mode_t ui_flash_mode;
+  exif_flash_func_pre_t flash_presence;
+  exif_redeye_t red_eye;
 } mm_jpeg_exif_params_t;
 
 typedef struct {
