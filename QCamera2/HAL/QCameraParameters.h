@@ -561,6 +561,8 @@ private:
     int32_t setFocusAreas(const QCameraParameters& );
     int32_t setMeteringAreas(const QCameraParameters& );
     int32_t setSceneMode(const QCameraParameters& );
+    int32_t setScenePreferences(const QCameraParameters& );
+    int32_t setSceneFocusMode(const QCameraParameters& );
     int32_t setSelectableZoneAf(const QCameraParameters& );
     int32_t setAEBracket(const QCameraParameters& );
     int32_t setRedeyeReduction(const QCameraParameters& );
