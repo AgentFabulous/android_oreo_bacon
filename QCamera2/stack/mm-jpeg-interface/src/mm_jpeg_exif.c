@@ -292,7 +292,7 @@ int32_t releaseExifEntry(QEXIF_INFO_DATA *p_exif_data)
  *  Notes: this needs to be filled for the metadata
  **/
 int process_sensor_data(cam_sensor_params_t *p_sensor_params,
-  QOMX_EXIF_INFO *exif_info)
+  QOMX_EXIF_INFO *exif_info, mm_jpeg_exif_params_t *p_cam_exif_params)
 {
   int rc = 0;
   rat_t val_rat;
@@ -310,6 +310,60 @@ int process_sensor_data(cam_sensor_params_t *p_sensor_params,
   rc = addExifEntry(exif_info, EXIFTAGID_APERTURE, EXIF_RATIONAL, 1, &val_rat);
   if (rc) {
     ALOGE("%s:%d]: Error adding Exif Entry", __func__, __LINE__);
+  }
+
+  short flash_tag = -1;
+  uint8_t flash_fired = 0;
+  uint8_t strobe_state = 0;
+  uint8_t flash_mode = 0;
+  uint8_t flash_presence = 0;
+  uint8_t red_eye_mode = 0;
+
+  if (!p_cam_exif_params->flash_presence) {
+    if (p_cam_exif_params->ui_flash_mode == CAM_FLASH_MODE_AUTO) {
+      ALOGD("%s %d: flashmode auto, take from sensor: %d", __func__, __LINE__,
+        p_sensor_params->flash_mode);
+      if(p_sensor_params->flash_mode == CAM_FLASH_MODE_ON)
+        flash_fired = FLASH_FIRED;
+      else if(p_sensor_params->flash_mode == CAM_FLASH_MODE_OFF)
+        flash_fired = FLASH_NOT_FIRED;
+
+      flash_mode = CAMERA_FLASH_AUTO;
+    } else {
+      ALOGD("%s %d: flashmode from ui: %d", __func__, __LINE__, p_cam_exif_params->ui_flash_mode);
+      if (p_cam_exif_params->ui_flash_mode == CAM_FLASH_MODE_ON) {
+        flash_mode = CAMERA_FLASH_COMPULSORY;
+        flash_fired = FLASH_FIRED;
+      } else if(p_cam_exif_params->ui_flash_mode == CAM_FLASH_MODE_OFF) {
+        flash_mode = CAMERA_FLASH_SUPRESSION;
+        flash_fired = FLASH_NOT_FIRED;
+      }
+   }
+
+   if((p_cam_exif_params->red_eye) && (flash_fired == FLASH_FIRED))
+     red_eye_mode = REDEYE_MODE;
+
+  } else {
+    flash_presence = NO_FLASH_FUNC;
+    red_eye_mode = NO_REDEYE_MODE;
+  }
+
+  /* No strobe flash support */
+  strobe_state = NO_STROBE_RETURN_DETECT;
+
+  /* Generating the flash tag */
+  flash_tag = 0x00 | flash_fired |
+    strobe_state | flash_mode |
+    flash_presence | red_eye_mode;
+
+  ALOGD("%s %d: flash_tag: 0x%x", __func__, __LINE__, flash_tag);
+
+
+  /*FLASH*/
+  rc = addExifEntry(exif_info, EXIFTAGID_FLASH, EXIF_SHORT,
+    sizeof(flash_tag)/2, &flash_tag);
+  if (rc) {
+    ALOGE("%s:%d]: Error adding flash Exif Entry", __func__, __LINE__);
   }
 
   return rc;
@@ -415,7 +469,7 @@ int process_meta_data(cam_metadata_info_t *p_meta, QOMX_EXIF_INFO *exif_info,
     return 0;
   }
   cam_ae_params_t *p_ae_params = p_meta->is_ae_params_valid ?
-    &p_meta->ae_params : NULL;
+    &p_meta->ae_params : &p_cam_exif_params->ae_params;
 
   if (NULL != p_ae_params) {
     rc = process_3a_data(p_ae_params, exif_info);
@@ -424,10 +478,10 @@ int process_meta_data(cam_metadata_info_t *p_meta, QOMX_EXIF_INFO *exif_info,
     }
   }
   cam_sensor_params_t *p_sensor_params = p_meta->is_sensor_params_valid ?
-    &p_meta->sensor_params : NULL;
+    &p_meta->sensor_params : &p_cam_exif_params->sensor_params;
 
   if (NULL != p_sensor_params) {
-    rc = process_sensor_data(p_sensor_params, exif_info);
+    rc = process_sensor_data(p_sensor_params, exif_info, p_cam_exif_params);
     if (rc) {
       ALOGE("%s %d: Failed to extract sensor params", __func__, __LINE__);
     }

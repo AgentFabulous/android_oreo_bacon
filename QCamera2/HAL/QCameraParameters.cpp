@@ -4445,6 +4445,71 @@ int32_t  QCameraParameters::setISOValue(const char *isoValue)
 }
 
 /*===========================================================================
+ * FUNCTION   : getFlashValue
+ *
+ * DESCRIPTION: get fash mode
+ *
+ * PARAMETERS :
+ *   @flashStr : none
+ *
+ * RETURN     : int32_t type of status
+ *
+ *==========================================================================*/
+int32_t QCameraParameters::getFlashValue()
+{
+  const char *flash_str = get(QCameraParameters::KEY_FLASH_MODE);
+  int flash_index = lookupAttr(FLASH_MODES_MAP,
+        sizeof(ISO_MODES_MAP)/sizeof(FLASH_MODES_MAP[0]), flash_str);
+
+  return flash_index;
+}
+
+
+/*===========================================================================
+ * FUNCTION   : getSupportedFlashModes
+ *
+ * DESCRIPTION: get supported fash modes
+ *
+ * PARAMETERS :
+ *   @flash_modes : none
+ *
+ * RETURN     : int32_t type of status
+ *
+ *==========================================================================*/
+int32_t QCameraParameters::getSupportedFlashModes()
+{
+  const char *flash_modes = get(QCameraParameters::KEY_SUPPORTED_FLASH_MODES);
+  int flash_presence = -1;
+
+  if (flash_modes != NULL)
+    flash_presence = FLASH_FUNC_PRESENT;
+  else
+    flash_presence = NO_FLASH_FUNC;
+
+  return flash_presence;
+}
+
+/*===========================================================================
+ * FUNCTION   : getRedEyeValue
+ *
+ * DESCRIPTION: get redeye mode
+ *
+ * PARAMETERS :
+ *   @redeyeStr : none
+ *
+ * RETURN     : int32_t type of status
+ *
+ *==========================================================================*/
+int32_t QCameraParameters::getRedEyeValue()
+{
+  const char *redEye_str = get(QCameraParameters::KEY_QC_REDEYE_REDUCTION);
+  int redEye = lookupAttr(ENABLE_DISABLE_MODES_MAP,
+        sizeof(ENABLE_DISABLE_MODES_MAP)/sizeof(QCameraMap), redEye_str);
+
+  return redEye;
+}
+
+/*===========================================================================
  * FUNCTION   : setFlash
  *
  * DESCRIPTION: set f;ash mode
@@ -5902,6 +5967,7 @@ int QCameraParameters::getJpegQuality()
     }
     return quality;
 }
+
 
 /*===========================================================================
  * FUNCTION   : getJpegRotation

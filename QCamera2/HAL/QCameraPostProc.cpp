@@ -1300,6 +1300,10 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
         jpg_job.encode_job.p_metadata = (cam_metadata_info_t *)meta_frame->buffer;
     }
 
+    m_parent->mExifParams.ui_flash_mode = (cam_flash_mode_t) m_parent->getFlash();
+    m_parent->mExifParams.red_eye = (exif_redeye_t) m_parent->getRedeye();
+    m_parent->mExifParams.flash_presence = (exif_flash_func_pre_t) m_parent->getFlashPresence();
+
     jpg_job.encode_job.cam_exif_params = m_parent->mExifParams;
 
     ALOGE("[KPI Perf] %s : PROFILE_JPEG_JOB_START", __func__);
