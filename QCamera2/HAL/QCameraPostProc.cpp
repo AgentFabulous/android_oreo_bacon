@@ -488,7 +488,7 @@ int32_t QCameraPostProcessor::processData(mm_camera_super_buf_t *frame)
     }
 
     if (m_parent->needReprocess()) {
-        if ( !m_parent->isLongshotEnabled() ) {
+        if ( !m_parent->isLongshotEnabled() && !m_parent->m_stateMachine.isNonZSLCaptureRunning()) {
             //play shutter sound
             m_parent->playShutter();
         }
