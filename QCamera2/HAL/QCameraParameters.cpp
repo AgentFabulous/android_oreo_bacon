@@ -1577,15 +1577,105 @@ int32_t QCameraParameters::setEffect(const QCameraParameters& params)
  *==========================================================================*/
 int32_t QCameraParameters::setFocusMode(const QCameraParameters& params)
 {
+    int rc = NO_ERROR;
     const char *str = params.get(KEY_FOCUS_MODE);
     const char *prev_str = get(KEY_FOCUS_MODE);
+
+    //Find whether scene mode is Auto or not. We should set focus mode set by app
+    //only in Auto scene mode.  For other scene modes, Focus mode corresponding to
+    //a scene is decided and set in backend. In HAL, it is taken care in setScenePreferences.
+    bool isAutoSceneMode = FALSE;
+    const char *scene_str = params.get(KEY_SCENE_MODE);
+    if(!strcmp(scene_str, SCENE_MODE_AUTO))
+        isAutoSceneMode = TRUE;
+
     if (str != NULL) {
         if (prev_str == NULL ||
-            strcmp(str, prev_str) != 0) {
-            return setFocusMode(str);
+            (strcmp(str, prev_str) != 0 && isAutoSceneMode)){
+                rc = setFocusMode(str);
         }
     }
-    return NO_ERROR;
+
+    return rc;
+}
+
+/*===========================================================================
+ * FUNCTION   : setScenePreferences
+ *
+ * DESCRIPTION: set preferences specific to a scene like focus, flash, WB,etc.
+ *
+ * PARAMETERS :
+ *   @params  : user setting parameters
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+
+int32_t QCameraParameters::setScenePreferences(const QCameraParameters& params)
+{
+    int rc = NO_ERROR;
+    rc = setSceneFocusMode(params);
+    //TODO: Similar we should set flash and WB for scene modes like below :
+    //setSceneFlashMode(params);
+    //setSceneWhiteBalance(params);
+
+    return rc;
+}
+
+/*===========================================================================
+ * FUNCTION   : setSceneFocusMode
+ *
+ * DESCRIPTION: set focus mode specific to a scene
+ *
+ * PARAMETERS :
+ *   @params  : user setting parameters
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+
+int32_t QCameraParameters::setSceneFocusMode(const QCameraParameters& params)
+{
+    int rc = NO_ERROR;
+
+    //Since focus mode for each scene is decided by AF module in backend,
+    //ideally, we should query it from backend. But since there is no easy
+    //mechanism to do this, for now, we switch to focus mode Auto if scene mode
+    //is set. This is done to avoid stability and image quality issues observed
+    //during scene mode transitions. Later this needs to be fixed properly by adding
+    //query mechanism instead of forcing to focus mode Auto.
+
+
+    //Detect if scene mode changed from Auto to any other scene
+    bool sceneModeSet = FALSE;
+    const char *scene_str = params.get(KEY_SCENE_MODE);
+    const char *scene_prev_str = get(KEY_SCENE_MODE);
+    if(scene_str != NULL && scene_prev_str != NULL){
+        if( (!strcmp(scene_prev_str, SCENE_MODE_AUTO)) &&
+            strcmp(scene_str, SCENE_MODE_AUTO) ){
+            sceneModeSet = TRUE;
+        }
+    }
+
+    //FOCUS_MODE_AUTO might not be supported by some times. In that case, switch
+    //to FOCUS_MODE_FIXED by querying supported focus modes from capabilities.
+    if(sceneModeSet && m_pCapability->supported_focus_modes_cnt > 0){
+        bool isAutoFocusModeSupported = FALSE;
+        for(int i=0;i < m_pCapability->supported_focus_modes_cnt; i++){
+             if(CAM_FOCUS_MODE_AUTO == m_pCapability->supported_focus_modes[i])
+                isAutoFocusModeSupported = TRUE;
+        }
+        if (isAutoFocusModeSupported) {
+            rc = setFocusMode(FOCUS_MODE_AUTO);
+        } else {
+            rc = setFocusMode(FOCUS_MODE_FIXED);
+        }
+    }
+
+    return rc;
+
 }
 
 /*===========================================================================
@@ -2436,6 +2526,7 @@ int32_t QCameraParameters::setMeteringAreas(const QCameraParameters& params)
  *==========================================================================*/
 int32_t QCameraParameters::setSceneMode(const QCameraParameters& params)
 {
+    int rc = NO_ERROR;
     const char *str = params.get(KEY_SCENE_MODE);
     const char *prev_str = get(KEY_SCENE_MODE);
     if (str != NULL) {
@@ -2480,10 +2571,15 @@ int32_t QCameraParameters::setSceneMode(const QCameraParameters& params)
             }
 
 
-            return setSceneMode(str);
+            rc = setSceneMode(str);
+
+            //Set scene mode specific settings like focus, flash,etc.
+            if(rc == NO_ERROR)
+                rc = setScenePreferences(params);
+
         }
     }
-    return NO_ERROR;
+    return rc;
 }
 
 /*===========================================================================
