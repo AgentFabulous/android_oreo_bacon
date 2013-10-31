@@ -605,6 +605,7 @@ QCameraParameters::QCameraParameters()
     }
 
     memset(&m_LiveSnapshotSize, 0, sizeof(m_LiveSnapshotSize));
+    memset(&m_default_fps_range, 0, sizeof(m_default_fps_range));
 }
 
 /*===========================================================================
@@ -659,6 +660,7 @@ QCameraParameters::QCameraParameters(const String8 &params)
     memset(&m_LiveSnapshotSize, 0, sizeof(m_LiveSnapshotSize));
     m_pTorch = NULL;
     m_bReleaseTorchCamera = false;
+    memset(&m_default_fps_range, 0, sizeof(m_default_fps_range));
 }
 
 /*===========================================================================
@@ -1487,6 +1489,10 @@ int32_t QCameraParameters::setPreviewFpsRange(const QCameraParameters& params)
     params.getPreviewFpsRange(&minFps, &maxFps);
     ALOGV("%s: Requested FpsRange Values:(%d, %d)", __func__, minFps, maxFps);
 
+    //first check if we need to change fps because of HFR mode change
+    if(UpdateHFRFrameRate(params))
+        return rc;
+
     if(minFps == prevMinFps && maxFps == prevMaxFps) {
         if ( m_bFixedFrameRateSet ) {
             minFps = params.getPreviewFrameRate() * 1000;
@@ -1498,6 +1504,7 @@ int32_t QCameraParameters::setPreviewFpsRange(const QCameraParameters& params)
             goto end;
         }
     }
+
     for(int i = 0; i < m_pCapability->fps_ranges_tbl_cnt; i++) {
         // if the value is in the supported list
         if(minFps >= m_pCapability->fps_ranges_tbl[i].min_fps * 1000 &&
@@ -1514,6 +1521,90 @@ int32_t QCameraParameters::setPreviewFpsRange(const QCameraParameters& params)
     }
 end:
     return rc;
+}
+
+/*===========================================================================
+ * FUNCTION   : UpdateHFRFrameRate
+ *
+ * DESCRIPTION: set preview FPS range based on HFR setting
+ *
+ * PARAMETERS :
+ *   @params  : user setting parameters
+ *
+ * RETURN     : bool true/false
+ *                  true -if HAL needs to overwrite FPS range set by app, false otherwise.
+ *==========================================================================*/
+
+bool QCameraParameters::UpdateHFRFrameRate(const QCameraParameters& params)
+{
+    bool updateNeeded = false;
+    int min_fps, max_fps;
+    int32_t hfrMode = CAM_HFR_MODE_OFF;
+
+    int parm_minfps,parm_maxfps;
+    int prevMinFps, prevMaxFps;
+    CameraParameters::getPreviewFpsRange(&prevMinFps, &prevMaxFps);
+    params.getPreviewFpsRange(&parm_minfps, &parm_maxfps);
+
+    // check if HFR is enabled
+    const char *hfrStr = params.get(KEY_QC_VIDEO_HIGH_FRAME_RATE);
+    const char *prev_hfrStr = get(KEY_QC_VIDEO_HIGH_FRAME_RATE);
+    if(hfrStr != NULL){
+        hfrMode = lookupAttr(HFR_MODES_MAP,
+                               sizeof(HFR_MODES_MAP)/sizeof(QCameraMap),
+                               hfrStr);
+    }
+
+    if (hfrStr != NULL && (prev_hfrStr == NULL || strcmp(hfrStr,prev_hfrStr))){
+        if (hfrMode != NAME_NOT_FOUND) {
+            // if HFR is enabled, change fps range
+            switch(hfrMode){
+                case CAM_HFR_MODE_60FPS:
+                    min_fps = 60000;
+                    max_fps = 60000;
+                    break;
+                case CAM_HFR_MODE_90FPS:
+                    min_fps = 90000;
+                    max_fps = 90000;
+                    break;
+                case CAM_HFR_MODE_120FPS:
+                    min_fps = 120000;
+                    max_fps = 120000;
+                    break;
+                case CAM_HFR_MODE_150FPS:
+                    min_fps = 150000;
+                    max_fps = 150000;
+                    break;
+                case CAM_HFR_MODE_OFF:
+                default:
+                    //if app has set fps range along with turning off HFR, then set the fps
+                    //range given by app. If app has not set any fps range while turning
+                    //off HFR, then fps range might remain with previous value. So, better
+                    //set default fps range which we stored during initdefaultParameters.
+                    if((parm_minfps != prevMinFps)||(parm_maxfps != prevMaxFps)){
+                        min_fps = parm_minfps;
+                        max_fps = parm_maxfps;
+                    }else{
+                        min_fps = m_default_fps_range.min_fps * 1000;
+                        max_fps = m_default_fps_range.max_fps * 1000;
+                    }
+                    break;
+            }
+            ALOGE("%s: HFR mode change - Set FPS : minFps = %d, maxFps = %d ",
+                __func__,min_fps,max_fps);
+            setPreviewFpsRange(min_fps, max_fps);
+            updateNeeded = true;
+        }
+    }
+
+    //Above logic would have set fps range after switching to HFR mode. But later if apps set fps
+    //range while in HFR mode, discard it by faking updateNeeded to TRUE.
+    if ((hfrMode > CAM_HFR_MODE_OFF) && (hfrMode < CAM_HFR_MODE_MAX)){
+        ALOGV("Discarding fps set by app while in HFR mode");
+        updateNeeded = true;
+    }
+
+    return updateNeeded;
 }
 
 /*===========================================================================
@@ -3481,11 +3572,13 @@ int32_t QCameraParameters::initDefaultParameters()
                                                       m_pCapability->fps_ranges_tbl_cnt,
                                                       default_fps_index);
         set(KEY_SUPPORTED_PREVIEW_FPS_RANGE, fpsRangeValues.string());
+        ALOGD("%s: supported fps ranges: %s", __func__, fpsRangeValues.string());
 
         int min_fps =
             int(m_pCapability->fps_ranges_tbl[default_fps_index].min_fps * 1000);
         int max_fps =
             int(m_pCapability->fps_ranges_tbl[default_fps_index].max_fps * 1000);
+        m_default_fps_range = m_pCapability->fps_ranges_tbl[default_fps_index];
         setPreviewFpsRange(min_fps, max_fps);
 
         // Set legacy preview fps
@@ -5589,7 +5682,7 @@ void QCameraParameters::getTouchIndexAf(int *x, int *y)
     if (parse_pair(p, &tempX, &tempY, 'x') == 0) {
         *x = tempX;
         *y = tempY;
-	}
+    }
 }
 
 /*===========================================================================
