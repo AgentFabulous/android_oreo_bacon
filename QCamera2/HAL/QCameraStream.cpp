@@ -1110,6 +1110,12 @@ int32_t QCameraStream::setParameter(cam_stream_parm_buffer_t &param)
 int32_t QCameraStream::getParameter(cam_stream_parm_buffer_t &param)
 {
     int32_t rc = NO_ERROR;
+
+    if (!m_bActive) {
+        ALOGE("%s : Stream not stopped!", __func__);
+        return NO_INIT;
+    }
+
     pthread_mutex_lock(&mParameterLock);
     mStreamInfo->parm_buf = param;
     rc = mCamOps->get_stream_parms(mCamHandle,
