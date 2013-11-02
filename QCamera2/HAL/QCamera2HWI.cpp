@@ -53,6 +53,8 @@
 namespace qcamera {
 
 cam_capability_t *gCamCapability[MM_CAMERA_MAX_NUM_SENSORS];
+qcamera_saved_sizes_list savedSizes[MM_CAMERA_MAX_NUM_SENSORS];
+
 static pthread_mutex_t g_camlock = PTHREAD_MUTEX_INITIALIZER;
 
 camera_device_ops_t QCamera2HardwareInterface::mCameraOps = {
@@ -1060,6 +1062,8 @@ int QCamera2HardwareInterface::openCamera()
     int32_t l_curr_height = 0;
     m_max_pic_width = 0;
     m_max_pic_height = 0;
+    char value[PROPERTY_VALUE_MAX];
+    int enable_4k2k;
     int i;
 
     if (mCameraHandle) {
@@ -1087,6 +1091,58 @@ int QCamera2HardwareInterface::openCamera()
         m_max_pic_width = l_curr_width;
         m_max_pic_height = l_curr_height;
       }
+    }
+    //reset the preview and video sizes tables in case they were changed earlier
+    copyList(savedSizes[mCameraId].all_preview_sizes, gCamCapability[mCameraId]->preview_sizes_tbl,
+             savedSizes[mCameraId].all_preview_sizes_cnt);
+    gCamCapability[mCameraId]->preview_sizes_tbl_cnt = savedSizes[mCameraId].all_preview_sizes_cnt;
+    copyList(savedSizes[mCameraId].all_video_sizes, gCamCapability[mCameraId]->video_sizes_tbl,
+             savedSizes[mCameraId].all_video_sizes_cnt);
+    gCamCapability[mCameraId]->video_sizes_tbl_cnt = savedSizes[mCameraId].all_video_sizes_cnt;
+
+    //check if video size 4k x 2k support is enabled
+    property_get("sys.camera.4k2k.enable", value, "0");
+    enable_4k2k = atoi(value) > 0 ? 1 : 0;
+    ALOGD("%s: enable_4k2k is %d", __func__, enable_4k2k);
+    if (!enable_4k2k) {
+       //if the 4kx2k size exists in the supported preview size or
+       //supported video size remove it
+       bool found;
+       cam_dimension_t true_size_4k_2k;
+       cam_dimension_t size_4k_2k;
+       true_size_4k_2k.width = 4096;
+       true_size_4k_2k.height = 2160;
+       size_4k_2k.width = 3840;
+       size_4k_2k.height = 2160;
+
+       found = removeSizeFromList(gCamCapability[mCameraId]->preview_sizes_tbl,
+                                  gCamCapability[mCameraId]->preview_sizes_tbl_cnt,
+                                  true_size_4k_2k);
+       if (found) {
+          gCamCapability[mCameraId]->preview_sizes_tbl_cnt--;
+       }
+
+       found = removeSizeFromList(gCamCapability[mCameraId]->preview_sizes_tbl,
+                                  gCamCapability[mCameraId]->preview_sizes_tbl_cnt,
+                                  size_4k_2k);
+       if (found) {
+          gCamCapability[mCameraId]->preview_sizes_tbl_cnt--;
+       }
+
+
+       found = removeSizeFromList(gCamCapability[mCameraId]->video_sizes_tbl,
+                                  gCamCapability[mCameraId]->video_sizes_tbl_cnt,
+                                  true_size_4k_2k);
+       if (found) {
+          gCamCapability[mCameraId]->video_sizes_tbl_cnt--;
+       }
+
+       found = removeSizeFromList(gCamCapability[mCameraId]->video_sizes_tbl,
+                                  gCamCapability[mCameraId]->video_sizes_tbl_cnt,
+                                  size_4k_2k);
+       if (found) {
+          gCamCapability[mCameraId]->video_sizes_tbl_cnt--;
+       }
     }
 
     int32_t rc = m_postprocessor.init(jpegEvtHandle, this);
@@ -1230,6 +1286,15 @@ int QCamera2HardwareInterface::initCapabilities(int cameraId)
     memcpy(gCamCapability[cameraId], DATA_PTR(capabilityHeap,0),
                                         sizeof(cam_capability_t));
 
+    //copy the preview sizes and video sizes lists because they
+    //might be changed later
+    copyList(gCamCapability[cameraId]->preview_sizes_tbl, savedSizes[cameraId].all_preview_sizes,
+             gCamCapability[cameraId]->preview_sizes_tbl_cnt);
+    savedSizes[cameraId].all_preview_sizes_cnt = gCamCapability[cameraId]->preview_sizes_tbl_cnt;
+    copyList(gCamCapability[cameraId]->video_sizes_tbl, savedSizes[cameraId].all_video_sizes,
+             gCamCapability[cameraId]->video_sizes_tbl_cnt);
+    savedSizes[cameraId].all_video_sizes_cnt = gCamCapability[cameraId]->video_sizes_tbl_cnt;
+
     rc = NO_ERROR;
 
 query_failed:
@@ -1288,6 +1353,7 @@ int QCamera2HardwareInterface::getCapabilities(int cameraId,
     }
 
     info->orientation = gCamCapability[cameraId]->sensor_mount_angle;
+    property_set("camera.4k2k.enable", "0");
     pthread_mutex_unlock(&g_camlock);
     return rc;
 }
@@ -5101,6 +5167,36 @@ bool QCamera2HardwareInterface::needFDMetadata(qcamera_ch_type_enum_t channel_ty
     }
 
     return value;
+}
+
+bool QCamera2HardwareInterface::removeSizeFromList(cam_dimension_t* size_list,
+                                                   uint8_t length,
+                                                   cam_dimension_t size)
+{
+   bool found = false;
+   int index = 0;
+   for (int i = 0; i < length; i++) {
+      if ((size_list[i].width == size.width
+           && size_list[i].height == size.height)) {
+         found = true;
+         index = i;
+         break;
+      }
+
+   }
+   if (found) {
+      for (int i = index; i < length; i++) {
+         size_list[i] = size_list[i+1];
+      }
+   }
+   return found;
+}
+
+void QCamera2HardwareInterface::copyList(cam_dimension_t* src_list,
+                                         cam_dimension_t* dst_list, uint8_t len){
+   for (int i = 0; i < len; i++) {
+      dst_list[i] = src_list[i];
+   }
 }
 
 }; // namespace qcamera

@@ -1361,8 +1361,12 @@ int32_t QCameraParameters::setJpegThumbnailSize(const QCameraParameters& params)
                 optimalHeight = THUMBNAIL_SIZES_MAP[i].height;
             }
         }
+        if (optimalWidth == 0 && optimalHeight == 0) {
+            ALOGD("%s: Could not find optimal size", __func__);
+            optimalWidth = width;
+            optimalHeight = height;
+        }
     }
-
     set(KEY_JPEG_THUMBNAIL_WIDTH, optimalWidth);
     set(KEY_JPEG_THUMBNAIL_HEIGHT, optimalHeight);
     return NO_ERROR;

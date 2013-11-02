@@ -129,6 +129,13 @@ typedef struct {
     camera_release_callback  release_cb; // release callback
 } qcamera_callback_argm_t;
 
+typedef struct {
+   cam_dimension_t all_preview_sizes[MAX_SIZES_CNT];
+   uint8_t all_preview_sizes_cnt;
+   cam_dimension_t all_video_sizes[MAX_SIZES_CNT];
+   uint8_t all_video_sizes_cnt;
+} qcamera_saved_sizes_list;
+
 class QCameraCbNotifier {
 public:
     QCameraCbNotifier(QCamera2HardwareInterface *parent) :
@@ -372,7 +379,11 @@ private:
     bool isLongshotEnabled() { return mLongshotEnabled; };
     uint8_t getBufNumRequired(cam_stream_type_t stream_type);
     bool needFDMetadata(qcamera_ch_type_enum_t channel_type);
-
+    bool removeSizeFromList(cam_dimension_t* size_list,
+                            uint8_t length,
+                            cam_dimension_t size);
+    static void copyList(cam_dimension_t* src_list,
+                   cam_dimension_t* dst_list, uint8_t len);
     static void camEvtHandle(uint32_t camera_handle,
                           mm_camera_event_t *evt,
                           void *user_data);
