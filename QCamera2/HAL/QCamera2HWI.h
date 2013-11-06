@@ -172,9 +172,11 @@ private:
     QCameraCmdThread mProcTh;
     bool             mActive;
 };
+
 class QCamera2HardwareInterface : public QCameraAllocator,
                                   public QCameraThermalCallback,
-                                  public QCameraAdjustFPS
+                                  public QCameraAdjustFPS,
+                                  public QCameraTorchInterface
 {
 public:
     /* static variable and functions accessed by camera service */
@@ -240,6 +242,10 @@ public:
             void *userdata, void *data);
 
     virtual int recalcFPSRange(int &minFPS, int &maxFPS);
+
+    // Implementation of QCameraTorchInterface
+    virtual int prepareTorchCamera();
+    virtual int releaseTorchCamera();
 
     friend class QCameraStateMachine;
     friend class QCameraPostProcessor;
