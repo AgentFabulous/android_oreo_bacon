@@ -129,6 +129,9 @@ public:
     // Supported live snapshot sizes
     static const char KEY_QC_SUPPORTED_LIVESNAPSHOT_SIZES[];
 
+    // Supported scaled picture sizes
+    static const char KEY_QC_SCALED_PICTURE_SIZES[];
+
     // Supported Raw formats
     static const char KEY_QC_SUPPORTED_RAW_FORMATS[];
     static const char KEY_QC_RAW_FORMAT[];

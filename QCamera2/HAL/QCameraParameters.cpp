@@ -96,6 +96,7 @@ const char QCameraParameters::KEY_QC_NO_DISPLAY_MODE[] = "no-display-mode";
 const char QCameraParameters::KEY_QC_RAW_PICUTRE_SIZE[] = "raw-size";
 const char QCameraParameters::KEY_QC_SUPPORTED_SKIN_TONE_ENHANCEMENT_MODES[] = "skinToneEnhancement-values";
 const char QCameraParameters::KEY_QC_SUPPORTED_LIVESNAPSHOT_SIZES[] = "supported-live-snapshot-sizes";
+const char QCameraParameters::KEY_QC_SCALED_PICTURE_SIZES[] = "scaled-picture-sizes";
 const char QCameraParameters::KEY_QC_HDR_NEED_1X[] = "hdr-need-1x";
 const char QCameraParameters::KEY_QC_PREVIEW_FLIP[] = "preview-flip";
 const char QCameraParameters::KEY_QC_VIDEO_FLIP[] = "video-flip";
@@ -3492,11 +3493,10 @@ int32_t QCameraParameters::initDefaultParameters()
             m_pCapability->scale_picture_sizes_cnt, m_pCapability->scale_picture_sizes,
             m_pCapability->picture_sizes_tbl_cnt, m_pCapability->picture_sizes_tbl);
         if(rc_s == NO_ERROR){
-            cam_dimension_t *totalSizeTbl = m_reprocScaleParam.getTotalSizeTbl();
-            uint8_t totalSizeCnt = m_reprocScaleParam.getTotalSizeTblCnt();
-            String8 pictureSizeValues = createSizesString(totalSizeTbl, totalSizeCnt);
-            set(KEY_SUPPORTED_PICTURE_SIZES, pictureSizeValues.string());
-            ALOGE("%s: scaled supported pic sizes: %s", __func__, pictureSizeValues.string());
+            String8 scaledPictureSizeValues = createSizesString(
+                m_pCapability->scale_picture_sizes, m_pCapability->scale_picture_sizes_cnt);
+            set(KEY_QC_SCALED_PICTURE_SIZES, scaledPictureSizeValues.string());
+            ALOGE("%s: scaled supported pic sizes: %s", __func__, scaledPictureSizeValues.string());
         }else{
             m_reprocScaleParam.setScaleEnable(false);
             ALOGE("%s: reset scaled picture size table failed.", __func__);
