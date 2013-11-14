@@ -581,7 +581,7 @@ QCameraParameters::QCameraParameters()
       m_AdjustFPS(NULL),
       m_bHDR1xFrameEnabled(true),
       m_HDRSceneEnabled(false),
-      m_bHDRThumbnailProcessNeeded(true),
+      m_bHDRThumbnailProcessNeeded(false),
       m_bHDR1xExtraBufferNeeded(true),
       m_bHDROutputCropEnabled(false),
       m_tempMap()
@@ -653,7 +653,7 @@ QCameraParameters::QCameraParameters(const String8 &params)
     m_AdjustFPS(NULL),
     m_bHDR1xFrameEnabled(true),
     m_HDRSceneEnabled(false),
-    m_bHDRThumbnailProcessNeeded(true),
+    m_bHDRThumbnailProcessNeeded(false),
     m_bHDR1xExtraBufferNeeded(true),
     m_bHDROutputCropEnabled(false),
     m_tempMap()
@@ -3828,7 +3828,7 @@ int32_t QCameraParameters::initDefaultParameters()
     m_bHDREnabled = false;
     m_bHDR1xFrameEnabled = true;
 
-    m_bHDRThumbnailProcessNeeded = true;
+    m_bHDRThumbnailProcessNeeded = false;
     m_bHDR1xExtraBufferNeeded = true;
     for (uint32_t i=0; i<m_pCapability->hdr_bracketing_setting.num_frames; i++) {
         if (0 == m_pCapability->hdr_bracketing_setting.exp_val.values[i]) {
