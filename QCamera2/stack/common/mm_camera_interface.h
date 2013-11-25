@@ -622,5 +622,5 @@ uint8_t get_num_of_cameras();
 
 /* return reference pointer of camera vtbl */
 mm_camera_vtbl_t * camera_open(uint8_t camera_idx);
-
+struct camera_info *get_cam_info(int camera_id);
 #endif /*__MM_CAMERA_INTERFACE_H__*/
