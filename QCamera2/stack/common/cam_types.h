@@ -406,6 +406,7 @@ typedef enum {
     CAM_WB_MODE_CLOUDY_DAYLIGHT,
     CAM_WB_MODE_TWILIGHT,
     CAM_WB_MODE_SHADE,
+    CAM_WB_MODE_CCT,
     CAM_WB_MODE_OFF,
     CAM_WB_MODE_MAX
 } cam_wb_mode_type;
@@ -429,6 +430,7 @@ typedef enum {
     CAM_ISO_MODE_400,
     CAM_ISO_MODE_800,
     CAM_ISO_MODE_1600,
+    CAM_ISO_MODE_3200,
     CAM_ISO_MODE_MAX
 } cam_iso_mode_type;
 
@@ -466,8 +468,20 @@ typedef enum {
     CAM_FOCUS_MODE_EDOF,
     CAM_FOCUS_MODE_CONTINOUS_VIDEO,
     CAM_FOCUS_MODE_CONTINOUS_PICTURE,
+    CAM_FOCUS_MODE_MANUAL,
     CAM_FOCUS_MODE_MAX
 } cam_focus_mode_type;
+
+typedef enum {
+    CAM_MANUAL_FOCUS_MODE_INDEX,
+    CAM_MANUAL_FOCUS_MODE_DAC_CODE,
+    CAM_MANUAL_FOCUS_MODE_MAX
+} cam_manual_focus_mode_type;
+
+typedef struct {
+    cam_manual_focus_mode_type flag;
+    int32_t af_manual_lens_position;
+} cam_manual_focus_parm_t;
 
 typedef enum {
     CAM_SCENE_MODE_OFF,
@@ -774,6 +788,7 @@ typedef enum {
 typedef struct {
     cam_autofocus_state_t focus_state;           /* state of focus */
     cam_focus_distances_info_t focus_dist;       /* focus distance */
+    int32_t focus_pos;
 } cam_auto_focus_data_t;
 
 typedef struct {
@@ -825,6 +840,10 @@ typedef struct {
     int iso_value;
     uint32_t flash_needed;
 } cam_ae_params_t;
+
+typedef struct {
+    int32_t cct_value;
+} cam_awb_params_t;
 
 
 
@@ -891,6 +910,10 @@ typedef  struct {
     uint8_t is_ae_params_valid;
     cam_ae_params_t ae_params;
 
+    /* AWB parameters */
+    uint8_t is_awb_params_valid;
+    cam_awb_params_t awb_params;
+
     /* sensor parameters */
     uint8_t is_sensor_params_valid;
     cam_sensor_params_t sensor_params;
@@ -944,6 +967,7 @@ typedef enum {
     CAM_INTF_PARM_SATURATION,
     CAM_INTF_PARM_BRIGHTNESS,
     CAM_INTF_PARM_ISO,
+    CAM_INTF_PARM_EXPOSURE_TIME,
     CAM_INTF_PARM_ZOOM, /* 20 */
     CAM_INTF_PARM_ROLLOFF,
     CAM_INTF_PARM_MODE,             /* camera mode */
@@ -952,6 +976,7 @@ typedef enum {
     CAM_INTF_PARM_AEC_ROI,
     CAM_INTF_PARM_AF_ROI,
     CAM_INTF_PARM_FOCUS_MODE,
+    CAM_INTF_PARM_MANUAL_FOCUS_POS,
     CAM_INTF_PARM_SCE_FACTOR,
     CAM_INTF_PARM_FD,
     CAM_INTF_PARM_MCE, /* 30 */
@@ -984,6 +1009,7 @@ typedef enum {
     CAM_INTF_PARM_SET_PP_COMMAND,
     CAM_INTF_PARM_TINTLESS,
     CAM_INTF_PARM_CDS_MODE,
+    CAM_INTF_PARM_WB_CCT,
 
     /* stream based parameters */
     CAM_INTF_PARM_DO_REPROCESS,

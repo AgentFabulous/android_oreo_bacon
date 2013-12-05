@@ -137,6 +137,7 @@ typedef enum {
     QCAMERA_INTERNAL_EVT_HISTOGRAM_STATS,    // histogram
     QCAMERA_INTERNAL_EVT_CROP_INFO,          // crop info
     QCAMERA_INTERNAL_EVT_ASD_UPDATE,         // asd update result
+    QCAMERA_INTERNAL_EVT_AWB_UPDATE,         // awb update result
     QCAMERA_INTERNAL_EVT_MAX
 } qcamera_internal_evt_type_t;
 
@@ -149,6 +150,7 @@ typedef struct {
         cam_hist_stats_t stats_data;
         cam_crop_data_t crop_data;
         cam_auto_scene_t asd_data;
+        cam_awb_params_t awb_data;
     };
 } qcamera_sm_internal_evt_payload_t;
 

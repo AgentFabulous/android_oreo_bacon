@@ -3285,6 +3285,12 @@ int32_t QCamera2HardwareInterface::processAutoFocusEvent(cam_auto_focus_data_t &
         ALOGD("%s: no ops for autofocus event in focusmode %d", __func__, focusMode);
         break;
     }
+
+    // we save cam_auto_focus_data_t.focus_pos to parameters,
+    // in any focus mode.
+    ALOGD("%s, update focus position: %d", __func__, focus_data.focus_pos);
+    mParameters.updateCurrentFocusPosition(focus_data.focus_pos);
+
     ALOGD("%s: X",__func__);
     return ret;
 }
@@ -3388,6 +3394,25 @@ int32_t QCamera2HardwareInterface::processHDRData(cam_asd_hdr_scene_data_t hdr_s
 }
 
 /*===========================================================================
+ * FUNCTION   : transAwbMetaToParams
+ *
+ * DESCRIPTION: translate awb params from metadata callback to QCameraParameters
+ *
+ * PARAMETERS :
+ *   @awb_params : awb params from metadata callback
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t QCamera2HardwareInterface::transAwbMetaToParams(cam_awb_params_t &awb_params)
+{
+    ALOGD("%s, cct value: %d", __func__, awb_params.cct_value);
+
+    return mParameters.updateCCTValue(awb_params.cct_value);
+}
+
+/*===========================================================================
  * FUNCTION   : processPrepSnapshotDone
  *
  * DESCRIPTION: process prep snapshot done event
@@ -3469,6 +3494,22 @@ int32_t QCamera2HardwareInterface::processASDUpdate(cam_auto_scene_t scene)
 
 }
 
+/*===========================================================================
+ * FUNCTION   : processAWBUpdate
+ *
+ * DESCRIPTION: process AWB update event
+ *
+ * PARAMETERS :
+ *   @awb_params: current awb parameters from back-end.
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t QCamera2HardwareInterface::processAWBUpdate(cam_awb_params_t &awb_params)
+{
+    return transAwbMetaToParams(awb_params);
+}
 
 /*===========================================================================
  * FUNCTION   : processJpegNotify

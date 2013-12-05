@@ -1087,6 +1087,26 @@ void QCamera2HardwareInterface::metadata_stream_cb_routine(mm_camera_super_buf_t
         pme->mFlashNeeded = pMetaData->ae_params.flash_needed;
     }
 
+    if (pMetaData->is_awb_params_valid) {
+        ALOGD("%s, metadata for awb params.", __func__);
+        qcamera_sm_internal_evt_payload_t *payload =
+            (qcamera_sm_internal_evt_payload_t *)malloc(sizeof(qcamera_sm_internal_evt_payload_t));
+        if (NULL != payload) {
+            memset(payload, 0, sizeof(qcamera_sm_internal_evt_payload_t));
+            payload->evt_type = QCAMERA_INTERNAL_EVT_AWB_UPDATE;
+            payload->awb_data = pMetaData->awb_params;
+            int32_t rc = pme->processEvt(QCAMERA_SM_EVT_EVT_INTERNAL, payload);
+            if (rc != NO_ERROR) {
+                ALOGE("%s: processEvt awb_update failed", __func__);
+                free(payload);
+                payload = NULL;
+
+            }
+        } else {
+            ALOGE("%s: No memory for awb_update qcamera_sm_internal_evt_payload_t", __func__);
+        }
+    }
+
     /*Update Sensor info*/
     if (pMetaData->is_sensor_params_valid) {
         pme->mExifParams.sensor_params = pMetaData->sensor_params;

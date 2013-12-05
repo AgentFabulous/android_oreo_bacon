@@ -346,6 +346,8 @@ private:
     int32_t processASDUpdate(cam_auto_scene_t scene);
     int32_t processJpegNotify(qcamera_jpeg_evt_payload_t *jpeg_job);
     int32_t processHDRData(cam_asd_hdr_scene_data_t hdr_scene);
+    int32_t transAwbMetaToParams(cam_awb_params_t &awb_params);
+    int32_t processAWBUpdate(cam_awb_params_t &awb_params);
 
     int32_t sendEvtNotify(int32_t msg_type, int32_t ext1, int32_t ext2);
     int32_t sendDataNotify(int32_t msg_type,

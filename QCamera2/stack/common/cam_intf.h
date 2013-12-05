@@ -63,6 +63,10 @@ typedef struct{
     uint8_t supported_iso_modes_cnt;
     cam_iso_mode_type supported_iso_modes[CAM_ISO_MODE_MAX];
 
+    /* supported exposure time */
+    int32_t min_exposure_time;
+    int32_t max_exposure_time;
+
     /* supported flash modes */
     uint8_t supported_flash_modes_cnt;
     cam_flash_mode_t supported_flash_modes[CAM_FLASH_MODE_MAX];
@@ -93,9 +97,17 @@ typedef struct{
     uint8_t supported_white_balances_cnt;
     cam_wb_mode_type supported_white_balances[CAM_WB_MODE_MAX];
 
+    /* supported manual wb cct */
+    int32_t min_wb_cct;
+    int32_t max_wb_cct;
+
     /* supported focus modes */
     uint8_t supported_focus_modes_cnt;
     cam_focus_mode_type supported_focus_modes[CAM_FOCUS_MODE_MAX];
+
+    /* supported manual focus position */
+    int32_t min_focus_pos[CAM_MANUAL_FOCUS_MODE_MAX];
+    int32_t max_focus_pos[CAM_MANUAL_FOCUS_MODE_MAX];
 
     int exposure_compensation_min;       /* min value of exposure compensation index */
     int exposure_compensation_max;       /* max value of exposure compensation index */
@@ -419,6 +431,7 @@ typedef union {
     INCLUDE(CAM_INTF_PARM_AEC_ENABLE,               int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_FPS_RANGE,                cam_fps_range_t,             1);
     INCLUDE(CAM_INTF_PARM_FOCUS_MODE,               uint8_t,                     1);
+    INCLUDE(CAM_INTF_PARM_MANUAL_FOCUS_POS,         cam_manual_focus_parm_t,     1);
     INCLUDE(CAM_INTF_PARM_AWB_LOCK,                 int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_AWB_ENABLE,               int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_AF_ENABLE,                int32_t,                     1);
@@ -436,6 +449,7 @@ typedef union {
     INCLUDE(CAM_INTF_PARM_SATURATION,               int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_BRIGHTNESS,               int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_ISO,                      int32_t,                     1);
+    INCLUDE(CAM_INTF_PARM_EXPOSURE_TIME,            int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_ZOOM,                     int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_ROLLOFF,                  int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_MODE,                     int32_t,                     1);
@@ -470,6 +484,7 @@ typedef union {
     INCLUDE(CAM_INTF_PARM_RAW_DIMENSION,            cam_dimension_t,             1);
     INCLUDE(CAM_INTF_PARM_TINTLESS,                 int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_CDS_MODE,                 cam_cds_mode_type_t,         1);
+    INCLUDE(CAM_INTF_PARM_WB_CCT,                   int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_EZTUNE_CMD,               cam_eztune_cmd_data_t,       1);
 
     /* HAL3 specific */

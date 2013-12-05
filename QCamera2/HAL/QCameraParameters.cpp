@@ -56,6 +56,9 @@ const char QCameraParameters::KEY_QC_SCENE_DETECT[] = "scene-detect";
 const char QCameraParameters::KEY_QC_SUPPORTED_SCENE_DETECT[] = "scene-detect-values";
 const char QCameraParameters::KEY_QC_ISO_MODE[] = "iso";
 const char QCameraParameters::KEY_QC_SUPPORTED_ISO_MODES[] = "iso-values";
+const char QCameraParameters::KEY_QC_EXPOSURE_TIME[] = "exposure-time";
+const char QCameraParameters::KEY_QC_MIN_EXPOSURE_TIME[] = "min-exposure-time";
+const char QCameraParameters::KEY_QC_MAX_EXPOSURE_TIME[] = "max-exposure-time";
 const char QCameraParameters::KEY_QC_LENSSHADE[] = "lensshade";
 const char QCameraParameters::KEY_QC_SUPPORTED_LENSSHADE_MODES[] = "lensshade-values";
 const char QCameraParameters::KEY_QC_AUTO_EXPOSURE[] = "auto-exposure";
@@ -64,6 +67,13 @@ const char QCameraParameters::KEY_QC_DENOISE[] = "denoise";
 const char QCameraParameters::KEY_QC_SUPPORTED_DENOISE[] = "denoise-values";
 const char QCameraParameters::KEY_QC_FOCUS_ALGO[] = "selectable-zone-af";
 const char QCameraParameters::KEY_QC_SUPPORTED_FOCUS_ALGOS[] = "selectable-zone-af-values";
+const char QCameraParameters::KEY_QC_MANUAL_FOCUS_POSITION[] = "manual-focus-position";
+const char QCameraParameters::KEY_QC_MANUAL_FOCUS_POS_TYPE[] = "manual-focus-pos-type";
+const char QCameraParameters::KEY_QC_CURRENT_FOCUS_POSITION[] = "current-focus-position";
+const char QCameraParameters::KEY_QC_MIN_FOCUS_POS_INDEX[] = "min-focus-pos-index";
+const char QCameraParameters::KEY_QC_MAX_FOCUS_POS_INDEX[] = "max-focus-pos-index";
+const char QCameraParameters::KEY_QC_MIN_FOCUS_POS_DAC[] = "min-focus-pos-dac";
+const char QCameraParameters::KEY_QC_MAX_FOCUS_POS_DAC[] = "max-focus-pos-dac";
 const char QCameraParameters::KEY_QC_FACE_DETECTION[] = "face-detection";
 const char QCameraParameters::KEY_QC_SUPPORTED_FACE_DETECTION[] = "face-detection-values";
 const char QCameraParameters::KEY_QC_FACE_RECOGNITION[] = "face-recognition";
@@ -117,6 +127,10 @@ const char QCameraParameters::KEY_QC_CHROMA_FLASH[] = "chroma-flash";
 const char QCameraParameters::KEY_QC_SUPPORTED_CHROMA_FLASH_MODES[] = "chroma-flash-values";
 const char QCameraParameters::KEY_QC_OPTI_ZOOM[] = "opti-zoom";
 const char QCameraParameters::KEY_QC_SUPPORTED_OPTI_ZOOM_MODES[] = "opti-zoom-values";
+const char QCameraParameters::KEY_QC_WB_MANUAL_CCT[] = "wb-manual-cct";
+const char QCameraParameters::KEY_QC_WB_CURRENT_CCT[] = "wb-current-cct";
+const char QCameraParameters::KEY_QC_MIN_WB_CCT[] = "min-wb-cct";
+const char QCameraParameters::KEY_QC_MAX_WB_CCT[] = "max-wb-cct";
 
 // Values for effect settings.
 const char QCameraParameters::EFFECT_EMBOSS[] = "emboss";
@@ -218,6 +232,7 @@ const char QCameraParameters::ISO_200[] = "ISO200";
 const char QCameraParameters::ISO_400[] = "ISO400";
 const char QCameraParameters::ISO_800[] = "ISO800";
 const char QCameraParameters::ISO_1600[] = "ISO1600";
+const char QCameraParameters::ISO_3200[] = "ISO3200";
 
 // Values for auto exposure settings.
 const char QCameraParameters::AUTO_EXPOSURE_FRAME_AVG[] = "frame-average";
@@ -428,7 +443,8 @@ const QCameraParameters::QCameraMap QCameraParameters::FOCUS_MODES_MAP[] = {
     { FOCUS_MODE_FIXED,              CAM_FOCUS_MODE_FIXED },
     { FOCUS_MODE_EDOF,               CAM_FOCUS_MODE_EDOF },
     { FOCUS_MODE_CONTINUOUS_PICTURE, CAM_FOCUS_MODE_CONTINOUS_PICTURE },
-    { FOCUS_MODE_CONTINUOUS_VIDEO,   CAM_FOCUS_MODE_CONTINOUS_VIDEO }
+    { FOCUS_MODE_CONTINUOUS_VIDEO,   CAM_FOCUS_MODE_CONTINOUS_VIDEO },
+    { FOCUS_MODE_MANUAL_POSITION,    CAM_FOCUS_MODE_MANUAL},
 };
 
 const QCameraParameters::QCameraMap QCameraParameters::EFFECT_MODES_MAP[] = {
@@ -491,7 +507,8 @@ const QCameraParameters::QCameraMap QCameraParameters::WHITE_BALANCE_MODES_MAP[]
     { WHITE_BALANCE_DAYLIGHT,        CAM_WB_MODE_DAYLIGHT },
     { WHITE_BALANCE_CLOUDY_DAYLIGHT, CAM_WB_MODE_CLOUDY_DAYLIGHT },
     { WHITE_BALANCE_TWILIGHT,        CAM_WB_MODE_TWILIGHT },
-    { WHITE_BALANCE_SHADE,           CAM_WB_MODE_SHADE }
+    { WHITE_BALANCE_SHADE,           CAM_WB_MODE_SHADE },
+    { WHITE_BALANCE_MANUAL_CCT,      CAM_WB_MODE_CCT},
 };
 
 const QCameraParameters::QCameraMap QCameraParameters::ANTIBANDING_MODES_MAP[] = {
@@ -508,7 +525,8 @@ const QCameraParameters::QCameraMap QCameraParameters::ISO_MODES_MAP[] = {
     { ISO_200,   CAM_ISO_MODE_200 },
     { ISO_400,   CAM_ISO_MODE_400 },
     { ISO_800,   CAM_ISO_MODE_800 },
-    { ISO_1600,  CAM_ISO_MODE_1600 }
+    { ISO_1600,  CAM_ISO_MODE_1600 },
+    { ISO_3200,  CAM_ISO_MODE_3200 }
 };
 
 const QCameraParameters::QCameraMap QCameraParameters::HFR_MODES_MAP[] = {
@@ -630,6 +648,8 @@ QCameraParameters::QCameraParameters()
       m_bHDRThumbnailProcessNeeded(false),
       m_bHDR1xExtraBufferNeeded(true),
       m_bHDROutputCropEnabled(false),
+      m_curCCT(-1),
+      m_curFocusPos(-1),
       m_tempMap(),
       m_bAFBracketingOn(false),
       m_bChromaFlashOn(false),
@@ -1831,6 +1851,35 @@ int32_t QCameraParameters::setSceneFocusMode(const QCameraParameters& params)
 }
 
 /*===========================================================================
+ * FUNCTION   : setFocusPosition
+ *
+ * DESCRIPTION: set focus position from user setting
+ *
+ * PARAMETERS :
+ *   @params  : user setting parameters
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t  QCameraParameters::setFocusPosition(const QCameraParameters& params)
+{
+    const char *pos = params.get(KEY_QC_MANUAL_FOCUS_POSITION);
+    const char *prev_pos = get(KEY_QC_MANUAL_FOCUS_POSITION);
+    const char *type = params.get(KEY_QC_MANUAL_FOCUS_POS_TYPE);
+    const char *prev_type = get(KEY_QC_MANUAL_FOCUS_POS_TYPE);
+
+    if ((pos != NULL) && (type != NULL)) {
+        if (prev_pos  == NULL || (strcmp(pos, prev_pos) != 0) ||
+            prev_type == NULL || (strcmp(type, prev_type) != 0)) {
+            return setFocusPosition(type, pos);
+        }
+    }
+
+    return NO_ERROR;
+}
+
+/*===========================================================================
  * FUNCTION   : setBrightness
  *
  * DESCRIPTION: set brightness control value from user setting
@@ -2091,6 +2140,32 @@ int32_t QCameraParameters::setWhiteBalance(const QCameraParameters& params)
 }
 
 /*===========================================================================
+ * FUNCTION   : setWBManualCCT
+ *
+ * DESCRIPTION: set wb cct value from user setting
+ *
+ * PARAMETERS :
+ *   @params  : user setting parameters
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t  QCameraParameters::setWBManualCCT(const QCameraParameters& params)
+{
+    const char *str = params.get(KEY_QC_WB_MANUAL_CCT);
+    const char *prev_str = get(KEY_QC_WB_MANUAL_CCT);
+    if (str != NULL) {
+        if (prev_str == NULL ||
+            strcmp(str, prev_str) != 0) {
+            return setWBManualCCT(str);
+        }
+    }
+
+    return NO_ERROR;
+}
+
+/*===========================================================================
  * FUNCTION   : setAntibanding
  *
  * DESCRIPTION: set antibanding value from user setting
@@ -2304,6 +2379,32 @@ int32_t  QCameraParameters::setISOValue(const QCameraParameters& params)
             return setISOValue(str);
         }
     }
+    return NO_ERROR;
+}
+
+/*===========================================================================
+ * FUNCTION   : setExposureTime
+ *
+ * DESCRIPTION: set exposure time from user setting
+ *
+ * PARAMETERS :
+ *   @params  : user setting parameters
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t  QCameraParameters::setExposureTime(const QCameraParameters& params)
+{
+    const char *str = params.get(KEY_QC_EXPOSURE_TIME);
+    const char *prev_str = get(KEY_QC_EXPOSURE_TIME);
+    if (str != NULL) {
+        if (prev_str == NULL ||
+            strcmp(str, prev_str) != 0) {
+            return setExposureTime(str);
+        }
+    }
+
     return NO_ERROR;
 }
 
@@ -3495,6 +3596,7 @@ int32_t QCameraParameters::updateParameters(QCameraParameters& params,
     if ((rc = setContrast(params)))                     final_rc = rc;
     if ((rc = setFocusMode(params)))                    final_rc = rc;
     if ((rc = setISOValue(params)))                     final_rc = rc;
+    if ((rc = setExposureTime(params)))                 final_rc = rc;
     if ((rc = setSkinToneEnhancement(params)))          final_rc = rc;
     if ((rc = setFlash(params)))                        final_rc = rc;
     if ((rc = setAecLock(params)))                      final_rc = rc;
@@ -3506,8 +3608,10 @@ int32_t QCameraParameters::updateParameters(QCameraParameters& params,
     if ((rc = setAntibanding(params)))                  final_rc = rc;
     if ((rc = setExposureCompensation(params)))         final_rc = rc;
     if ((rc = setWhiteBalance(params)))                 final_rc = rc;
+    if ((rc = setWBManualCCT(params)))                  final_rc = rc;
     if ((rc = setSceneMode(params)))                    final_rc = rc;
     if ((rc = setFocusAreas(params)))                   final_rc = rc;
+    if ((rc = setFocusPosition(params)))                final_rc = rc;
     if ((rc = setMeteringAreas(params)))                final_rc = rc;
     if ((rc = setSelectableZoneAf(params)))             final_rc = rc;
     if ((rc = setRedeyeReduction(params)))              final_rc = rc;
@@ -3788,6 +3892,17 @@ int32_t QCameraParameters::initDefaultParameters()
         setMeteringAreas(DEFAULT_CAMERA_AREA);
     }
 
+    // set focus position, we should get them from m_pCapability
+    m_pCapability->min_focus_pos[CAM_MANUAL_FOCUS_MODE_INDEX] = 40;
+    m_pCapability->max_focus_pos[CAM_MANUAL_FOCUS_MODE_INDEX] = 60;
+    set(KEY_QC_MIN_FOCUS_POS_INDEX, m_pCapability->min_focus_pos[CAM_MANUAL_FOCUS_MODE_INDEX]);
+    set(KEY_QC_MAX_FOCUS_POS_INDEX, m_pCapability->max_focus_pos[CAM_MANUAL_FOCUS_MODE_INDEX]);
+
+    m_pCapability->min_focus_pos[CAM_MANUAL_FOCUS_MODE_DAC_CODE] = 0;
+    m_pCapability->max_focus_pos[CAM_MANUAL_FOCUS_MODE_DAC_CODE] = 1023;
+    set(KEY_QC_MIN_FOCUS_POS_DAC, m_pCapability->min_focus_pos[CAM_MANUAL_FOCUS_MODE_DAC_CODE]);
+    set(KEY_QC_MIN_FOCUS_POS_DAC, m_pCapability->max_focus_pos[CAM_MANUAL_FOCUS_MODE_DAC_CODE]);
+
     // Set Saturation
     set(KEY_QC_MIN_SATURATION, m_pCapability->saturation_ctrl.min_value);
     set(KEY_QC_MAX_SATURATION, m_pCapability->saturation_ctrl.max_value);
@@ -3860,6 +3975,12 @@ int32_t QCameraParameters::initDefaultParameters()
     set(KEY_SUPPORTED_WHITE_BALANCE, whitebalanceValues);
     setWhiteBalance(WHITE_BALANCE_AUTO);
 
+    // set supported wb cct, we should get them from m_pCapability
+    m_pCapability->min_wb_cct = 2000;
+    m_pCapability->max_wb_cct = 8000;
+    set(KEY_QC_MIN_WB_CCT, m_pCapability->min_wb_cct);
+    set(KEY_QC_MAX_WB_CCT, m_pCapability->max_wb_cct);
+
     // Set Flash mode
     if(m_pCapability->supported_flash_modes_cnt > 0) {
        String8 flashValues = createValuesString(
@@ -3890,6 +4011,13 @@ int32_t QCameraParameters::initDefaultParameters()
             sizeof(ISO_MODES_MAP) / sizeof(QCameraMap));
     set(KEY_QC_SUPPORTED_ISO_MODES, isoValues);
     setISOValue(ISO_AUTO);
+
+    // Set exposure time, we should get them from m_pCapability
+    m_pCapability->min_exposure_time = 200;
+    m_pCapability->max_exposure_time = 2000000;
+    set(KEY_QC_MIN_EXPOSURE_TIME, m_pCapability->min_exposure_time);
+    set(KEY_QC_MAX_EXPOSURE_TIME, m_pCapability->max_exposure_time);
+    //setExposureTime("0");
 
     // Set HFR
     String8 hfrValues = createHfrValuesString(
@@ -4521,6 +4649,75 @@ int32_t QCameraParameters::setFocusMode(const char *focusMode)
 }
 
 /*===========================================================================
+ * FUNCTION   : setFocusPosition
+ *
+ * DESCRIPTION: set focus position
+ *
+ * PARAMETERS :
+ *   @typeStr : focus position type, index or dac_code
+ *   @posStr : focus positon.
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t  QCameraParameters::setFocusPosition(const char *typeStr, const char *posStr)
+{
+    ALOGD("%s, type:%s, pos: %s", __func__, typeStr, posStr);
+    int32_t type = atoi(typeStr);
+    int32_t pos  = atoi(posStr);
+
+    if ((type >= CAM_MANUAL_FOCUS_MODE_INDEX) &&
+        (type < CAM_MANUAL_FOCUS_MODE_MAX)) {
+
+        // get max and min focus position from m_pCapability
+        int32_t minFocusPos = m_pCapability->min_focus_pos[type];
+        int32_t maxFocusPos = m_pCapability->max_focus_pos[type];
+        ALOGD("%s, focusPos min: %d, max: %d", __func__, minFocusPos, maxFocusPos);
+
+        if (pos >= minFocusPos && pos <= maxFocusPos) {
+            updateParamEntry(KEY_QC_MANUAL_FOCUS_POS_TYPE, typeStr);
+            updateParamEntry(KEY_QC_MANUAL_FOCUS_POSITION, posStr);
+
+            cam_manual_focus_parm_t manual_focus;
+            manual_focus.flag = (cam_manual_focus_mode_type)type;
+            manual_focus.af_manual_lens_position = pos;
+            return AddSetParmEntryToBatch(m_pParamBuf,
+                                          CAM_INTF_PARM_MANUAL_FOCUS_POS,
+                                          sizeof(manual_focus),
+                                          &manual_focus);
+        }
+    }
+
+    ALOGE("%s, invalid params, type:%d, pos: %d", __func__, type, pos);
+    return BAD_VALUE;
+}
+
+/*===========================================================================
+ * FUNCTION   : updateCurrentFocusPosition
+ *
+ * DESCRIPTION: update current focus position from metadata callback
+ *
+ * PARAMETERS :
+ *   @pos : current focus position
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t  QCameraParameters::updateCurrentFocusPosition(int32_t pos)
+{
+    if (pos != m_curFocusPos) {
+        ALOGE("update focus position. old:%d, now:%d", m_curFocusPos, pos);
+        m_curFocusPos = pos;
+        set(KEY_QC_CURRENT_FOCUS_POSITION, pos);
+    }
+
+    return NO_ERROR;
+}
+
+
+/*===========================================================================
  * FUNCTION   : setSharpness
  *
  * DESCRIPTION: set sharpness control value
@@ -4828,6 +5025,42 @@ int32_t  QCameraParameters::setISOValue(const char *isoValue)
     }
     ALOGE("Invalid ISO value: %s",
           (isoValue == NULL) ? "NULL" : isoValue);
+    return BAD_VALUE;
+}
+
+/*===========================================================================
+ * FUNCTION   : setExposureTime
+ *
+ * DESCRIPTION: set exposure time
+ *
+ * PARAMETERS :
+ *   @expTimeStr : string of exposure time, range (1/5, 2000) in ms
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t  QCameraParameters::setExposureTime(const char *expTimeStr)
+{
+    if (expTimeStr != NULL) {
+        int32_t expTimeUs = atoi(expTimeStr);
+        int32_t min_exp_time = m_pCapability->min_exposure_time; /* 200 */
+        int32_t max_exp_time = m_pCapability->max_exposure_time; /* 2000000 */
+
+        // expTime == 0 means not to use manual exposure time.
+        if (expTimeUs == 0 ||
+            (expTimeUs >= min_exp_time && expTimeUs <= max_exp_time)) {
+            ALOGD("%s, exposure time: %d", __func__, expTimeUs);
+            updateParamEntry(KEY_QC_EXPOSURE_TIME, expTimeStr);
+            return AddSetParmEntryToBatch(m_pParamBuf,
+                                          CAM_INTF_PARM_EXPOSURE_TIME,
+                                          sizeof(expTimeUs),
+                                          &expTimeUs);
+        }
+    }
+
+    ALOGE("Invalid exposure time, value: %s",
+          (expTimeStr == NULL) ? "NULL" : expTimeStr);
     return BAD_VALUE;
 }
 
@@ -5298,6 +5531,52 @@ int32_t QCameraParameters::setWhiteBalance(const char *wbStr)
     ALOGE("Invalid WhiteBalance value: %s", (wbStr == NULL) ? "NULL" : wbStr);
     return BAD_VALUE;
 }
+
+/*===========================================================================
+ * FUNCTION   : setWBManualCCT
+ *
+ * DESCRIPTION: set setWBManualCCT time
+ *
+ * PARAMETERS :
+ *   @cctStr : string of wb cct, range (2000, 8000) in K.
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t  QCameraParameters::setWBManualCCT(const char *cctStr)
+{
+    if (cctStr != NULL) {
+        int32_t cctVal = atoi(cctStr);
+        int32_t minCct = m_pCapability->min_wb_cct; /* 2000K */
+        int32_t maxCct = m_pCapability->max_wb_cct; /* 8000K */
+
+        if (cctVal >= minCct && cctVal <= maxCct) {
+            ALOGD("%s, cct value: %d", __func__, cctVal);
+            updateParamEntry(KEY_QC_WB_MANUAL_CCT, cctStr);
+            return AddSetParmEntryToBatch(m_pParamBuf,
+                                          CAM_INTF_PARM_WB_CCT,
+                                          sizeof(cctVal),
+                                          &cctVal);
+        }
+    }
+
+    ALOGE("Invalid cct, value: %s",
+          (cctStr == NULL) ? "NULL" : cctStr);
+    return BAD_VALUE;
+}
+
+int32_t QCameraParameters::updateCCTValue(int32_t cct)
+{
+    if (cct != m_curCCT) {
+        ALOGD("update current cct value. old:%d, now:%d", m_curCCT, cct);
+        m_curCCT = cct;
+        set(KEY_QC_WB_CURRENT_CCT, cct);
+    }
+
+    return NO_ERROR;
+}
+
 int QCameraParameters::getAutoFlickerMode()
 {
     /* Enable Advanced Auto Antibanding where we can set
@@ -6921,6 +7200,9 @@ uint16_t QCameraParameters::getExifIsoSpeed()
         break;
     case CAM_ISO_MODE_1600:
         isoSpeed = 1600;
+        break;
+    case CAM_ISO_MODE_3200:
+        isoSpeed = 3200;
         break;
     }
     return isoSpeed;
