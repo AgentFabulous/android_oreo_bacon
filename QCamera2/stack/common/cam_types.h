@@ -511,6 +511,13 @@ typedef enum {
     CAM_AE_STATE_PRECAPTURE
 } cam_ae_state_t;
 
+typedef enum {
+  CAM_CDS_MODE_OFF,
+  CAM_CDS_MODE_ON,
+  CAM_CDS_MODE_AUTO,
+  CAM_CDS_MODE_MAX
+} cam_cds_mode_type_t;
+
 typedef struct  {
     int32_t left;
     int32_t top;
@@ -948,6 +955,7 @@ typedef enum {
     CAM_INTF_PARM_SET_VFE_COMMAND,
     CAM_INTF_PARM_SET_PP_COMMAND,
     CAM_INTF_PARM_TINTLESS,
+    CAM_INTF_PARM_CDS_MODE,
 
     /* stream based parameters */
     CAM_INTF_PARM_DO_REPROCESS,
