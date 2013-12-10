@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <utils/Errors.h>
 #include <gralloc_priv.h>
+#include <gui/Surface.h>
 
 #include "QCamera2HWI.h"
 #include "QCameraMem.h"
@@ -1404,10 +1405,16 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
         mParameters.getNumOfExtraHDROutBufsIfNeeded() +
         mParameters.getNumOfExtraBuffersForImageProc();
 
-    if (!isNoDisplayMode() && mPreviewWindow != NULL) {
-        if (mPreviewWindow->get_min_undequeued_buffer_count(mPreviewWindow,&minUndequeCount)
-            != 0) {
-            ALOGE("get_min_undequeued_buffer_count  failed");
+    if (!isNoDisplayMode()) {
+        if(mPreviewWindow != NULL) {
+            if (mPreviewWindow->get_min_undequeued_buffer_count(mPreviewWindow,&minUndequeCount)
+                != 0) {
+                ALOGE("get_min_undequeued_buffer_count  failed");
+            }
+        } else {
+            //preview window might not be set at this point. So, query directly
+            //from BufferQueue implementation of gralloc buffers.
+            minUndequeCount = BufferQueue::MIN_UNDEQUEUED_BUFFERS;
         }
     }
 
