@@ -540,10 +540,11 @@ typedef enum {
 
 /* event from server */
 typedef enum {
-    CAM_EVENT_TYPE_MAP_UNMAP_DONE  = (1<<0),
-    CAM_EVENT_TYPE_AUTO_FOCUS_DONE = (1<<1),
-    CAM_EVENT_TYPE_ZOOM_DONE       = (1<<2),
-    CAM_EVENT_TYPE_DAEMON_DIED     = (1<<3),
+    CAM_EVENT_TYPE_MAP_UNMAP_DONE        = (1<<0),
+    CAM_EVENT_TYPE_AUTO_FOCUS_DONE       = (1<<1),
+    CAM_EVENT_TYPE_ZOOM_DONE             = (1<<2),
+    CAM_EVENT_TYPE_REPROCESS_STAGE_DONE  = (1<<3),
+    CAM_EVENT_TYPE_DAEMON_DIED           = (1<<4),
     CAM_EVENT_TYPE_MAX
 } cam_event_type_t;
 

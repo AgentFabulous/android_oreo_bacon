@@ -119,6 +119,8 @@ public:
     int32_t processJpegEvt(qcamera_jpeg_evt_payload_t *evt);
     int32_t getJpegPaddingReq(cam_padding_info_t &padding_info);
     QCameraReprocessChannel * getReprocChannel() {return m_pReprocChannel;};
+    bool getMultipleStages() { return mMultipleStages; };
+    void setMultipleStages(bool stages) { mMultipleStages = stages; };
 
 private:
     int32_t sendDataNotify(int32_t msg_type,
@@ -184,6 +186,7 @@ private:
     bool mUseJpegBurst;                 // use jpeg burst encoding mode
     bool mJpegMemOpt;
     uint8_t mNewJpegSessionNeeded;
+    bool mMultipleStages;               // multiple stages are present
 };
 
 }; // namespace qcamera
