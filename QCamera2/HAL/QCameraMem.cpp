@@ -1234,6 +1234,12 @@ int QCameraGrallocMemory::allocate(int count, int /*size*/)
                   __func__, strerror(-err), -err);
             ret = UNKNOWN_ERROR;
             for(int i = 0; i < cnt; i++) {
+                struct ion_handle_data ion_handle;
+                memset(&ion_handle, 0, sizeof(ion_handle));
+                ion_handle.handle = mMemInfo[i].handle;
+                if (ioctl(mMemInfo[i].main_ion_fd, ION_IOC_FREE, &ion_handle) < 0) {
+                    ALOGE("ion free failed");
+                }
                 if(mLocalFlag[i] != BUFFER_NOT_OWNED) {
                     err = mWindow->cancel_buffer(mWindow, mBufferHandle[i]);
                     ALOGD("%s: cancel_buffer: hdl =%p", __func__, (*mBufferHandle[i]));
