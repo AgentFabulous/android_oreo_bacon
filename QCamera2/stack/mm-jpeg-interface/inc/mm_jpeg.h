@@ -316,6 +316,9 @@ typedef struct mm_jpeg_job_session {
   OMX_EVENTTYPE omxEvent;
   int event_pending;
 
+  uint8_t *meta_enc_key;
+  uint32_t meta_enc_keylen;
+
   struct mm_jpeg_job_session *next_session;
 
   uint32_t curr_out_buf_idx;
