@@ -54,7 +54,8 @@ public:
 class QCameraAdjustFPS
 {
 public:
-    virtual int recalcFPSRange(int &minFPS, int &maxFPS) = 0;
+    virtual int recalcFPSRange(int &minFPS, int &maxFPS,
+            int &vidMinFps, int &vidMaxFps) = 0;
     virtual ~QCameraAdjustFPS() {}
 };
 
@@ -175,6 +176,7 @@ public:
     static const char KEY_QC_ORIENTATION[];
 
     static const char KEY_QC_VIDEO_HIGH_FRAME_RATE[];
+    static const char KEY_QC_VIDEO_HIGH_SPEED_RECORDING[];
     static const char KEY_QC_SUPPORTED_VIDEO_HIGH_FRAME_RATE_MODES[];
     static const char KEY_QC_HIGH_DYNAMIC_RANGE_IMAGING[];
     static const char KEY_QC_SUPPORTED_HDR_IMAGING_MODES[];
@@ -493,6 +495,8 @@ public:
     bool isZSLMode() {return m_bZslMode;};
     bool isNoDisplayMode() {return m_bNoDisplayMode;};
     bool isWNREnabled() {return m_bWNROn;};
+    bool isHfrMode() {return m_bHfrMode;};
+    void getHfrFps(cam_fps_range_t &pFpsRange) { pFpsRange = m_hfrFpsRange;};
     uint8_t getNumOfSnapshots();
     uint8_t getNumOfExtraHDRInBufsIfNeeded();
     uint8_t getNumOfExtraHDROutBufsIfNeeded();
@@ -614,6 +618,7 @@ private:
     int32_t setMCEValue(const QCameraParameters& );
     int32_t setDISValue(const QCameraParameters& params);
     int32_t setHighFrameRate(const QCameraParameters& );
+    int32_t setHighSpeedRecording(const QCameraParameters& );
     int32_t setLensShadeValue(const QCameraParameters& );
     int32_t setExposureCompensation(const QCameraParameters& );
     int32_t setWhiteBalance(const QCameraParameters& );
@@ -648,7 +653,8 @@ private:
     bool UpdateHFRFrameRate(const QCameraParameters& params);
 
     int32_t setAutoExposure(const char *autoExp);
-    int32_t setPreviewFpsRange(int minFPS,int maxFPS);
+    int32_t setPreviewFpsRange(int min_fps,int max_fps,
+            int vid_min_fps,int vid_max_fps);
     int32_t setEffect(const char *effect);
     int32_t setBrightness(int brightness);
     int32_t setFocusMode(const char *focusMode);
@@ -802,6 +808,8 @@ private:
     bool m_bChromaFlashOn;
     bool m_bOptiZoomOn;
     bool m_bUbiRefocus;
+    cam_fps_range_t m_hfrFpsRange;
+    bool m_bHfrMode;
 };
 
 }; // namespace qcamera

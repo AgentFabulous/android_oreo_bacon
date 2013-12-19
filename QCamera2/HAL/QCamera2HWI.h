@@ -245,7 +245,8 @@ public:
     virtual int thermalEvtHandle(qcamera_thermal_level_enum_t level,
             void *userdata, void *data);
 
-    virtual int recalcFPSRange(int &minFPS, int &maxFPS);
+    virtual int recalcFPSRange(int &minFPS, int &maxFPS,
+            int &vidMinFps, int &vidMaxFps);
 
     // Implementation of QCameraTorchInterface
     virtual int prepareTorchCamera();
@@ -387,6 +388,7 @@ private:
     bool needProcessPreviewFrame() {return m_stateMachine.isPreviewRunning();};
     bool isNoDisplayMode() {return mParameters.isNoDisplayMode();};
     bool isZSLMode() {return mParameters.isZSLMode();};
+    bool isHFRMode() {return mParameters.isHfrMode();};
     uint8_t numOfSnapshotsExpected() {
         return mParameters.isUbiRefocus() ? 1 : mParameters.getNumOfSnapshots();};
     bool isLongshotEnabled() { return mLongshotEnabled; };
