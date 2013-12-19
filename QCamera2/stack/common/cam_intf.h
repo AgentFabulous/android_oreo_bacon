@@ -31,8 +31,10 @@
 #define __QCAMERA_INTF_H__
 
 #include <media/msmb_isp.h>
+#include <semaphore.h>
 #include "cam_types.h"
 
+#define ONE_MB_OF_PARAMS (1024 * 1024)
 #define CAM_PRIV_IOCTL_BASE (V4L2_CID_PRIVATE_BASE + 14)
 typedef enum {
     /* session based parameters */
@@ -407,6 +409,10 @@ typedef struct {
 #define INCLUDE(PARAM_ID,DATATYPE,COUNT)  \
         DATATYPE member_variable_##PARAM_ID[ COUNT ]
 
+#define GET_NEXT_PARAM(TABLE_PTR, TYPE)    \
+        (TYPE *)((char *)TABLE_PTR +       \
+               TABLE_PTR->aligned_size)    \
+
 typedef union {
 /**************************************************************************************
  *          ID from (cam_intf_parm_type_t)          DATATYPE                     COUNT
@@ -592,9 +598,43 @@ typedef struct {
     uint8_t next_flagged_entry;
 } parm_entry_type_t;
 
+//we need to align these contiguous param structures in memory
+typedef struct {
+    cam_intf_parm_type_t entry_type;
+    uint32_t size;
+    uint32_t aligned_size;
+    char data[1];
+} parm_entry_type_new_t;
+
 typedef struct {
     uint8_t first_flagged_entry;
     parm_entry_type_t entry[CAM_INTF_PARM_MAX];
 } parm_buffer_t;
+
+typedef struct {
+    uint32_t num_entry;
+    uint32_t tot_rem_size;
+    uint32_t curr_size;
+    //there is no clear documentation in Android on the use of a
+    //named semaphore for inter-process synchronization, like
+    //the ones available in System V and Posix. However, as this
+    //semaphore will reside in a mapped memory between two
+    //processes, it's expected to work well. Detailed testing may
+    //be necessary. Semaphore is kicked in only in the extreme
+    //case of a batch set param, where memory memory for the
+    //initial batch is exhausted and caller waits before they are
+    //copied in the camera daemon
+    sem_t   cam_sync_sem;
+    char entry[1];
+} parm_buffer_new_t;
+
+#ifdef  __cplusplus
+extern "C" {
+#endif
+void *POINTER_OF_PARAM(cam_intf_parm_type_t PARAM_ID,
+                    void *TABLE_PTR);
+#ifdef  __cplusplus
+}
+#endif
 
 #endif /* __QCAMERA_INTF_H__ */

@@ -446,9 +446,9 @@ extern int32_t mm_camera_qbuf(mm_camera_obj_t *my_obj,
                               mm_camera_buf_def_t *buf);
 extern int32_t mm_camera_query_capability(mm_camera_obj_t *my_obj);
 extern int32_t mm_camera_set_parms(mm_camera_obj_t *my_obj,
-                                   parm_buffer_t *parms);
+                                   void *parms);
 extern int32_t mm_camera_get_parms(mm_camera_obj_t *my_obj,
-                                   parm_buffer_t *parms);
+                                   void *parms);
 extern int32_t mm_camera_map_buf(mm_camera_obj_t *my_obj,
                                  uint8_t buf_type,
                                  int fd,
