@@ -69,6 +69,7 @@ typedef enum
     MM_CAMERA_CMD_TYPE_SUPER_BUF_DATA_CB,    /* superbuf dataB CMD */
     MM_CAMERA_CMD_TYPE_CONFIG_NOTIFY, /* configure notify mode */
     MM_CAMERA_CMD_TYPE_FLUSH_QUEUE, /* flush queue */
+    MM_CAMERA_CMD_TYPE_GENERAL,  /* general cmd */
     MM_CAMERA_CMD_TYPE_MAX
 } mm_camera_cmdcb_type_t;
 
@@ -82,6 +83,17 @@ typedef struct {
     uint32_t num_buf_requested;
 } mm_camera_req_buf_t;
 
+typedef enum {
+    MM_CAMERA_GENERIC_CMD_TYPE_AE_BRACKETING,
+    MM_CAMERA_GENERIC_CMD_TYPE_AF_BRACKETING,
+    MM_CAMERA_GENERIC_CMD_TYPE_FLASH_BRACKETING,
+} mm_camera_generic_cmd_type_t;
+
+typedef struct {
+    mm_camera_generic_cmd_type_t type;
+    uint32_t payload[32];
+} mm_camera_generic_cmd_t;
+
 typedef struct {
     mm_camera_cmdcb_type_t cmd_type;
     union {
@@ -91,6 +103,7 @@ typedef struct {
         mm_camera_req_buf_t req_buf; /* num of buf requested */
         uint32_t frame_idx; /* frame idx boundary for flush superbuf queue*/
         mm_camera_super_buf_notify_mode_t notify_mode; /* notification mode */
+        mm_camera_generic_cmd_t gen_cmd;
     } u;
 } mm_camera_cmdcb_t;
 
@@ -254,6 +267,9 @@ typedef enum {
     MM_CHANNEL_EVT_GET_STREAM_PARM,
     MM_CHANNEL_EVT_DO_STREAM_ACTION,
     MM_CHANNEL_EVT_DELETE,
+    MM_CHANNEL_EVT_AF_BRACKETING,
+    MM_CHANNEL_EVT_AE_BRACKETING,
+    MM_CHANNEL_EVT_FLASH_BRACKETING,
 } mm_channel_evt_type_t;
 
 typedef struct {
@@ -302,6 +318,7 @@ typedef struct {
     mm_camera_channel_attr_t attr;
     uint32_t expected_frame_id;
     uint32_t match_cnt;
+    uint32_t expected_frame_id_without_led;
 } mm_channel_queue_t;
 
 typedef struct {
@@ -343,6 +360,9 @@ typedef struct mm_channel {
     /* control for zsl led */
     uint8_t startZSlSnapshotCalled;
     uint8_t needLEDFlash;
+
+    uint8_t need3ABracketing;
+    uint8_t isFlashBracketingEnabled;
 } mm_channel_t;
 
 /* struct to store information about pp cookie*/
@@ -569,4 +589,8 @@ extern int32_t mm_camera_cmd_thread_launch(
                                 void* user_data);
 extern int32_t mm_camera_cmd_thread_release(mm_camera_cmd_thread_t * cmd_thread);
 
+extern int32_t mm_camera_channel_bracketing(mm_camera_obj_t *my_obj,
+                                               mm_camera_bracketing_t bracketingtype,
+                                               uint32_t ch_id,
+                                               int32_t start_flag);
 #endif /* __MM_CAMERA_H__ */

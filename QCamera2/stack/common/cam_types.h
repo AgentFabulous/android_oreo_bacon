@@ -82,7 +82,7 @@
 #define MAX_PP_DATA_SIZE 2000
 #define MAX_STATS_DATA_SIZE 4000
 
-
+#define MAX_AF_BRACKETING_VALUES 5
 
 typedef enum {
     CAM_HAL_V1 = 1,
@@ -1092,6 +1092,10 @@ typedef enum {
     CAM_INTF_META_ASD_HDR_SCENE_DATA,
     CAM_INTF_META_PRIVATE_DATA,
     CAM_INTF_PARM_STATS_DEBUG_MASK,
+    /* Indicates streams ID of all the requested buffers */
+    CAM_INTF_META_STREAM_ID,
+    CAM_INTF_PARM_FOCUS_BRACKETING,
+    CAM_INTF_PARM_FLASH_BRACKETING,
 
     CAM_INTF_PARM_MAX
 } cam_intf_parm_type_t;
@@ -1254,6 +1258,9 @@ typedef struct {
 #define CAM_QCOM_FEATURE_CAC            (1<<9)
 #define CAM_QCOM_FEATURE_SCALE          (1<<10)
 #define CAM_QCOM_FEATURE_EFFECT         (1<<11)
+#define CAM_QCOM_FEATURE_UBIFOCUS       (1<<12)
+#define CAM_QCOM_FEATURE_CHROMA_FLASH   (1<<13)
+#define CAM_QCOM_FEATURE_OPTIZOOM       (1<<14)
 
 // Counter clock wise
 typedef enum {
@@ -1296,6 +1303,28 @@ typedef struct {
 } cam_scale_param_t;
 
 typedef struct {
+    uint8_t enable;
+    uint8_t burst_count;
+    uint8_t focus_steps[MAX_AF_BRACKETING_VALUES];
+} cam_af_bracketing_t;
+
+typedef struct {
+    uint8_t enable;
+    uint8_t burst_count;
+} cam_flash_bracketing_t;
+
+typedef struct {
+    uint8_t enable;
+    uint8_t burst_count;
+    uint8_t zoom_threshold;
+} cam_opti_zoom_t;
+
+typedef enum {
+    CAM_FLASH_OFF,
+    CAM_FLASH_ON
+} cam_flash_value_t;
+
+typedef struct {
     /* reprocess feature mask */
     uint32_t feature_mask;
 
@@ -1308,6 +1337,10 @@ typedef struct {
     int32_t effect;
     cam_hdr_param_t hdr_param;
     cam_scale_param_t scale_param;
+
+    uint8_t zoom_level;
+    cam_flash_value_t flash_value;
+
 } cam_pp_feature_config_t;
 
 typedef struct {

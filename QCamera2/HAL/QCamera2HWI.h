@@ -388,6 +388,12 @@ private:
     bool removeSizeFromList(cam_dimension_t* size_list,
                             uint8_t length,
                             cam_dimension_t size);
+    int32_t configureBracketing();
+    int32_t configureAFBracketing();
+    int32_t configureFlashBracketing();
+    int32_t startZslBracketing(QCameraPicChannel *pZSLchannel);
+    int32_t configureOptiZoom();
+
     static void copyList(cam_dimension_t* src_list,
                    cam_dimension_t* dst_list, uint8_t len);
     static void camEvtHandle(uint32_t camera_handle,
@@ -505,6 +511,8 @@ private:
     int32_t mFlash;
     int32_t mRedEye;
     int32_t mFlashPresence;
+    bool mIs3ALocked;
+    int32_t mZoomLevel;
 };
 
 }; // namespace qcamera
