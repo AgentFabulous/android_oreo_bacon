@@ -1272,6 +1272,7 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
     bool hdr_output_crop = m_parent->mParameters.isHDROutputCropEnabled();
     bool crop_upscale_needed =
       m_parent->mParameters.isUbiFocusEnabled() ||
+      m_parent->mParameters.isChromaFlashEnabled() ||
       m_parent->mParameters.isOptiZoomEnabled();
 
     ALOGE("%s:%d] Crop needed %d", __func__, __LINE__, crop_upscale_needed);
