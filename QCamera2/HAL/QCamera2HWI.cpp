@@ -1399,7 +1399,10 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
 
     int minUndequeCount = 0;
     int minPPBufs = mParameters.getMinPPBufs();
-    int maxStreamBuf = zslQBuffers + minCircularBufNum;
+    int maxStreamBuf = zslQBuffers + minCircularBufNum +
+        mParameters.getNumOfExtraHDRInBufsIfNeeded() -
+        mParameters.getNumOfExtraHDROutBufsIfNeeded() +
+        mParameters.getNumOfExtraBuffersForImageProc();
 
     if (!isNoDisplayMode() && mPreviewWindow != NULL) {
         if (mPreviewWindow->get_min_undequeued_buffer_count(mPreviewWindow,&minUndequeCount)
@@ -1426,7 +1429,8 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
             bufferCnt = minCaptureBuffers +
                         mParameters.getNumOfExtraHDRInBufsIfNeeded() -
                         mParameters.getNumOfExtraHDROutBufsIfNeeded() +
-                        minPPBufs;
+                        minPPBufs +
+                        mParameters.getNumOfExtraBuffersForImageProc();
 
             if (bufferCnt > maxStreamBuf) {
                 bufferCnt = maxStreamBuf;
@@ -1449,7 +1453,8 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
                 bufferCnt = minCaptureBuffers +
                             mParameters.getNumOfExtraHDRInBufsIfNeeded() -
                             mParameters.getNumOfExtraHDROutBufsIfNeeded() +
-                            minPPBufs;
+                            minPPBufs +
+                            mParameters.getNumOfExtraBuffersForImageProc();
 
                 if (bufferCnt > maxStreamBuf) {
                     bufferCnt = maxStreamBuf;
@@ -1464,7 +1469,8 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
             bufferCnt = minCaptureBuffers +
                         mParameters.getNumOfExtraHDRInBufsIfNeeded() -
                         mParameters.getNumOfExtraHDROutBufsIfNeeded() +
-                        minPPBufs;
+                        minPPBufs +
+                        mParameters.getNumOfExtraBuffersForImageProc();
 
             if (bufferCnt > maxStreamBuf) {
                 bufferCnt = maxStreamBuf;
@@ -1485,7 +1491,8 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
                             mParameters.getNumOfExtraHDRInBufsIfNeeded() -
                             mParameters.getNumOfExtraHDROutBufsIfNeeded() +
                             mParameters.getMaxUnmatchedFramesInQueue() +
-                            CAMERA_MIN_STREAMING_BUFFERS;
+                            CAMERA_MIN_STREAMING_BUFFERS +
+                            mParameters.getNumOfExtraBuffersForImageProc();
             }
             if (bufferCnt > maxStreamBuf) {
                 bufferCnt = maxStreamBuf;
@@ -1495,10 +1502,6 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
     case CAM_STREAM_TYPE_OFFLINE_PROC:
         {
             bufferCnt = minCaptureBuffers;
-            if (bufferCnt > maxStreamBuf) {
-                bufferCnt = maxStreamBuf;
-            }
-            bufferCnt += mParameters.getNumOfExtraBuffersForImageProc();
         }
         break;
     case CAM_STREAM_TYPE_DEFAULT:
@@ -1685,7 +1688,8 @@ QCameraHeapMemory *QCamera2HardwareInterface::allocateStreamInfoBuf(
             streamInfo->streaming_mode = CAM_STREAMING_MODE_BURST;
             streamInfo->num_of_burst = mParameters.getNumOfSnapshots()
                 + mParameters.getNumOfExtraHDRInBufsIfNeeded()
-                - mParameters.getNumOfExtraHDROutBufsIfNeeded();
+                - mParameters.getNumOfExtraHDROutBufsIfNeeded()
+                + mParameters.getNumOfExtraBuffersForImageProc();
         }
         break;
     case CAM_STREAM_TYPE_POSTVIEW:
@@ -1695,7 +1699,8 @@ QCameraHeapMemory *QCamera2HardwareInterface::allocateStreamInfoBuf(
             streamInfo->streaming_mode = CAM_STREAMING_MODE_BURST;
             streamInfo->num_of_burst = mParameters.getNumOfSnapshots()
                 + mParameters.getNumOfExtraHDRInBufsIfNeeded()
-                - mParameters.getNumOfExtraHDROutBufsIfNeeded();
+                - mParameters.getNumOfExtraHDROutBufsIfNeeded()
+                + mParameters.getNumOfExtraBuffersForImageProc();
         }
         break;
     case CAM_STREAM_TYPE_VIDEO:
@@ -4151,6 +4156,17 @@ QCameraReprocessChannel *QCamera2HardwareInterface::addOnlineReprocChannel(
               gCamCapability[mCameraId]->hdr_bracketing_setting.num_frames;
     }
 
+    // Add non inplace image lib buffers only when ppproc is present,
+    // becuase pproc is non inplace and input buffers for img lib
+    // are output for pproc and this number of extra buffers is required
+    // If pproc is not there, input buffers for imglib are from snapshot stream
+    uint8_t imglib_extra_bufs = mParameters.getNumOfExtraBuffersForImageProc();
+    if (temp_feature_mask && imglib_extra_bufs) {
+        // 1 is added because getNumOfExtraBuffersForImageProc returns extra
+        // buffers assuming number of capture is already added
+        minStreamBufNum += imglib_extra_bufs + 1;
+    }
+
     if ( mLongshotEnabled ) {
         minStreamBufNum = getBufNumRequired(CAM_STREAM_TYPE_PREVIEW);
     }
@@ -4161,6 +4177,7 @@ QCameraReprocessChannel *QCamera2HardwareInterface::addOnlineReprocChannel(
                                               pp_config,
                                               pInputChannel,
                                               minStreamBufNum,
+                                              mParameters.getNumOfSnapshots(),
                                               &gCamCapability[mCameraId]->padding_info,
                                               mParameters,
                                               mLongshotEnabled);
