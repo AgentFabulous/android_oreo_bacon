@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -809,6 +809,7 @@ end:
  *==========================================================================*/
 int32_t QCameraPostProcessor::processPPData(mm_camera_super_buf_t *frame)
 {
+    bool needSuperBufMatch = m_parent->mParameters.generateThumbFromMain();
     if (m_bInited == FALSE) {
         ALOGE("%s: postproc not initialized yet", __func__);
         return UNKNOWN_ERROR;
@@ -816,13 +817,13 @@ int32_t QCameraPostProcessor::processPPData(mm_camera_super_buf_t *frame)
 
     qcamera_pp_data_t *job = (qcamera_pp_data_t *)m_ongoingPPQ.dequeue();
 
-    if (job == NULL || job->src_frame == NULL) {
+    if (!needSuperBufMatch && (job == NULL || job->src_frame == NULL) ) {
         ALOGE("%s: Cannot find reprocess job", __func__);
         return BAD_VALUE;
     }
 
-    if (m_parent->mParameters.isNV16PictureFormat() ||
-        m_parent->mParameters.isNV21PictureFormat()) {
+    if (!needSuperBufMatch && (m_parent->mParameters.isNV16PictureFormat() ||
+        m_parent->mParameters.isNV21PictureFormat())) {
         releaseSuperBuf(job->src_frame);
         free(job->src_frame);
         free(job);
@@ -849,11 +850,11 @@ int32_t QCameraPostProcessor::processPPData(mm_camera_super_buf_t *frame)
 
     memset(jpeg_job, 0, sizeof(qcamera_jpeg_data_t));
     jpeg_job->src_frame = frame;
-    jpeg_job->src_reproc_frame = job->src_frame;
+    jpeg_job->src_reproc_frame = job ? job->src_frame : NULL;
 
     // find meta data frame
     mm_camera_buf_def_t *meta_frame = NULL;
-    for (int i = 0; i < job->src_frame->num_bufs; i++) {
+    for (int i = 0; job && (i < job->src_frame->num_bufs); i++) {
         // look through input superbuf
         if (job->src_frame->bufs[i]->stream_type == CAM_STREAM_TYPE_METADATA) {
             meta_frame = job->src_frame->bufs[i];
@@ -877,11 +878,14 @@ int32_t QCameraPostProcessor::processPPData(mm_camera_super_buf_t *frame)
     }
 
     // free pp job buf
-    free(job);
+    if (job) {
+        free(job);
+    }
 
     // enqueu reprocessed frame to jpeg input queue
     m_inputJpegQ.enqueue((void *)jpeg_job);
 
+    ALOGD("%s: %d] ", __func__, __LINE__);
     // wait up data proc thread
     m_dataProcTh.sendCmd(CAMERA_CMD_TYPE_DO_NEXT_JOB, FALSE, FALSE);
 
@@ -1264,6 +1268,7 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
     mm_camera_super_buf_t *recvd_frame = jpeg_job_data->src_frame;
     cam_rect_t crop;
     cam_stream_parm_buffer_t param;
+    cam_stream_img_prop_t imgProp;
 
     // find channel
     QCameraChannel *pChannel = m_parent->getChannelByHandle(recvd_frame->ch_id);
@@ -1274,9 +1279,10 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
             pChannel = m_pReprocChannel;
         }
     }
+
     if (pChannel == NULL) {
-        ALOGE("%s: No corresponding channel (ch_id = %d) exist, return here",
-              __func__, recvd_frame->ch_id);
+        ALOGE("%s:%d] No corresponding channel (ch_id = %d) exist, return here",
+              __func__, __LINE__, recvd_frame->ch_id);
         return BAD_VALUE;
     }
 
@@ -1304,14 +1310,18 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
        return BAD_VALUE;
     }
 
+    if (m_parent->mParameters.generateThumbFromMain()) {
+        thumb_frame = NULL;
+        thumb_stream = NULL;
+    }
     //Sometimes thumbnail might be skipped in reprocess. Reprocessed channel will not have
     //thumbnail in such case.  Hence, look through reprocess source superbuf.
-    if (thumb_frame == NULL && jpeg_job_data->src_reproc_frame != NULL) {
+     else if (thumb_frame == NULL && jpeg_job_data->src_reproc_frame != NULL) {
         mm_camera_super_buf_t *src_reproc_frame = jpeg_job_data->src_reproc_frame;
         QCameraChannel *pSrcReprocChannel = m_parent->getChannelByHandle(src_reproc_frame->ch_id);
         if (pSrcReprocChannel == NULL) {
-            ALOGE("%s: No corresponding channel (ch_id = %d) exist, return here",
-                __func__, src_reproc_frame->ch_id);
+            ALOGE("%s:%d[ No corresponding channel (ch_id = %d) exist, return here",
+                __func__,  __LINE__, src_reproc_frame->ch_id);
             return BAD_VALUE;
         }
         // find thumnail frame
@@ -1402,13 +1412,12 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
     main_stream->getFrameDimension(src_dim);
 
     bool hdr_output_crop = m_parent->mParameters.isHDROutputCropEnabled();
-    bool crop_upscale_needed =
+    bool img_feature_enabled =
       m_parent->mParameters.isUbiFocusEnabled() ||
       m_parent->mParameters.isChromaFlashEnabled() ||
       m_parent->mParameters.isOptiZoomEnabled();
 
-    ALOGE("%s:%d] Crop needed %d", __func__, __LINE__, crop_upscale_needed);
-    hdr_output_crop = hdr_output_crop || crop_upscale_needed;
+    ALOGD("%s:%d] Crop needed %d", __func__, __LINE__, img_feature_enabled);
     crop.left = 0;
     crop.top = 0;
     crop.height = src_dim.height;
@@ -1431,15 +1440,43 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
            }
         }
     }
+    if (img_feature_enabled) {
+        memset(&param, 0, sizeof(cam_stream_parm_buffer_t));
+        param.type = CAM_STREAM_PARAM_TYPE_GET_IMG_PROP;
+
+        ret = main_stream->getParameter(param);
+        if (ret != NO_ERROR) {
+            ALOGE("%s: stream getParameter for reprocess failed", __func__);
+        } else {
+            imgProp = param.imgProp;
+            main_stream->setCropInfo(imgProp.crop);
+            crop = imgProp.crop;
+            thumb_stream = NULL; /* use thumbnail from main image */
+            if (imgProp.is_raw_image) {
+               camera_memory_t *mem = memObj->getMemory(
+                   main_frame->buf_idx, false);
+               ALOGE("%s:%d] Process raw image %p %d", __func__, __LINE__,
+                   mem, imgProp.size);
+               /* dump image */
+               if (mem && mem->data) {
+                   CAM_DUMP_TO_FILE("/data/local/ubifocus", "DepthMapImage",
+                                    -1, "y",
+                                    (uint8_t *)mem->data,
+                                    imgProp.size);
+               }
+               return NO_ERROR;
+            }
+        }
+    }
 
     cam_dimension_t dst_dim;
 
-    if (hdr_output_crop && crop.height && !crop_upscale_needed) {
+    if (hdr_output_crop && crop.height) {
         dst_dim.height = crop.height;
     } else {
         dst_dim.height = src_dim.height;
     }
-    if (hdr_output_crop && crop.width && !crop_upscale_needed) {
+    if (hdr_output_crop && crop.width) {
         dst_dim.width = crop.width;
     } else {
         dst_dim.width = src_dim.width;
@@ -1560,8 +1597,8 @@ int32_t QCameraPostProcessor::processRawImageImpl(mm_camera_super_buf_t *recvd_f
         }
     }
     if (pChannel == NULL) {
-        ALOGE("%s: No corresponding channel (ch_id = %d) exist, return here",
-              __func__, recvd_frame->ch_id);
+        ALOGE("%s:%d] No corresponding channel (ch_id = %d) exist, return here",
+              __func__, __LINE__, recvd_frame->ch_id);
         return BAD_VALUE;
     }
 
@@ -2100,8 +2137,8 @@ int32_t QCameraPostProcessor::setYUVFrameInfo(mm_camera_super_buf_t *recvd_frame
     }
 
     if (pChannel == NULL) {
-        ALOGE("%s: No corresponding channel (ch_id = %d) exist, return here",
-              __func__, recvd_frame->ch_id);
+        ALOGE("%s:%d] No corresponding channel (ch_id = %d) exist, return here",
+              __func__, __LINE__, recvd_frame->ch_id);
         return BAD_VALUE;
     }
 

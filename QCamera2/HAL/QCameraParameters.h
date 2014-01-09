@@ -1,7 +1,5 @@
 /*
-**
-** Copyright 2008, The Android Open Source Project
-** Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+** Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
 ** Not a Contribution. Apache license notifications and license are
 ** retained for attribution purposes only.
 **
@@ -563,14 +561,20 @@ public:
     bool setStreamConfigure(bool isCapture, bool previewAsPostview);
     uint8_t getNumOfExtraBuffersForImageProc();
     bool needThumbnailReprocess(uint32_t *pFeatureMask);
-    bool isUbiFocusEnabled() {return m_bAFBracketingOn;};
-    bool isChromaFlashEnabled() {return m_bChromaFlashOn;};
-    bool isOptiZoomEnabled() {return m_bOptiZoomOn;};
+    inline bool isUbiFocusEnabled() {return m_bAFBracketingOn;};
+    inline bool isChromaFlashEnabled() {return m_bChromaFlashOn;};
+    inline bool isOptiZoomEnabled() {return m_bOptiZoomOn;};
     int32_t commitAFBracket(cam_af_bracketing_t afBracket);
     int32_t commitFlashBracket(cam_flash_bracketing_t flashBracket);
     int32_t set3ALock(const char *lockStr);
     int32_t setAndCommitZoom(int zoom_level);
     uint8_t getBurstCountForBracketing();
+    inline bool isUbiRefocus() {return isUbiFocusEnabled() &&
+        (m_pCapability->ubifocus_af_bracketing_need.output_count > 1);};
+    inline uint32_t UfOutputCount() {
+        return m_pCapability->ubifocus_af_bracketing_need.output_count;};
+    inline bool generateThumbFromMain() {return isUbiFocusEnabled() ||
+        isChromaFlashEnabled() || isOptiZoomEnabled(); }
 private:
     int32_t setPreviewSize(const QCameraParameters& );
     int32_t setVideoSize(const QCameraParameters& );
@@ -789,6 +793,7 @@ private:
     bool m_bAFBracketingOn;
     bool m_bChromaFlashOn;
     bool m_bOptiZoomOn;
+    bool m_bUbiRefocus;
 };
 
 }; // namespace qcamera
