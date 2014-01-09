@@ -121,6 +121,7 @@ public:
     QCameraReprocessChannel * getReprocChannel() {return m_pReprocChannel;};
     bool getMultipleStages() { return mMultipleStages; };
     void setMultipleStages(bool stages) { mMultipleStages = stages; };
+    inline bool getJpegMemOpt() {return mJpegMemOpt;}
 
 private:
     int32_t sendDataNotify(int32_t msg_type,
