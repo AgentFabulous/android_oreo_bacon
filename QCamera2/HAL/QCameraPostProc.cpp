@@ -1632,7 +1632,7 @@ int32_t QCameraPostProcessor::processRawImageImpl(mm_camera_super_buf_t *recvd_f
         if (zslChannelUsed) {
             raw_mem = rawMemObj->getMemory(frame->buf_idx, false);
         } else {
-            raw_mem = m_parent->mGetMemory(-1,
+            raw_mem = m_parent->mGetMemory(frame->fd,
                                            frame->frame_len,
                                            1,
                                            m_parent->mCallbackCookie);
@@ -1640,7 +1640,6 @@ int32_t QCameraPostProcessor::processRawImageImpl(mm_camera_super_buf_t *recvd_f
                 ALOGE("%s : Not enough memory for RAW cb ", __func__);
                 return NO_MEMORY;
             }
-            memcpy(raw_mem->data, frame->buffer, frame->frame_len);
         }
     }
 
