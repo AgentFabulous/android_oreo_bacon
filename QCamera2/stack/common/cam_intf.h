@@ -469,6 +469,7 @@ typedef union {
     INCLUDE(CAM_INTF_PARM_MAX_DIMENSION,            cam_dimension_t,             1);
     INCLUDE(CAM_INTF_PARM_RAW_DIMENSION,            cam_dimension_t,             1);
     INCLUDE(CAM_INTF_PARM_TINTLESS,                 int32_t,                     1);
+    INCLUDE(CAM_INTF_PARM_CDS_MODE,                 cam_cds_mode_type_t,         1);
     INCLUDE(CAM_INTF_PARM_EZTUNE_CMD,               cam_eztune_cmd_data_t,       1);
 
     /* HAL3 specific */
