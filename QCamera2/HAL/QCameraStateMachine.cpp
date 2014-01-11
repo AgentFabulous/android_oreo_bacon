@@ -1672,6 +1672,16 @@ int32_t QCameraStateMachine::procEvtPicTakingState(qcamera_sm_evt_enum_t evt,
         {
             mm_camera_event_t *cam_evt = (mm_camera_event_t *)payload;
             switch (cam_evt->server_event_type) {
+            case CAM_EVENT_TYPE_REPROCESS_STAGE_DONE:
+                {
+                    if ( m_parent->isLongshotEnabled() ) {
+                        if(!m_parent->m_postprocessor.getMultipleStages()) {
+                            m_parent->m_postprocessor.setMultipleStages(true);
+                        }
+                        m_parent->playShutter();
+                    }
+                }
+                break;
             case CAM_EVENT_TYPE_DAEMON_DIED:
                 {
                     m_parent->sendEvtNotify(CAMERA_MSG_ERROR,
@@ -2762,6 +2772,16 @@ int32_t QCameraStateMachine::procEvtPreviewPicTakingState(qcamera_sm_evt_enum_t 
         {
             mm_camera_event_t *cam_evt = (mm_camera_event_t *)payload;
             switch (cam_evt->server_event_type) {
+            case CAM_EVENT_TYPE_REPROCESS_STAGE_DONE:
+                {
+                    if ( m_parent->isLongshotEnabled() ) {
+                        if(!m_parent->m_postprocessor.getMultipleStages()) {
+                            m_parent->m_postprocessor.setMultipleStages(true);
+                        }
+                        m_parent->playShutter();
+                    }
+                }
+                break;
             case CAM_EVENT_TYPE_DAEMON_DIED:
                 {
                     m_parent->sendEvtNotify(CAMERA_MSG_ERROR,

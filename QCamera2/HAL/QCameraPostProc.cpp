@@ -78,7 +78,8 @@ QCameraPostProcessor::QCameraPostProcessor(QCamera2HardwareInterface *cam_ctrl)
       mUseSaveProc(false),
       mUseJpegBurst(false),
       mJpegMemOpt(true),
-      mNewJpegSessionNeeded(true)
+      mNewJpegSessionNeeded(true),
+      mMultipleStages(false)
 {
     memset(&mJpegHandle, 0, sizeof(mJpegHandle));
     memset(&m_pJpegOutputMem, 0, sizeof(m_pJpegOutputMem));
@@ -224,6 +225,8 @@ int32_t QCameraPostProcessor::start(QCameraChannel *pSrcChannel)
 
     m_dataProcTh.sendCmd(CAMERA_CMD_TYPE_START_DATA_PROC, FALSE, FALSE);
     m_parent->m_cbNotifier.startSnapshots();
+
+    mMultipleStages = false;
 
     // Create Jpeg session
     if ( !m_parent->mParameters.getRecordingHintValue() &&
@@ -833,11 +836,8 @@ int32_t QCameraPostProcessor::processPPData(mm_camera_super_buf_t *frame)
         return processRawData(frame);
     }
 
-    if ( m_parent->isLongshotEnabled() ) {
-        // play shutter sound for longshot
-        // after reprocess is done
-        // TODO: Move this after CAC done event
-
+    if ( m_parent->isLongshotEnabled() &&
+         !getMultipleStages() ) {
         m_parent->playShutter();
     }
 
