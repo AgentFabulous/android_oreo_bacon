@@ -4278,6 +4278,10 @@ QCameraReprocessChannel *QCamera2HardwareInterface::addOnlineReprocChannel(
             pp_config.sharpness = mParameters.getInt(QCameraParameters::KEY_QC_SHARPNESS);
         }
 
+        if (gCamCapability[mCameraId]->min_required_pp_mask & CAM_QCOM_FEATURE_CROP) {
+            pp_config.feature_mask |= CAM_QCOM_FEATURE_CROP;
+        }
+
         if (mParameters.isWNREnabled()) {
             pp_config.feature_mask |= CAM_QCOM_FEATURE_DENOISE2D;
             pp_config.denoise2d.denoise_enable = 1;
