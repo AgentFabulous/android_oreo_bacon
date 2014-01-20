@@ -624,6 +624,7 @@ QCameraParameters::QCameraParameters()
       m_bFixedFrameRateSet(false),
       m_bHDREnabled(false),
       m_bAVTimerEnabled(false),
+      m_bMobiEnabled(false),
       m_AdjustFPS(NULL),
       m_bHDR1xFrameEnabled(true),
       m_HDRSceneEnabled(false),
@@ -3438,7 +3439,7 @@ int32_t QCameraParameters::setMobicat(const QCameraParameters& )
                                 sizeof(tune_cmd_t),
                                 &tune_cmd);
     }
-
+    m_bMobiEnabled = enableMobi;
     return ret;
 }
 
@@ -8335,6 +8336,21 @@ bool QCameraParameters::isHDREnabled()
 bool QCameraParameters::isAVTimerEnabled()
 {
     return m_bAVTimerEnabled;
+}
+
+/*===========================================================================
+ * FUNCTION   : isMobicatEnabled
+ *
+ * DESCRIPTION: if MobicatEnabled is enabled
+ *
+ * PARAMETERS : none
+ *
+ * RETURN     : true: needed
+ *              false: no need
+ *==========================================================================*/
+bool QCameraParameters::isMobicatEnabled()
+{
+    return m_bMobiEnabled;
 }
 
 /*===========================================================================

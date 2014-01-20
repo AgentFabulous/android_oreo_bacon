@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -1109,6 +1109,12 @@ void QCamera2HardwareInterface::metadata_stream_cb_routine(mm_camera_super_buf_t
         } else {
             ALOGE("%s: No memory for prep_snapshot qcamera_sm_internal_evt_payload_t", __func__);
         }
+    }
+
+    if (pMetaData->is_chromatix_mobicat_af_valid) {
+        memcpy(pme->mExifParams.af_mobicat_params,
+            pMetaData->chromatix_mobicat_af_data.private_mobicat_af_data,
+            sizeof(pme->mExifParams.af_mobicat_params));
     }
 
     stream->bufDone(frame->buf_idx);
