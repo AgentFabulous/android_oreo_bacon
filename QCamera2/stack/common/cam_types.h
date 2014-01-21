@@ -840,16 +840,18 @@ typedef struct {
 
 typedef struct {
     float exp_time;
+    float real_gain;
     int iso_value;
     uint32_t flash_needed;
     int settled;
+    uint32_t exp_index;
+    uint32_t line_count;
 } cam_ae_params_t;
 
 typedef struct {
     int32_t cct_value;
+    int32_t decision;
 } cam_awb_params_t;
-
-
 
 typedef struct {
     uint32_t tuning_data_version;

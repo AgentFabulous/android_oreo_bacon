@@ -1091,6 +1091,12 @@ void QCamera2HardwareInterface::metadata_stream_cb_routine(mm_camera_super_buf_t
         pme->mExifParams.ae_params = pMetaData->ae_params;
         pme->mFlashNeeded = pMetaData->ae_params.flash_needed;
     }
+    if(pMetaData->is_awb_params_valid) {
+        pme->mExifParams.awb_params = pMetaData->awb_params;
+    }
+    if(pMetaData->is_focus_valid) {
+        pme->mExifParams.af_params = pMetaData->focus_data;
+    }
 
     if (pMetaData->is_awb_params_valid) {
         ALOGD("%s, metadata for awb params.", __func__);
