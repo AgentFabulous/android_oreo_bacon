@@ -69,7 +69,6 @@ const char QCameraParameters::KEY_QC_FOCUS_ALGO[] = "selectable-zone-af";
 const char QCameraParameters::KEY_QC_SUPPORTED_FOCUS_ALGOS[] = "selectable-zone-af-values";
 const char QCameraParameters::KEY_QC_MANUAL_FOCUS_POSITION[] = "manual-focus-position";
 const char QCameraParameters::KEY_QC_MANUAL_FOCUS_POS_TYPE[] = "manual-focus-pos-type";
-const char QCameraParameters::KEY_QC_CURRENT_FOCUS_POSITION[] = "current-focus-position";
 const char QCameraParameters::KEY_QC_MIN_FOCUS_POS_INDEX[] = "min-focus-pos-index";
 const char QCameraParameters::KEY_QC_MAX_FOCUS_POS_INDEX[] = "max-focus-pos-index";
 const char QCameraParameters::KEY_QC_MIN_FOCUS_POS_DAC[] = "min-focus-pos-dac";
@@ -129,7 +128,6 @@ const char QCameraParameters::KEY_QC_SUPPORTED_CHROMA_FLASH_MODES[] = "chroma-fl
 const char QCameraParameters::KEY_QC_OPTI_ZOOM[] = "opti-zoom";
 const char QCameraParameters::KEY_QC_SUPPORTED_OPTI_ZOOM_MODES[] = "opti-zoom-values";
 const char QCameraParameters::KEY_QC_WB_MANUAL_CCT[] = "wb-manual-cct";
-const char QCameraParameters::KEY_QC_WB_CURRENT_CCT[] = "wb-current-cct";
 const char QCameraParameters::KEY_QC_MIN_WB_CCT[] = "min-wb-cct";
 const char QCameraParameters::KEY_QC_MAX_WB_CCT[] = "max-wb-cct";
 
@@ -1926,6 +1924,14 @@ int32_t QCameraParameters::setSceneFocusMode(const QCameraParameters& params)
  *==========================================================================*/
 int32_t  QCameraParameters::setFocusPosition(const QCameraParameters& params)
 {
+    const char *focus_str = params.get(KEY_FOCUS_MODE);
+    ALOGD("%s, current focus mode: %s", __func__, focus_str);
+
+    if (strcmp(focus_str, FOCUS_MODE_MANUAL_POSITION)) {
+        ALOGI("%s, dont set focus pos to back-end!", __func__);
+        return NO_ERROR;
+    }
+
     const char *pos = params.get(KEY_QC_MANUAL_FOCUS_POSITION);
     const char *prev_pos = get(KEY_QC_MANUAL_FOCUS_POSITION);
     const char *type = params.get(KEY_QC_MANUAL_FOCUS_POS_TYPE);
@@ -2215,6 +2221,14 @@ int32_t QCameraParameters::setWhiteBalance(const QCameraParameters& params)
  *==========================================================================*/
 int32_t  QCameraParameters::setWBManualCCT(const QCameraParameters& params)
 {
+    const char *wb_str = params.get(KEY_WHITE_BALANCE);
+    ALOGD("%s, current wb mode: %s", __func__, wb_str);
+
+    if (strcmp(wb_str, WHITE_BALANCE_MANUAL_CCT)) {
+        ALOGI("%s, dont set cct to back-end.", __func__);
+        return NO_ERROR;
+    }
+
     const char *str = params.get(KEY_QC_WB_MANUAL_CCT);
     const char *prev_str = get(KEY_QC_WB_MANUAL_CCT);
     if (str != NULL) {
@@ -4793,6 +4807,7 @@ int32_t  QCameraParameters::setFocusPosition(const char *typeStr, const char *po
         ALOGD("%s, focusPos min: %d, max: %d", __func__, minFocusPos, maxFocusPos);
 
         if (pos >= minFocusPos && pos <= maxFocusPos) {
+            m_curFocusPos = pos;
             updateParamEntry(KEY_QC_MANUAL_FOCUS_POS_TYPE, typeStr);
             updateParamEntry(KEY_QC_MANUAL_FOCUS_POSITION, posStr);
 
@@ -4827,7 +4842,7 @@ int32_t  QCameraParameters::updateCurrentFocusPosition(int32_t pos)
     if (pos != m_curFocusPos) {
         ALOGE("update focus position. old:%d, now:%d", m_curFocusPos, pos);
         m_curFocusPos = pos;
-        set(KEY_QC_CURRENT_FOCUS_POSITION, pos);
+        set(KEY_QC_MANUAL_FOCUS_POSITION, pos);
     }
 
     return NO_ERROR;
@@ -5670,6 +5685,7 @@ int32_t  QCameraParameters::setWBManualCCT(const char *cctStr)
 
         if (cctVal >= minCct && cctVal <= maxCct) {
             ALOGD("%s, cct value: %d", __func__, cctVal);
+            m_curCCT = cctVal;
             updateParamEntry(KEY_QC_WB_MANUAL_CCT, cctStr);
             return AddSetParmEntryToBatch(m_pParamBuf,
                                           CAM_INTF_PARM_WB_CCT,
@@ -5688,7 +5704,7 @@ int32_t QCameraParameters::updateCCTValue(int32_t cct)
     if (cct != m_curCCT) {
         ALOGD("update current cct value. old:%d, now:%d", m_curCCT, cct);
         m_curCCT = cct;
-        set(KEY_QC_WB_CURRENT_CCT, cct);
+        set(KEY_QC_WB_MANUAL_CCT, cct);
     }
 
     return NO_ERROR;
