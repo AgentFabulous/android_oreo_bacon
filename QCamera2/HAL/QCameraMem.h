@@ -79,7 +79,7 @@ protected:
     struct QCameraMemInfo {
         int fd;
         int main_ion_fd;
-        struct ion_handle *handle;
+        ion_user_handle_t handle;
         uint32_t size;
         bool cached;
         int heap_id;
