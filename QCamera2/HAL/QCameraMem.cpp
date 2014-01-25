@@ -122,9 +122,9 @@ int QCameraMemory::cacheOpsInternal(int index, unsigned int cmd, void *vaddr)
     custom_data.cmd = cmd;
     custom_data.arg = (unsigned long)&cache_inv_data;
 
-    ALOGV("%s: addr = %p, fd = %d, handle = %p length = %d, ION Fd = %d",
+    ALOGV("%s: addr = %p, fd = %d, handle = %lx length = %d, ION Fd = %d",
          __func__, cache_inv_data.vaddr, cache_inv_data.fd,
-         cache_inv_data.handle, cache_inv_data.length,
+         (unsigned long)cache_inv_data.handle, cache_inv_data.length,
          mMemInfo[index].main_ion_fd);
     ret = ioctl(mMemInfo[index].main_ion_fd, ION_IOC_CUSTOM, &custom_data);
     if (ret < 0)
@@ -365,8 +365,8 @@ int QCameraMemory::allocOneBuffer(QCameraMemInfo &memInfo,
     memInfo.cached = cached;
     memInfo.heap_id = heap_id;
 
-    ALOGD("%s : ION buffer %p with size %d allocated",
-            __func__, memInfo.handle, size);
+    ALOGD("%s : ION buffer %lx with size %d allocated",
+            __func__, (unsigned long)memInfo.handle, size);
     return OK;
 
 ION_MAP_FAILED:
@@ -405,7 +405,7 @@ void QCameraMemory::deallocOneBuffer(QCameraMemInfo &memInfo)
         close(memInfo.main_ion_fd);
         memInfo.main_ion_fd = 0;
     }
-    memInfo.handle = NULL;
+    memInfo.handle = 0;
     memInfo.size = 0;
 }
 
@@ -521,8 +521,8 @@ int QCameraMemoryPool::findBufferLocked(
             ((*it).heap_id == heap_id) &&
             ((*it).cached == cached) ) {
             memInfo = *it;
-            ALOGE("%s : Found buffer %p size %d",
-                    __func__, memInfo.handle, memInfo.size);
+            ALOGE("%s : Found buffer %lx size %d",
+                    __func__, (unsigned long)memInfo.handle, memInfo.size);
             mPools[streamType].erase(it);
             rc = NO_ERROR;
             break;
