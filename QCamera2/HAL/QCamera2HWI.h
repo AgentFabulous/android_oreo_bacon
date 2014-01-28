@@ -108,6 +108,14 @@ typedef struct {
 #define QCAMERA_ION_USE_NOCACHE false
 #define MAX_ONGOING_JOBS 25
 
+/** IMG_SWAP
+ *  @a: input a
+ *  @b: input b
+ *
+ *  Swaps the input values
+ **/
+#define IMG_SWAP(a, b) ({typeof(a) c; c=a; a=b; b=c;})
+
 typedef enum {
     QCAMERA_NOTIFY_CALLBACK,
     QCAMERA_DATA_CALLBACK,
