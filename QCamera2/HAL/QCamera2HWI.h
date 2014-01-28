@@ -399,6 +399,8 @@ private:
     int32_t configureAFBracketing(bool enable = true);
     int32_t configureFlashBracketing();
     int32_t startBracketing(QCameraPicChannel *pZSLchannel);
+    int32_t configureZSLHDRBracketing();
+    int32_t startZslBracketing(QCameraPicChannel *pZSLchannel);
     int32_t configureOptiZoom();
     inline void setOutputImageCount(uint32_t aCount) {mOutputCount = aCount;}
     inline uint32_t getOutputImageCount() {return mOutputCount;}
