@@ -4382,8 +4382,7 @@ QCameraReprocessChannel *QCamera2HardwareInterface::addOnlineReprocChannel(
     temp_feature_mask &= ~CAM_QCOM_FEATURE_DENOISE2D;
     temp_feature_mask &= ~CAM_QCOM_FEATURE_HDR;
     if (temp_feature_mask && mParameters.isHDREnabled()) {
-          minStreamBufNum =
-              gCamCapability[mCameraId]->hdr_bracketing_setting.num_frames;
+        minStreamBufNum = 1 + mParameters.getNumOfExtraHDRInBufsIfNeeded();
     }
 
     // Add non inplace image lib buffers only when ppproc is present,
