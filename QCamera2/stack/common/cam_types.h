@@ -377,7 +377,10 @@ typedef struct {
 typedef struct {
     float min_fps;
     float max_fps;
+    float video_min_fps;
+    float video_max_fps;
 } cam_fps_range_t;
+
 
 typedef enum {
     CAM_HFR_MODE_OFF,
