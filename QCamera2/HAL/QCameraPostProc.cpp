@@ -1579,6 +1579,14 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
 
     jpg_job.encode_job.cam_exif_params = m_parent->mExifParams;
 
+    if (NULL != jpg_job.encode_job.p_metadata &&
+        m_parent->mParameters.isMobicatEnabled()) {
+        memcpy(jpg_job.encode_job.p_metadata->
+            chromatix_mobicat_af_data.private_mobicat_af_data,
+            jpg_job.encode_job.cam_exif_params.af_mobicat_params,
+            sizeof(jpg_job.encode_job.cam_exif_params.af_mobicat_params));
+    }
+
     ALOGE("[KPI Perf] %s : PROFILE_JPEG_JOB_START", __func__);
     ret = mJpegHandle.start_job(&jpg_job, &jobId);
     if (ret == NO_ERROR) {

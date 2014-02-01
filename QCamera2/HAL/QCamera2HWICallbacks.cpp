@@ -1116,6 +1116,12 @@ void QCamera2HardwareInterface::metadata_stream_cb_routine(mm_camera_super_buf_t
         }
     }
 
+    if (pMetaData->is_chromatix_mobicat_af_valid) {
+        memcpy(pme->mExifParams.af_mobicat_params,
+            pMetaData->chromatix_mobicat_af_data.private_mobicat_af_data,
+            sizeof(pme->mExifParams.af_mobicat_params));
+    }
+
     stream->bufDone(frame->buf_idx);
     free(super_frame);
 

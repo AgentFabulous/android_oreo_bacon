@@ -842,6 +842,10 @@ typedef struct {
 }tuning_params_t;
 
 typedef struct {
+  uint8_t private_mobicat_af_data[MAX_AF_STATS_DATA_SIZE];
+} cam_chromatix_mobicat_af_t;
+
+typedef struct {
   uint8_t private_isp_data[MAX_ISP_DATA_SIZE];
 } cam_chromatix_lite_isp_t;
 
@@ -906,6 +910,9 @@ typedef  struct {
     /*Tuning Data*/
     uint8_t is_tuning_params_valid;
     tuning_params_t tuning_params;
+
+    uint8_t is_chromatix_mobicat_af_valid;
+    cam_chromatix_mobicat_af_t chromatix_mobicat_af_data;
 
     uint8_t is_chromatix_lite_isp_valid;
     cam_chromatix_lite_isp_t chromatix_lite_isp_data;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, 2013 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,6 +34,7 @@
 
 #define MM_JPEG_MAX_PLANES 3
 #define MM_JPEG_MAX_BUF CAM_MAX_NUM_BUFS_PER_STREAM
+#define MAX_AF_STATS_DATA_SIZE 1000
 
 typedef enum {
   MM_JPEG_FMT_YUV,
@@ -71,6 +72,8 @@ typedef enum {
 
 typedef struct {
   cam_ae_params_t ae_params;
+  cam_auto_focus_data_t af_params;
+  uint8_t af_mobicat_params[MAX_AF_STATS_DATA_SIZE];
   cam_sensor_params_t sensor_params;
   cam_flash_mode_t ui_flash_mode;
   exif_flash_func_pre_t flash_presence;
