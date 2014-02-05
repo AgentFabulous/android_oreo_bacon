@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -116,6 +116,10 @@ int encodeData(mm_camera_test_obj_t *test_obj, mm_camera_super_buf_t* recvd_fram
     /* fill in sink img param */
     job.encode_job.dst_index = 0;
 
+    if (test_obj->metadata != NULL) {
+      job.encode_job.p_metadata = test_obj->metadata;
+    }
+
     rc = test_obj->jpeg_ops.start_job(&job, &test_obj->current_job_id);
     if ( 0 != rc ) {
         free(test_obj->current_job_frames);
@@ -212,7 +216,19 @@ static void mm_app_snapshot_metadata_notify_cb(mm_camera_super_buf_t *bufs,
     /* The app will free the metadata, we don't need to bother here */
     pme->metadata = malloc(sizeof(cam_metadata_info_t));
   }
-  memcpy(pme->metadata , frame->buffer, sizeof(cam_metadata_info_t));
+
+  /* find meta data frame */
+  mm_camera_buf_def_t *meta_frame = NULL;
+  for (i = 0; i < bufs->num_bufs; i++) {
+    if (bufs->bufs[i]->stream_type == CAM_STREAM_TYPE_METADATA) {
+      meta_frame = bufs->bufs[i];
+      break;
+    }
+  }
+  /* fill in meta data frame ptr */
+  if (meta_frame != NULL) {
+    pme->metadata = (cam_metadata_info_t *)meta_frame->buffer;
+  }
 
   pMetadata = (cam_metadata_info_t *)frame->buffer;
 
