@@ -15,6 +15,7 @@ LOCAL_SHARED_LIBRARIES:= \
     libui \
     libgui \
     libcamera_client \
+    libskia \
 
 ifneq ($(call is-platform-sdk-version-at-least,18),true)
 
@@ -30,6 +31,8 @@ LOCAL_C_INCLUDES += \
     frameworks/base/include/surfaceflinger \
     frameworks/base/include/camera \
     frameworks/base/include/media \
+    external/skia/include/core \
+    external/skia/include/images \
 
 LOCAL_MODULE:= camera_test
 LOCAL_MODULE_TAGS:= tests
