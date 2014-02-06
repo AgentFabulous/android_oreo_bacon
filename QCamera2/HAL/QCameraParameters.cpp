@@ -2915,6 +2915,8 @@ int32_t QCameraParameters::setSceneMode(const QCameraParameters& params)
                     updateParamEntry(KEY_QC_HDR_NEED_1X, need_hdr_1x);
                 }
 
+                enableFlash(!m_bHDREnabled);
+
                 AddSetParmEntryToBatch(m_pParamBuf,
                                        CAM_INTF_PARM_HDR_NEED_1X,
                                        sizeof(m_bHDR1xFrameEnabled),
@@ -5276,6 +5278,12 @@ int32_t QCameraParameters::setFlash(const char *flashStr)
             }
 
             updateParamEntry(KEY_FLASH_MODE, flashStr);
+
+            // If hdr is enabled, flash mode just need to be stored
+            if (isHDREnabled()) {
+              return NO_ERROR;
+            }
+
             return AddSetParmEntryToBatch(m_pParamBuf,
                                           CAM_INTF_PARM_LED_MODE,
                                           sizeof(value),
@@ -6351,7 +6359,7 @@ int32_t QCameraParameters::setOptiZoom(const char *optiZoomStr)
 }
 
 /*===========================================================================
- * FUNCTION   : enableHDRAEBracket
+ * FUNCTION   : setHDRAEBracket
  *
  * DESCRIPTION: enables AE bracketing for HDR
  *
@@ -6364,7 +6372,6 @@ int32_t QCameraParameters::setOptiZoom(const char *optiZoomStr)
  *==========================================================================*/
 int32_t QCameraParameters::setHDRAEBracket(cam_exp_bracketing_t hdrBracket)
 {
-
     int32_t rc = NO_ERROR;
     if(initBatchUpdate(m_pParamBuf) < 0 ) {
         ALOGE("%s:Failed to initialize group update table", __func__);
@@ -6402,7 +6409,68 @@ int32_t QCameraParameters::setHDRAEBracket(cam_exp_bracketing_t hdrBracket)
  *==========================================================================*/
 int32_t QCameraParameters::restoreAEBracket()
 {
-    return setHDRAEBracket(m_AEBracketingClient);
+    int32_t rc = enableFlash(true);
+
+    if (NO_ERROR == rc) {
+      rc = setHDRAEBracket(m_AEBracketingClient);
+    }
+
+    return rc;
+}
+
+/*===========================================================================
+ * FUNCTION   : enableFlash
+ *
+ * DESCRIPTION: restores client flash configuration or disables flash
+ *
+ * PARAMETERS :
+ *   @enableFlash : enable flash
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t QCameraParameters::enableFlash(bool bflag)
+{
+    int32_t rc = NO_ERROR;
+    if(initBatchUpdate(m_pParamBuf) < 0 ) {
+        ALOGE("%s:Failed to initialize group update table", __func__);
+        return BAD_TYPE;
+    }
+
+    const char *str = get(KEY_FLASH_MODE);
+
+    if (!bflag) {
+        str = FLASH_MODE_OFF;
+    }
+
+    int32_t value = lookupAttr(FLASH_MODES_MAP,
+        sizeof(FLASH_MODES_MAP)/sizeof(QCameraMap),
+        str);
+
+    if (value != NAME_NOT_FOUND) {
+        ALOGV("%s: Setting Flash value %s", __func__, flashStr);
+
+        rc = AddSetParmEntryToBatch(m_pParamBuf,
+                                      CAM_INTF_PARM_LED_MODE,
+                                      sizeof(value),
+                                      &value);
+        if (rc != NO_ERROR) {
+           ALOGE("%s:Failed to set led mode", __func__);
+          return rc;
+        }
+    } else {
+        ALOGE("%s:Wrong saved led mode", __func__);
+        return rc;
+    }
+
+    rc = commitSetBatch();
+    if (rc != NO_ERROR) {
+        ALOGE("%s:Failed to configure HDR bracketing", __func__);
+        return rc;
+    }
+
+    return rc;
 }
 
 /*===========================================================================
@@ -7786,6 +7854,30 @@ int32_t QCameraParameters::updateRAW(cam_dimension_t max_dim)
     setRawSize(raw_dim);
     return rc;
 }
+
+/*===========================================================================
+ * FUNCTION   : setHDRSceneEnable
+ *
+ * DESCRIPTION: sets hdr scene deteced flag
+ *
+ * PARAMETERS :
+ *   @bflag : hdr scene deteced
+ *
+ * RETURN     : nothing
+ *==========================================================================*/
+void QCameraParameters::setHDRSceneEnable(bool bflag)
+{
+    bool bupdate = false;
+    if (m_HDRSceneEnabled != bflag) {
+        bupdate = true;
+    }
+    m_HDRSceneEnabled = bflag;
+
+    if (bupdate) {
+        enableFlash(!isHDREnabled());
+    }
+}
+
 /*===========================================================================
  * FUNCTION   : getASDStateString
  *

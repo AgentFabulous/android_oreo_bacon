@@ -2311,6 +2311,12 @@ int32_t QCamera2HardwareInterface::configureZSLHDRBracketing()
     ALOGD("%s: E",__func__);
     int32_t rc = NO_ERROR;
 
+    rc = mParameters.enableFlash(false);
+    if ( NO_ERROR != rc ) {
+        ALOGE("%s: cannot configure flash", __func__);
+        return rc;
+    }
+
     // 'values' should be in "idx1,idx2,idx3,..." format
     uint8_t hdrFrameCount = gCamCapability[mCameraId]->hdr_bracketing_setting.num_frames;
     ALOGE("%s : HDR values %d, %d frame count: %d",
