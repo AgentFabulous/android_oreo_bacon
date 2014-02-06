@@ -550,6 +550,26 @@ QCameraPicChannel::~QCameraPicChannel()
 }
 
 /*===========================================================================
+ * FUNCTION   : takePictureContinuous
+ *
+ * DESCRIPTION: send request for continuous snapshot frames
+ *
+ * PARAMETERS :
+*
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t QCameraPicChannel::takePictureContinuous()
+{
+    int32_t rc = m_camOps->configure_notify_mode(m_camHandle,
+                                        m_handle,
+                                        MM_CAMERA_SUPER_BUF_NOTIFY_CONTINUOUS);
+
+    return rc;
+}
+
+/*===========================================================================
  * FUNCTION   : takePicture
  *
  * DESCRIPTION: send request for queued snapshot frames
@@ -563,9 +583,15 @@ QCameraPicChannel::~QCameraPicChannel()
  *==========================================================================*/
 int32_t QCameraPicChannel::takePicture(uint8_t num_of_snapshot)
 {
-    int32_t rc = m_camOps->request_super_buf(m_camHandle,
+    int32_t rc = m_camOps->configure_notify_mode(m_camHandle,
+                                        m_handle,
+                                        MM_CAMERA_SUPER_BUF_NOTIFY_BURST);
+    if (rc == NO_ERROR) {
+        rc = m_camOps->request_super_buf(m_camHandle,
                                              m_handle,
                                              num_of_snapshot);
+    }
+
     return rc;
 }
 
@@ -582,7 +608,13 @@ int32_t QCameraPicChannel::takePicture(uint8_t num_of_snapshot)
  *==========================================================================*/
 int32_t QCameraPicChannel::cancelPicture()
 {
-    int32_t rc = m_camOps->cancel_super_buf_request(m_camHandle, m_handle);
+    int32_t rc = m_camOps->configure_notify_mode(m_camHandle,
+                                    m_handle,
+                                    MM_CAMERA_SUPER_BUF_NOTIFY_BURST);
+    if (rc == NO_ERROR) {
+        rc = m_camOps->cancel_super_buf_request(m_camHandle, m_handle);
+    }
+
     return rc;
 }
 

@@ -945,6 +945,7 @@ QCamera2HardwareInterface::QCamera2HardwareInterface(int cameraId)
       mPreviewWindow(NULL),
       mMsgEnabled(0),
       mStoreMetaDataInFrame(0),
+      mNumSnapshots(0),
       m_stateMachine(this),
       m_postprocessor(this),
       m_thermalAdapter(QCameraThermalAdapter::getInstance()),
@@ -2440,6 +2441,7 @@ int QCamera2HardwareInterface::takePicture()
         }
     }
     ALOGE("%s: numSnapshot = %d",__func__, numSnapshots);
+    mNumSnapshots = numSnapshots;
 
     getOrientation();
     ALOGD("%s: E", __func__);
@@ -2462,7 +2464,11 @@ int QCamera2HardwareInterface::takePicture()
                     return rc;
                 }
             }
-            rc = pZSLChannel->takePicture(numSnapshots);
+            if (mParameters.isOptiZoomEnabled()) {
+                rc = pZSLChannel->takePictureContinuous();
+            } else {
+                rc = pZSLChannel->takePicture(numSnapshots);
+            }
             if (rc != NO_ERROR) {
                 ALOGE("%s: cannot take ZSL picture", __func__);
                 m_postprocessor.stop();
