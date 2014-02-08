@@ -529,12 +529,11 @@ int32_t mm_camera_query_capability(mm_camera_obj_t *my_obj)
  *              domain socket. Corresponding fields of parameters to be set
  *              are already filled in by upper layer caller.
  *==========================================================================*/
-int32_t mm_camera_set_parms(mm_camera_obj_t *my_obj,
-                            parm_buffer_t *parms)
+int32_t mm_camera_set_parms(mm_camera_obj_t *my_obj, void *parms)
 {
     int32_t rc = -1;
     int32_t value = 0;
-    if (parms !=  NULL) {
+    if ((parm_buffer_new_t *)parms !=  NULL) {
         rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd, CAM_PRIV_PARM, &value);
     }
     pthread_mutex_unlock(&my_obj->cam_lock);
@@ -559,12 +558,11 @@ int32_t mm_camera_set_parms(mm_camera_obj_t *my_obj,
  *              fields of requested parameters will be filled in by server with
  *              detailed information.
  *==========================================================================*/
-int32_t mm_camera_get_parms(mm_camera_obj_t *my_obj,
-                            parm_buffer_t *parms)
+int32_t mm_camera_get_parms(mm_camera_obj_t *my_obj, void *parms)
 {
     int32_t rc = -1;
     int32_t value = 0;
-    if (parms != NULL) {
+    if ((parm_buffer_new_t *)parms != NULL) {
         rc = mm_camera_util_g_ctrl(my_obj->ctrl_fd, CAM_PRIV_PARM, &value);
     }
     pthread_mutex_unlock(&my_obj->cam_lock);
