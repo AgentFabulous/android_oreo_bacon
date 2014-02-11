@@ -93,6 +93,7 @@ public:
     QCameraPicChannel();
     virtual ~QCameraPicChannel();
     int32_t takePicture(uint8_t num_of_snapshot);
+    int32_t takePictureContinuous();
     int32_t cancelPicture();
     int32_t startBracketing(mm_camera_bracketing_t type);
 };
