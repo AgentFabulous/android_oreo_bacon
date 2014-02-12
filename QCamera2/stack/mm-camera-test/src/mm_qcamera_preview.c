@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -238,6 +238,10 @@ static void mm_app_zsl_notify_cb(mm_camera_super_buf_t *bufs,
               md_frame = bufs->bufs[i];
               break;
           }
+      }
+      /* fill in meta data frame ptr */
+      if (md_frame != NULL) {
+        pme->metadata = (cam_metadata_info_t *)md_frame->buffer;
       }
     }
     /* find snapshot frame */
