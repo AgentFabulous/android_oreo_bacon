@@ -194,13 +194,11 @@ public:
     static const char KEY_QC_TINTLESS_ENABLE[];
     static const char KEY_QC_CDS_MODE[];
     static const char KEY_QC_WB_MANUAL_CCT[];
-    static const char KEY_QC_WB_CURRENT_CCT[];
     static const char KEY_QC_MIN_WB_CCT[];
     static const char KEY_QC_MAX_WB_CCT[];
 
     static const char KEY_QC_MANUAL_FOCUS_POSITION[];
     static const char KEY_QC_MANUAL_FOCUS_POS_TYPE[];
-    static const char KEY_QC_CURRENT_FOCUS_POSITION[];
     static const char KEY_QC_MIN_FOCUS_POS_INDEX[];
     static const char KEY_QC_MAX_FOCUS_POS_INDEX[];
     static const char KEY_QC_MIN_FOCUS_POS_DAC[];
