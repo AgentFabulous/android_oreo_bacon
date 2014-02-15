@@ -74,6 +74,7 @@ typedef struct {
   cam_ae_params_t ae_params;
   cam_auto_focus_data_t af_params;
   uint8_t af_mobicat_params[MAX_AF_STATS_DATA_SIZE];
+  cam_awb_params_t awb_params;
   cam_sensor_params_t sensor_params;
   cam_flash_mode_t ui_flash_mode;
   exif_flash_func_pre_t flash_presence;
