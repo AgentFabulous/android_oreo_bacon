@@ -2217,6 +2217,8 @@ int32_t QCamera2HardwareInterface::configureBracketing()
         rc = configureFlashBracketing();
     } else if (mParameters.isHDREnabled()) {
         rc = configureZSLHDRBracketing();
+    } else if (mParameters.isAEBracketEnabled()) {
+        rc = configureAEBracketing();
     } else {
         ALOGE("%s: No Bracketing feature enabled!! ",__func__);
         rc = BAD_VALUE;
@@ -2301,7 +2303,7 @@ int32_t QCamera2HardwareInterface::configureFlashBracketing()
 /*===========================================================================
  * FUNCTION   : configureZSLHDRBracketing
  *
- * DESCRIPTION: configure Flash Bracketing.
+ * DESCRIPTION: configure HDR Bracketing.
  *
  * PARAMETERS : none
  *
@@ -2357,6 +2359,32 @@ int32_t QCamera2HardwareInterface::configureZSLHDRBracketing()
     ALOGD("%s: X",__func__);
     return rc;
 }
+
+/*===========================================================================
+ * FUNCTION   : configureAEBracketing
+ *
+ * DESCRIPTION: configure AE Bracketing.
+ *
+ * PARAMETERS : none
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t QCamera2HardwareInterface::configureAEBracketing()
+{
+    ALOGD("%s: E",__func__);
+    int32_t rc = NO_ERROR;
+
+    rc = mParameters.setAEBracketing();
+    if ( NO_ERROR != rc ) {
+        ALOGE("%s: cannot configure AE bracketing", __func__);
+        return rc;
+    }
+    ALOGD("%s: X",__func__);
+    return rc;
+}
+
 /*===========================================================================
  * FUNCTION   : configureOptiZoom
  *
@@ -2407,7 +2435,7 @@ int32_t QCamera2HardwareInterface::startBracketing(
         rc = pChannel->startBracketing(MM_CAMERA_AF_BRACKETING);
     } else if (mParameters.isChromaFlashEnabled()) {
         rc = pChannel->startBracketing(MM_CAMERA_FLASH_BRACKETING);
-    } else if (mParameters.isHDREnabled()) {
+    } else if (mParameters.isHDREnabled() || mParameters.isAEBracketEnabled()) {
         rc = pChannel->startBracketing(MM_CAMERA_AE_BRACKETING);
     } else {
         ALOGE("%s: No Bracketing feature enabled!",__func__);
@@ -2432,10 +2460,11 @@ int QCamera2HardwareInterface::takePicture()
     int rc = NO_ERROR;
     uint8_t numSnapshots = mParameters.getNumOfSnapshots();
 
-    if (mParameters.isUbiFocusEnabled()|
-        mParameters.isOptiZoomEnabled()|
-        mParameters.isHDREnabled()|
-        mParameters.isChromaFlashEnabled()) {
+    if (mParameters.isUbiFocusEnabled() ||
+            mParameters.isOptiZoomEnabled() ||
+            mParameters.isHDREnabled() ||
+            mParameters.isChromaFlashEnabled() ||
+            mParameters.isAEBracketEnabled()) {
         rc = configureBracketing();
         if (rc == NO_ERROR) {
             numSnapshots = mParameters.getBurstCountForBracketing();
@@ -2456,9 +2485,10 @@ int QCamera2HardwareInterface::takePicture()
                 ALOGE("%s: cannot start postprocessor", __func__);
                 return rc;
             }
-            if (mParameters.isUbiFocusEnabled()|
-                mParameters.isHDREnabled()|
-                mParameters.isChromaFlashEnabled()) {
+            if (mParameters.isUbiFocusEnabled() ||
+                    mParameters.isHDREnabled() ||
+                    mParameters.isChromaFlashEnabled() ||
+                    mParameters.isAEBracketEnabled()) {
                 rc = startBracketing(pZSLChannel);
                 if (rc != NO_ERROR) {
                     ALOGE("%s: cannot start zsl bracketing", __func__);
@@ -2679,6 +2709,10 @@ int QCamera2HardwareInterface::cancelPicture()
     //stop post processor
     m_postprocessor.stop();
 
+    if ( mParameters.isHDREnabled() || mParameters.isAEBracketEnabled()) {
+        mParameters.stopAEBracket();
+    }
+
     if (mParameters.isZSLMode()) {
         QCameraPicChannel *pZSLChannel =
             (QCameraPicChannel *)m_channels[QCAMERA_CH_TYPE_ZSL];
@@ -2686,10 +2720,6 @@ int QCamera2HardwareInterface::cancelPicture()
             pZSLChannel->cancelPicture();
         }
     } else {
-
-        if ( mParameters.isHDREnabled() ) {
-            mParameters.restoreAEBracket();
-        }
 
         // normal capture case
         if (mParameters.isJpegPictureFormat() ||
