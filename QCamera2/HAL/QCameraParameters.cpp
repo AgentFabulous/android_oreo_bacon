@@ -5151,7 +5151,19 @@ int32_t QCameraParameters::setZoom(int zoom_level)
  *==========================================================================*/
 int32_t  QCameraParameters::setISOValue(const char *isoValue)
 {
-    if (isoValue != NULL) {
+    char iso[PROPERTY_VALUE_MAX];
+    int32_t continous_iso = 0;
+    // Check if continuous ISO is set
+    property_get("persist.camera.continuous.iso", iso, "0");
+    continous_iso = atoi(iso);
+
+    if(continous_iso != 0) {
+        ALOGV("%s: Setting continuous ISO value %d", __func__, continous_iso);
+        return AddSetParmEntryToBatch(m_pParamBuf,
+                                          CAM_INTF_PARM_ISO,
+                                          sizeof(continous_iso),
+                                          &continous_iso);
+    } else if (isoValue != NULL) {
         int32_t value = lookupAttr(ISO_MODES_MAP,
                                    sizeof(ISO_MODES_MAP)/sizeof(QCameraMap),
                                    isoValue);
