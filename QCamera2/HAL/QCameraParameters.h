@@ -553,6 +553,7 @@ public:
     int32_t enableFlash(bool enableFlash, bool commitSettings);
     int32_t updateRAW(cam_dimension_t max_dim);
     bool isAVTimerEnabled();
+    bool isDISEnabled();
     bool isMobicatEnabled();
 
     cam_focus_mode_type getFocusMode() const {return mFocusMode;};
@@ -815,6 +816,7 @@ private:
     cam_dimension_t m_rawSize; // live snapshot size
     bool m_bHDREnabled;             // if HDR is enabled
     bool m_bAVTimerEnabled;    //if AVTimer is enabled
+    bool m_bDISEnabled;
     bool m_bMobiEnabled;
     QCameraAdjustFPS *m_AdjustFPS;
     bool m_bHDR1xFrameEnabled;          // if frame with exposure compensation 0 during HDR is enabled
