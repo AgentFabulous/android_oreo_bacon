@@ -1587,9 +1587,8 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
 
     if (img_feature_enabled) {
         memset(&param, 0, sizeof(cam_stream_parm_buffer_t));
-        param.type = CAM_STREAM_PARAM_TYPE_GET_IMG_PROP;
 
-        param = main_stream->getOutputCrop();
+        param = main_stream->getImgProp();
         imgProp = param.imgProp;
         main_stream->setCropInfo(imgProp.crop);
         crop = imgProp.crop;
@@ -2088,9 +2087,7 @@ void *QCameraPostProcessor::dataProcessRoutine(void *data)
                         (qcamera_jpeg_data_t *)pme->m_inputJpegQ.dequeue();
 
                     if (NULL != jpeg_job) {
-                        if (!pme->m_parent->needReprocess()) {
-                            pme->syncStreamParams(jpeg_job->src_frame);
-                        }
+                        pme->syncStreamParams(jpeg_job->src_frame);
 
                       if (pme->m_parent->numOfSnapshotsExpected() == 1 &&
                               !pme->m_parent->isLongshotEnabled() &&
