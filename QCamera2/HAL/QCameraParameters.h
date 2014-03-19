@@ -598,6 +598,8 @@ public:
     inline bool generateThumbFromMain() {return isUbiFocusEnabled() ||
         isChromaFlashEnabled() || isOptiZoomEnabled(); }
     int32_t  updateCurrentFocusPosition(int32_t pos);
+    bool isDisplayFrameNeeded() { return m_bDisplayFrame; };
+    int32_t setDisplayFrame(bool enabled) {m_bDisplayFrame=enabled; return 0;};
 
 private:
     int32_t setPreviewSize(const QCameraParameters& );
@@ -830,6 +832,7 @@ private:
     bool m_bUbiRefocus;
     cam_fps_range_t m_hfrFpsRange;
     bool m_bHfrMode;
+    bool m_bDisplayFrame;
 };
 
 }; // namespace qcamera
