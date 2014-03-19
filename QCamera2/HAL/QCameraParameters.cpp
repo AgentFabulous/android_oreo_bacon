@@ -2920,6 +2920,8 @@ int32_t QCameraParameters::setSceneMode(const QCameraParameters& params)
                 m_bHDREnabled = false;
             }
 
+            enableFlash(!m_bHDREnabled);
+
             if ((m_bHDREnabled) ||
                 ((prev_str != NULL) && (strcmp(prev_str, SCENE_MODE_HDR) == 0))) {
                 ALOGD("%s: scene mode changed between HDR and non-HDR, need restart", __func__);
@@ -2936,8 +2938,6 @@ int32_t QCameraParameters::setSceneMode(const QCameraParameters& params)
 
                     updateParamEntry(KEY_QC_HDR_NEED_1X, need_hdr_1x);
                 }
-
-                enableFlash(!m_bHDREnabled);
 
                 AddSetParmEntryToBatch(m_pParamBuf,
                                        CAM_INTF_PARM_HDR_NEED_1X,
@@ -6445,13 +6445,7 @@ int32_t QCameraParameters::setHDRAEBracket(cam_exp_bracketing_t hdrBracket)
  *==========================================================================*/
 int32_t QCameraParameters::restoreAEBracket()
 {
-    int32_t rc = enableFlash(true);
-
-    if (NO_ERROR == rc) {
-      rc = setHDRAEBracket(m_AEBracketingClient);
-    }
-
-    return rc;
+  return setHDRAEBracket(m_AEBracketingClient);
 }
 
 /*===========================================================================
