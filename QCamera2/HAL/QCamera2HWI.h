@@ -416,6 +416,7 @@ private:
     int32_t configureZSLHDRBracketing();
     int32_t startZslBracketing(QCameraPicChannel *pZSLchannel);
     int32_t configureOptiZoom();
+    int32_t configureAEBracketing();
     inline void setOutputImageCount(uint32_t aCount) {mOutputCount = aCount;}
     inline uint32_t getOutputImageCount() {return mOutputCount;}
     bool processUFDumps(qcamera_jpeg_evt_payload_t *evt);
