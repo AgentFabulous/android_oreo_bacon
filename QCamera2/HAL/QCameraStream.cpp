@@ -260,6 +260,8 @@ QCameraStream::QCameraStream(QCameraAllocator &allocator,
     memcpy(&mPaddingInfo, paddingInfo, sizeof(cam_padding_info_t));
     memset(&mCropInfo, 0, sizeof(cam_rect_t));
     memset(&m_MemOpsTbl, 0, sizeof(mm_camera_map_unmap_ops_tbl_t));
+    memset(&m_OutputCrop, 0, sizeof(cam_stream_parm_buffer_t));
+    memset(&m_ImgProp, 0, sizeof(cam_stream_parm_buffer_t));
     pthread_mutex_init(&mCropLock, NULL);
     pthread_mutex_init(&mParameterLock, NULL);
 }
@@ -554,6 +556,43 @@ int32_t QCameraStream::stop()
     m_bActive = false;
     rc = mProcTh.exit();
     return rc;
+}
+
+/*===========================================================================
+ * FUNCTION   : syncRuntimeParams
+ *
+ * DESCRIPTION: query and sync runtime parameters like output crop
+ *              buffer info etc.
+ *
+ * PARAMETERS : none
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t QCameraStream::syncRuntimeParams()
+{
+    int32_t ret = NO_ERROR;
+
+    memset(&m_OutputCrop, 0, sizeof(cam_stream_parm_buffer_t));
+    m_OutputCrop.type = CAM_STREAM_PARAM_TYPE_GET_OUTPUT_CROP;
+
+    ret = getParameter(m_OutputCrop);
+    if (ret != NO_ERROR) {
+        ALOGE("%s: stream getParameter for output crop failed", __func__);
+        return ret;
+    }
+
+    memset(&m_ImgProp, 0, sizeof(cam_stream_parm_buffer_t));
+    m_ImgProp.type = CAM_STREAM_PARAM_TYPE_GET_IMG_PROP;
+
+    ret = getParameter(m_ImgProp);
+    if (ret != NO_ERROR) {
+        ALOGE("%s: stream getParameter for image prop failed", __func__);
+        return ret;
+    }
+
+    return ret;
 }
 
 /*===========================================================================
