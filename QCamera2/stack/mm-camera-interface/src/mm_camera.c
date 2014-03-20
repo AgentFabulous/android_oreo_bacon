@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -1430,7 +1430,8 @@ int32_t mm_camera_evt_sub(mm_camera_obj_t * my_obj,
         }
         /* remove evt fd from the polling thraed when unreg the last event */
         rc = mm_camera_poll_thread_del_poll_fd(&my_obj->evt_poll_thread,
-                                               my_obj->my_hdl);
+                                               my_obj->my_hdl,
+                                               mm_camera_sync_call);
     } else {
         rc = ioctl(my_obj->ctrl_fd, VIDIOC_SUBSCRIBE_EVENT, &sub);
         if (rc < 0) {
@@ -1442,7 +1443,8 @@ int32_t mm_camera_evt_sub(mm_camera_obj_t * my_obj,
                                                my_obj->my_hdl,
                                                my_obj->ctrl_fd,
                                                mm_camera_event_notify,
-                                               (void*)my_obj);
+                                               (void*)my_obj,
+                                               mm_camera_sync_call);
     }
     return rc;
 }
