@@ -490,6 +490,7 @@ private:
     int32_t               mMsgEnabled;
     int                   mStoreMetaDataInFrame;
     int                   mNumSnapshots;
+    bool                  mOldCrop1xFound;
 
     camera_notify_callback         mNotifyCb;
     camera_data_callback           mDataCb;
