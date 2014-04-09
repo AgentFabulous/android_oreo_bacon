@@ -180,6 +180,9 @@ void QCamera2HardwareInterface::zsl_channel_cb(mm_camera_super_buf_t *recvd_fram
                 }
             }
 
+            int width, height;
+            pme->mParameters.getPictureSize(&width, &height);
+
             if (pme->mParameters.isOptiZoomEnabled()) {
                 bool crop1xFound = false;
                 if (pMetaData->is_crop_valid) {
@@ -187,15 +190,18 @@ void QCamera2HardwareInterface::zsl_channel_cb(mm_camera_super_buf_t *recvd_fram
                         if (snapshotStreamId ==
                                 pMetaData->crop_data.crop_info[i].stream_id) {
                             if (!pMetaData->crop_data.crop_info[i].crop.left &&
-                                    !pMetaData->crop_data.crop_info[i].crop.top) {
+                                    !pMetaData->crop_data.crop_info[i].crop.top &&
+                                    width == pMetaData->crop_data.crop_info[i].crop.width &&
+                                    height == pMetaData->crop_data.crop_info[i].crop.height) {
                                 crop1xFound = true;
                             }
                         }
                     }
                 }
 
-                if ((!crop1xFound) || (pme->mNumSnapshots <= 0)) {
+                if ((!pme->mOldCrop1xFound) || (pme->mNumSnapshots <= 0)) {
                     pChannel->bufDone(recvd_frame);
+                    pme->mOldCrop1xFound = crop1xFound;
                     return;
                 }
                 QCameraPicChannel *pZSLChannel =
