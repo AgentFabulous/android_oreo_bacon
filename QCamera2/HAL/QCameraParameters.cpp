@@ -113,8 +113,10 @@ const char QCameraParameters::KEY_QC_VIDEO_FLIP[] = "video-flip";
 const char QCameraParameters::KEY_QC_SNAPSHOT_PICTURE_FLIP[] = "snapshot-picture-flip";
 const char QCameraParameters::KEY_QC_SUPPORTED_FLIP_MODES[] = "flip-mode-values";
 const char QCameraParameters::KEY_QC_VIDEO_HDR[] = "video-hdr";
+const char QCameraParameters::KEY_QC_SNAPSHOT_HDR[] = "snapshot-hdr";
 const char QCameraParameters::KEY_QC_VT_ENABLE[] = "avtimer";
 const char QCameraParameters::KEY_QC_SUPPORTED_VIDEO_HDR_MODES[] = "video-hdr-values";
+const char QCameraParameters::KEY_QC_SUPPORTED_SNAPSHOT_HDR_MODES[] = "snapshot-hdr-values";
 const char QCameraParameters::KEY_QC_AUTO_HDR_ENABLE [] = "auto-hdr-enable";
 const char QCameraParameters::KEY_QC_SNAPSHOT_BURST_NUM[] = "snapshot-burst-num";
 const char QCameraParameters::KEY_QC_SNAPSHOT_FD_DATA[] = "snapshot-fd-data-enable";
@@ -2346,6 +2348,55 @@ int32_t QCameraParameters::setVideoHDR(const QCameraParameters& params)
 }
 
 /*===========================================================================
+ * FUNCTION   : setSnapshotHDR
+ *
+ * DESCRIPTION: set snapshot HDR value from user setting
+ *
+ * PARAMETERS :
+ *   @params  : user setting parameters
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t QCameraParameters::setSnapshotHDR(const QCameraParameters& params)
+{
+
+    const char *str = params.get(KEY_QC_SNAPSHOT_HDR);
+	const char *prev_str = get(KEY_QC_SNAPSHOT_HDR);
+    char prop[PROPERTY_VALUE_MAX];
+    memset(prop, 0, sizeof(prop));
+    ALOGE("%s :E 0. Snapshot HDR set to: %s", __func__, str);
+    property_get("persist.camera.snapshot.hdr", prop, VALUE_OFF);
+
+    /* logic for setprop to enable/disable */
+    if (prev_str == NULL ||
+         strcmp(prev_str, prop) != 0 ) {
+         ALOGE("%s :2. Snapshot HDR set to: %s", __func__, prop);
+         updateParamEntry(KEY_QC_SNAPSHOT_HDR, prop);
+         // Need restart
+         m_bNeedRestart = true;
+         return setSnapshotHDR(prop);
+    }
+    /* logic for app to enable/disable */
+    if (str != NULL) {
+       if (prev_str == NULL ||
+           strcmp(str, prev_str) != 0) {
+           ALOGE("%s : 1. Snapshot HDR set to: %s", __func__, str);
+           updateParamEntry(KEY_QC_SNAPSHOT_HDR, str);
+           // Need restart
+           m_bNeedRestart = true;
+           return setSnapshotHDR(str);
+
+       }
+    }
+
+    ALOGE("%s :X 3. Snapshot HDR set to: prev_str %s, prop %s", __func__, prev_str, prop);
+    return NO_ERROR;
+}
+
+
+/*===========================================================================
  * FUNCTION   : setVtEnable
  *
  * DESCRIPTION: set vt Time Stamp enable from user setting
@@ -3745,6 +3796,7 @@ int32_t QCameraParameters::updateParameters(QCameraParameters& params,
     if ((rc = setFaceRecognition(params)))              final_rc = rc;
     if ((rc = setFlip(params)))                         final_rc = rc;
     if ((rc = setVideoHDR(params)))                     final_rc = rc;
+    if ((rc = setSnapshotHDR(params)))                     final_rc = rc;
     if ((rc = setVtEnable(params)))                     final_rc = rc;
     if ((rc = setBurstNum(params)))                     final_rc = rc;
     if ((rc = setSnapshotFDReq(params)))                final_rc = rc;
@@ -4317,6 +4369,13 @@ int32_t QCameraParameters::initDefaultParameters()
         set(KEY_QC_SUPPORTED_VIDEO_HDR_MODES, onOffValues);
         set(KEY_QC_VIDEO_HDR, VALUE_OFF);
     }
+
+    //Set Snapshot HDR
+    if ((m_pCapability->qcom_supported_feature_mask & CAM_QCOM_FEATURE_SNAPSHOT_HDR) > 0) {
+        set(KEY_QC_SUPPORTED_SNAPSHOT_HDR_MODES, onOffValues);
+        set(KEY_QC_SNAPSHOT_HDR, VALUE_OFF);
+    }
+
     // Set VT TimeStamp
     set(KEY_QC_VT_ENABLE, VALUE_DISABLE);
     //Set Touch AF/AEC
@@ -5001,6 +5060,39 @@ int32_t QCameraParameters::setSceneDetect(const char *sceneDetect)
 }
 
 /*===========================================================================
+ * FUNCTION   : setSnapshotHDR
+ *
+ * DESCRIPTION: set snapshot HDR value
+ *
+ * PARAMETERS :
+ *   @videoHDR  : snapshot HDR value string
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t QCameraParameters::setSnapshotHDR(const char *snapshotHDR)
+{
+    if (snapshotHDR != NULL) {
+        int32_t value = lookupAttr(ON_OFF_MODES_MAP,
+                                   sizeof(ON_OFF_MODES_MAP)/sizeof(QCameraMap),
+                                   snapshotHDR);
+        if (value != NAME_NOT_FOUND) {
+            ALOGD("%s: Setting Snasphot HDR %s", __func__, snapshotHDR);
+            updateParamEntry(KEY_QC_SNAPSHOT_HDR, snapshotHDR);
+            return AddSetParmEntryToBatch(m_pParamBuf,
+                                          CAM_INTF_PARM_SNAPSHOT_HDR,
+                                          sizeof(value),
+                                          &value);
+        }
+    }
+    ALOGE("Invalid Snapshot HDR value: %s",
+          (snapshotHDR == NULL) ? "NULL" : snapshotHDR);
+    return BAD_VALUE;
+}
+
+
+/*===========================================================================
  * FUNCTION   : setVideoHDR
  *
  * DESCRIPTION: set video HDR value
@@ -5031,6 +5123,8 @@ int32_t QCameraParameters::setVideoHDR(const char *videoHDR)
           (videoHDR == NULL) ? "NULL" : videoHDR);
     return BAD_VALUE;
 }
+
+
 
 /*===========================================================================
  * FUNCTION   : setVtEnable
