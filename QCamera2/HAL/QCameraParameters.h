@@ -398,6 +398,8 @@ public:
     static const char KEY_QC_VIDEO_HDR[];
     static const char KEY_QC_VT_ENABLE[];
     static const char KEY_QC_SUPPORTED_VIDEO_HDR_MODES[];
+    static const char KEY_QC_SNAPSHOT_HDR[];
+    static const char KEY_QC_SUPPORTED_SNAPSHOT_HDR_MODES[];
 
     // Values for SKIN TONE ENHANCEMENT
     static const char SKIN_TONE_ENHANCEMENT_ENABLE[] ;
@@ -626,6 +628,7 @@ private:
     int32_t setSkinToneEnhancement(const QCameraParameters& );
     int32_t setSceneDetect(const QCameraParameters& );
     int32_t setVideoHDR(const QCameraParameters& );
+    int32_t setSnapshotHDR(const QCameraParameters& );
     int32_t setVtEnable(const QCameraParameters& );
     int32_t setZoom(const QCameraParameters& );
     int32_t setISOValue(const QCameraParameters& );
@@ -686,6 +689,7 @@ private:
     int32_t setSkinToneEnhancement(int sceFactor);
     int32_t setSceneDetect(const char *scendDetect);
     int32_t setVideoHDR(const char *videoHDR);
+    int32_t setSnapshotHDR(const char *snapshotHDR);
     int32_t setVtEnable(const char *vtEnable);
     int32_t setZoom(int zoom_level);
     int32_t setISOValue(const char *isoValue);
