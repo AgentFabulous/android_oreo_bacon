@@ -36,6 +36,27 @@ static void wpa_driver_send_hang_msg(struct wpa_driver_nl80211_data *drv)
 	}
 }
 
+static void wpa_driver_notify_country_change(void *ctx, char *cmd)
+{
+	if ((os_strncasecmp(cmd, "COUNTRY", 7) == 0) ||
+	    (os_strncasecmp(cmd, "SETBAND", 7) == 0)) {
+		union wpa_event_data event;
+
+		os_memset(&event, 0, sizeof(event));
+		event.channel_list_changed.initiator = REGDOM_SET_BY_USER;
+		if (os_strncasecmp(cmd, "COUNTRY", 7) == 0) {
+			event.channel_list_changed.type = REGDOM_TYPE_COUNTRY;
+			if (os_strlen(cmd) > 9) {
+				event.channel_list_changed.alpha2[0] = cmd[8];
+				event.channel_list_changed.alpha2[1] = cmd[9];
+			}
+		} else {
+			event.channel_list_changed.type = REGDOM_TYPE_UNKNOWN;
+		}
+		wpa_supplicant_event(ctx, EVENT_CHANNEL_LIST_CHANGED, &event);
+	}
+}
+
 int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 				  size_t buf_len )
 {
@@ -78,11 +99,6 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 			    (os_strcasecmp(cmd, "RSSI") == 0) ||
 			    (os_strcasecmp(cmd, "GETBAND") == 0) )
 				ret = strlen(buf);
-			else if (os_strcasecmp(cmd, "COUNTRY") == 0)
-				wpa_supplicant_event(drv->ctx,
-					EVENT_CHANNEL_LIST_CHANGED, NULL);
-			else if (os_strncasecmp(cmd, "SETBAND", 7) == 0)
-				wpa_printf(MSG_DEBUG, "%s: %s ", __func__, cmd);
 			else if (os_strcasecmp(cmd, "P2P_DEV_ADDR") == 0)
 				wpa_printf(MSG_DEBUG, "%s: P2P: Device address ("MACSTR")",
 					__func__, MAC2STR(buf));
@@ -92,6 +108,7 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 				wpa_printf(MSG_DEBUG, "%s: P2P: %s ", __func__, buf);
 			else
 				wpa_printf(MSG_DEBUG, "%s %s len = %d, %d", __func__, buf, ret, strlen(buf));
+			wpa_driver_notify_country_change(drv->ctx, cmd);
 		}
 	}
 	return ret;
