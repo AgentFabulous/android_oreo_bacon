@@ -16,6 +16,8 @@ LOCAL_SHARED_LIBRARIES:= \
     libgui \
     libcamera_client \
     libskia \
+    libstagefright \
+    libstagefright_foundation \
 
 ifneq ($(call is-platform-sdk-version-at-least,18),true)
 
@@ -33,6 +35,9 @@ LOCAL_C_INCLUDES += \
     frameworks/base/include/media \
     external/skia/include/core \
     external/skia/include/images \
+    hardware/qcom/display/libgralloc \
+    frameworks/av/include/media/stagefright \
+    frameworks/native/include/media/openmax \
 
 LOCAL_MODULE:= camera_test
 LOCAL_MODULE_TAGS:= tests
