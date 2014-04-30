@@ -2747,11 +2747,26 @@ int QCamera2HardwareInterface::cancelPicture()
     if (mParameters.isUbiFocusEnabled()) {
         configureAFBracketing(false);
     }
-    if(mParameters.isOptiZoomEnabled()) {
-        ALOGD("%s: Restoring previous zoom value!!",__func__);
-        mParameters.setAndCommitZoom(mZoomLevel);
-    }
     return NO_ERROR;
+}
+
+/*===========================================================================
+ * FUNCTION   : captureDone
+ *
+ * DESCRIPTION: Function called when the capture is completed before encoding
+ *
+ * PARAMETERS : none
+ *
+ * RETURN     : none
+ *==========================================================================*/
+void QCamera2HardwareInterface::captureDone()
+{
+    if (mParameters.isOptiZoomEnabled() &&
+        ++mOutputCount >= mParameters.getBurstCountForAdvancedCapture()) {
+        ALOGE("%s: Restoring previous zoom value!!",__func__);
+        mParameters.setAndCommitZoom(mZoomLevel);
+        mOutputCount = 0;
+    }
 }
 
 /*===========================================================================
