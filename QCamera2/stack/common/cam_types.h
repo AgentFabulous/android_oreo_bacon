@@ -582,6 +582,7 @@ typedef enum {
 } cam_streaming_mode_t;
 
 typedef enum {
+    IS_TYPE_NONE,
     IS_TYPE_DIS,
     IS_TYPE_GA_DIS,
     IS_TYPE_EIS_1_0,
