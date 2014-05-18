@@ -504,3 +504,20 @@ wifi_error wifi_get_iface_name(wifi_interface_handle handle, char *name, size_t 
 
 /////////////////////////////////////////////////////////////////////////////
 
+
+wifi_error wifi_set_link_stats(wifi_interface_handle iface, wifi_link_layer_params params) {
+    return WIFI_ERROR_UNINITIALIZED;
+}
+
+wifi_error wifi_get_link_stats(wifi_request_id id,
+        wifi_interface_handle iface, wifi_stats_result_handler handler) {
+    return WIFI_ERROR_UNINITIALIZED;
+} 
+
+wifi_error wifi_clear_link_stats(wifi_interface_handle iface,
+      u32 stats_clear_req_mask, u32 *stats_clear_rsp_mask, u8 stop_req, u8 *stop_rsp) {
+    return WIFI_ERROR_UNINITIALIZED;
+}
+
+
+
