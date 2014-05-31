@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2014 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <stdlib.h>
 #include <linux/pkt_sched.h>
@@ -6,6 +21,7 @@
 
 #include "wifi_hal.h"
 #include "common.h"
+#include <netlink-types.h>
 
 interface_info *getIfaceInfo(wifi_interface_handle handle)
 {
@@ -62,7 +78,17 @@ wifi_error wifi_register_vendor_handler(wifi_handle handle,
 {
     hal_info *info = (hal_info *)handle;
 
-    /* TODO: check for multiple handlers? */
+    for (int i = 0; i < info->num_event_cb; i++) {
+        if(info->event_cb[info->num_event_cb].vendor_id  == id &&
+           info->event_cb[info->num_event_cb].vendor_subcmd == subcmd)
+        {
+            info->event_cb[info->num_event_cb].cb_func = func;
+            info->event_cb[info->num_event_cb].cb_arg  = arg;
+            ALOGI("Updated event handler %p for vendor 0x%0x and subcmd 0x%0x arg %p",
+                  func, id, subcmd, arg);
+            return WIFI_SUCCESS;
+        }
+    }
 
     if (info->num_event_cb < info->alloc_event_cb) {
         info->event_cb[info->num_event_cb].nl_cmd  = NL80211_CMD_VENDOR;
@@ -71,7 +97,8 @@ wifi_error wifi_register_vendor_handler(wifi_handle handle,
         info->event_cb[info->num_event_cb].cb_func = func;
         info->event_cb[info->num_event_cb].cb_arg  = arg;
         info->num_event_cb++;
-        ALOGI("Added event handler %p for vendor 0x%0x and subcmd 0x%0x", func, id, subcmd);
+        ALOGI("Added event handler %p for vendor 0x%0x and subcmd 0x%0x arg %p",
+              func, id, subcmd, arg);
         return WIFI_SUCCESS;
     } else {
         return WIFI_ERROR_OUT_OF_MEMORY;
@@ -168,3 +195,34 @@ void wifi_unregister_cmd(wifi_handle handle, WifiCommand *cmd)
     }
 }
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif /* __cplusplus */
+
+void hexdump(char *bytes, u16 len)
+{
+    int i=0;
+    ALOGI("******HexDump len:%d*********", len);
+    for (i = 0; ((i + 7) < len); i+=8) {
+        ALOGI("%02x %02x %02x %02x   %02x %02x %02x %02x",
+              bytes[i], bytes[i+1],
+              bytes[i+2], bytes[i+3],
+              bytes[i+4], bytes[i+5],
+              bytes[i+6], bytes[i+7]);
+    }
+    if ((len - i) >= 4) {
+        ALOGI("%02x %02x %02x %02x",
+              bytes[i], bytes[i+1],
+              bytes[i+2], bytes[i+3]);
+        i+=4;
+    }
+    for (;i < len;i++) {
+        ALOGI("%02x", bytes[i]);
+    }
+    ALOGI("******HexDump End***********");
+}
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

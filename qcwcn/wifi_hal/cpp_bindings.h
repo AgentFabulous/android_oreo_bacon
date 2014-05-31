@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2014 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#ifndef __WIFI_HAL_CPP_BINDINGS_H__
+#define __WIFI_HAL_CPP_BINDINGS_H__
 
 #include "wifi_hal.h"
 #include "common.h"
@@ -167,6 +184,9 @@ public:
 
     /* Command assembly helpers */
     int create(int family, uint8_t cmd, int flags, int hdrlen);
+    int create(uint8_t cmd, int flags, int hdrlen) {
+        return create(mFamily, cmd, flags, hdrlen);
+    }
     int create(uint8_t cmd) {
         return create(mFamily, cmd, 0, 0);
     }
@@ -201,6 +221,10 @@ public:
 
     int set_iface_id(int ifindex) {
         return put_u32(NL80211_ATTR_IFINDEX, ifindex);
+    }
+
+    int put_bytes(int attribute, const char *data, int len) {
+        return nla_put(mMsg, attribute, len, data);
     }
 private:
     WifiRequest(const WifiRequest&);        // hide copy constructor to prevent copies
@@ -319,6 +343,55 @@ private:
     static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err, void *arg);
 };
 
+//WifiVendorCommand class
+class WifiVendorCommand: public WifiCommand
+{
+protected:
+    u32 mVendor_id;
+    u32 mSubcmd;
+    char *mVendorData;
+    u32 mDataLen;
+
+
+public:
+    WifiVendorCommand(wifi_handle handle, wifi_request_id id, u32 vendor_id, u32 subcmd);
+
+    virtual ~WifiVendorCommand();
+
+    virtual int create();
+
+    virtual int requestEvent();
+
+    virtual int put_u8(int attribute, uint8_t value);
+
+    virtual int put_u16(int attribute, uint16_t value);
+
+    virtual int put_u32(int attribute, uint32_t value);
+
+    virtual int put_u64(int attribute, uint64_t value);
+
+    virtual int put_string(int attribute, const char *value);
+
+    virtual int put_addr(int attribute, mac_addr value);
+
+    virtual struct nlattr * attr_start(int attribute);
+
+    virtual void attr_end(struct nlattr *attribute);
+
+    virtual int set_iface_id(const char* name);
+
+    virtual int put_bytes(int attribute, const char *data, int len);
+
+protected:
+
+    /* Override this method to parse reply and dig out data; save it in the corresponding
+       object */
+    virtual int handleResponse(WifiEvent &reply);
+
+    /* Override this method to parse event and dig out data; save it in the object */
+    virtual int handleEvent(WifiEvent &event);
+};
+
 /* nl message processing macros (required to pass C++ type checks) */
 
 #define for_each_attr(pos, nla, rem) \
@@ -326,3 +399,4 @@ private:
         nla_ok(pos, rem); \
         pos = (nlattr *)nla_next(pos, &(rem)))
 
+#endif

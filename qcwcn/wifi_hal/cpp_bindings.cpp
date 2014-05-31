@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2014 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <stdint.h>
 #include <fcntl.h>
@@ -15,6 +30,7 @@
 #include <netlink/netlink.h>
 #include <netlink/socket.h>
 #include <netlink-types.h>
+#include <net/if.h>
 
 #include "nl80211_copy.h"
 #include <ctype.h>
@@ -728,4 +744,162 @@ int WifiCommand::error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err, vo
 
     // ALOGD("error_handler received : %d", err->error);
     return NL_SKIP;
+}
+
+
+WifiVendorCommand::WifiVendorCommand(wifi_handle handle,
+                                     wifi_request_id id,
+                                     u32 vendor_id,
+                                     u32 subcmd)
+        : WifiCommand(handle, id), mVendor_id(vendor_id), mSubcmd(subcmd),
+        mVendorData(NULL), mDataLen(0)
+{
+    ALOGV("WifiVendorCommand %p created vendor_id:0x%x subcmd:%u",
+          this, mVendor_id, mSubcmd);
+}
+
+WifiVendorCommand::~WifiVendorCommand()
+{
+    ALOGV("~WifiVendorCommand %p destroyed", this);
+    //mVendorData is not destroyed here. Assumption
+    //is that VendorData is specific to each Vendor and they
+    //are responsible for owning the same.
+}
+
+// Override this method to parse reply and dig out data; save it
+// in the corresponding object
+int WifiVendorCommand::handleResponse(WifiEvent &reply)
+{
+    ALOGI("WifiVendorCommand::handleResponse");
+    struct nlattr **tb = reply.attributes();
+    struct nlattr *attr = NULL;
+    struct genlmsghdr *gnlh = reply.header();
+
+    if (gnlh->cmd == NL80211_CMD_VENDOR) {
+        if (tb[NL80211_ATTR_VENDOR_DATA]) {
+            mVendorData = (char *)nla_data(tb[NL80211_ATTR_VENDOR_DATA]);
+            mDataLen = nla_len(tb[NL80211_ATTR_VENDOR_DATA]);
+            ALOGD("%s: Vendor data len received:%d", __func__, mDataLen);
+        }
+    }
+    return NL_SKIP;
+}
+
+// Override this method to parse event and dig out data;
+// save it in the object
+int WifiVendorCommand::handleEvent(WifiEvent &event)
+{
+    ALOGI("WifiVendorCommand::handleEvent");
+    struct nlattr **tb = event.attributes();
+    struct nlattr *attr = NULL;
+    struct genlmsghdr *gnlh = event.header();
+
+    if (gnlh->cmd == NL80211_CMD_VENDOR) {
+        /* Vendor Event */
+        if (!tb[NL80211_ATTR_VENDOR_ID] ||
+            !tb[NL80211_ATTR_VENDOR_SUBCMD])
+            return NL_SKIP;
+
+        mVendor_id = nla_get_u32(tb[NL80211_ATTR_VENDOR_ID]);
+        mSubcmd = nla_get_u32(tb[NL80211_ATTR_VENDOR_SUBCMD]);
+
+        ALOGD("%s: Vendor event: vendor_id=0x%x subcmd=%u",
+              __func__, mVendor_id, mSubcmd);
+
+        if (tb[NL80211_ATTR_VENDOR_DATA]) {
+            mVendorData = (char *)nla_data(tb[NL80211_ATTR_VENDOR_DATA]);
+            mDataLen = nla_len(tb[NL80211_ATTR_VENDOR_DATA]);
+            ALOGD("%s: Vendor data len received:%d", __func__, mDataLen);
+            hexdump(mVendorData, mDataLen);
+        }
+    }
+    return NL_SKIP;
+}
+
+int WifiVendorCommand::create() {
+    int ifindex;
+    int ret = mMsg.create(NL80211_CMD_VENDOR, 0, 0);
+    if (ret < 0) {
+        return ret;
+    }
+    // insert the oui in the msg
+    ret = mMsg.put_u32(NL80211_ATTR_VENDOR_ID, mVendor_id);
+    if (ret < 0)
+        goto out;
+
+    // insert the subcmd in the msg
+    ret = mMsg.put_u32(NL80211_ATTR_VENDOR_SUBCMD, mSubcmd);
+    if (ret < 0)
+        goto out;
+
+    //Insert the vendor specific data
+    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+    hexdump(mVendorData, mDataLen);
+
+    //insert the iface id to be "wlan0"
+    ifindex = if_nametoindex("wlan0");
+    ALOGE("%s ifindex obtained:%d",__func__,ifindex);
+    mMsg.set_iface_id(ifindex);
+out:
+    return ret;
+
+}
+
+int WifiVendorCommand::requestEvent()
+{
+    int res = requestVendorEvent(mVendor_id, mSubcmd);
+    return res;
+
+}
+
+int WifiVendorCommand::put_u8(int attribute, uint8_t value)
+{
+    return mMsg.put_u8(attribute, value);
+}
+
+int WifiVendorCommand::put_u16(int attribute, uint16_t value)
+{
+    return mMsg.put_u16(attribute, value);
+}
+
+int WifiVendorCommand::put_u32(int attribute, uint32_t value)
+{
+    return mMsg.put_u32(attribute, value);
+}
+
+int WifiVendorCommand::put_u64(int attribute, uint64_t value)
+{
+    return mMsg.put_u64(attribute, value);
+}
+
+int WifiVendorCommand::put_string(int attribute, const char *value)
+{
+    return mMsg.put_string(attribute, value);
+}
+
+int WifiVendorCommand::put_addr(int attribute, mac_addr value)
+{
+    return mMsg.put_addr(attribute, value);
+}
+
+struct nlattr * WifiVendorCommand::attr_start(int attribute)
+{
+    return mMsg.attr_start(attribute);
+}
+
+void WifiVendorCommand::attr_end(struct nlattr *attribute)
+{
+    return mMsg.attr_end(attribute);
+}
+
+int WifiVendorCommand::set_iface_id(const char* name)
+{
+    unsigned ifindex = if_nametoindex(name);
+    ALOGE("%s ifindex obtained:%d",__func__,ifindex);
+    return mMsg.set_iface_id(ifindex);
+}
+
+int WifiVendorCommand::put_bytes(int attribute, const char *data, int len)
+{
+    return mMsg.put_bytes(attribute, data, len);
 }

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2014 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <stdint.h>
 #include <fcntl.h>
@@ -88,20 +103,44 @@ static nl_sock * wifi_create_nl_socket(int port)
         return NULL;
     }
 
-    // ALOGI("Making socket nonblocking");
-    /*
-    if (nl_socket_set_nonblocking(sock)) {
-        ALOGE("Could make socket non-blocking");
-        nl_socket_free(sock);
-        return NULL;
-    }
-    */
-
+    ALOGI("Socket Value:%p", sock);
     return sock;
+}
+
+int ack_handler(struct nl_msg *msg, void *arg)
+{
+    int *err = (int *)arg;
+    *err = 0;
+    ALOGD("%s invoked",__func__);
+    return NL_STOP;
+}
+
+int finish_handler(struct nl_msg *msg, void *arg)
+{
+    int *ret = (int *)arg;
+    *ret = 0;
+    ALOGD("%s called",__func__);
+    return NL_SKIP;
+}
+
+int error_handler(struct sockaddr_nl *nla,
+                  struct nlmsgerr *err, void *arg)
+{
+    int *ret = (int *)arg;
+    *ret = err->error;
+
+    ALOGD("%s invoked with error: %d", __func__, err->error);
+    return NL_SKIP;
+}
+static int no_seq_check(struct nl_msg *msg, void *arg)
+{
+    ALOGD("no_seq_check received");
+    return NL_OK;
 }
 
 wifi_error wifi_initialize(wifi_handle *handle)
 {
+    int err = 0;
     srand(getpid());
 
     ALOGI("Initializing wifi");
@@ -133,7 +172,12 @@ wifi_error wifi_initialize(wifi_handle *handle)
         return WIFI_ERROR_UNKNOWN;
     }
 
-    // ALOGI("cb->refcnt = %d", cb->cb_refcnt);
+    err = 1;
+    nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, no_seq_check, NULL);
+    nl_cb_err(cb, NL_CB_CUSTOM, error_handler, &err);
+    nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &err);
+    nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_handler, &err);
+
     nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, internal_valid_message_handler, info);
     nl_cb_put(cb);
 
@@ -158,6 +202,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
         free(info);
 		return WIFI_ERROR_UNKNOWN;
     }
+    ALOGI("%s: family_id:%d", __func__, info->nl80211_family_id);
 
     *handle = (wifi_handle) info;
 
@@ -169,7 +214,8 @@ wifi_error wifi_initialize(wifi_handle *handle)
     wifi_init_interfaces(*handle);
     // ALOGI("Found %d interfaces", info->num_interfaces);
 
-    ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d", NL80211_CMD_VENDOR);
+    ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d handle %p", NL80211_CMD_VENDOR ,
+                       *handle);
     return WIFI_SUCCESS;
 }
 
@@ -265,6 +311,7 @@ void wifi_event_loop(wifi_handle handle)
         pfd.revents = 0;
         //ALOGI("Polling socket");
         int result = poll(&pfd, 1, -1);
+        ALOGI("Poll result = %0x", result);
         if (result < 0) {
             ALOGE("Error polling socket");
         } else if (pfd.revents & (POLLIN | POLLHUP | POLLERR)) {
@@ -503,21 +550,4 @@ wifi_error wifi_get_iface_name(wifi_interface_handle handle, char *name, size_t 
 }
 
 /////////////////////////////////////////////////////////////////////////////
-
-
-wifi_error wifi_set_link_stats(wifi_interface_handle iface, wifi_link_layer_params params) {
-    return WIFI_ERROR_UNINITIALIZED;
-}
-
-wifi_error wifi_get_link_stats(wifi_request_id id,
-        wifi_interface_handle iface, wifi_stats_result_handler handler) {
-    return WIFI_ERROR_UNINITIALIZED;
-} 
-
-wifi_error wifi_clear_link_stats(wifi_interface_handle iface,
-      u32 stats_clear_req_mask, u32 *stats_clear_rsp_mask, u8 stop_req, u8 *stop_rsp) {
-    return WIFI_ERROR_UNINITIALIZED;
-}
-
-
 

@@ -1,13 +1,48 @@
+/*
+ * Copyright (C) 2014 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include "wifi_hal.h"
 
 #ifndef __WIFI_HAL_COMMON_H__
 #define __WIFI_HAL_COMMON_H__
 
+#ifndef LOG_TAG
 #define LOG_TAG  "WifiHAL"
+#endif
+
+#include <stdint.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <netlink/genl/genl.h>
+#include <netlink/genl/family.h>
+#include <netlink/genl/ctrl.h>
+#include <linux/rtnetlink.h>
+#include <netpacket/packet.h>
+#include <linux/filter.h>
+#include <linux/errqueue.h>
+
+#include <linux/pkt_sched.h>
+#include <netlink/object-api.h>
+#include <netlink/netlink.h>
+#include <netlink/socket.h>
+#include <netlink-types.h>
+
+#include "nl80211_copy.h"
 
 #include <utils/Log.h>
-#include "nl80211_copy.h"
 
 #define SOCKET_BUFFER_SIZE      (32768U)
 #define RECV_BUF_SIZE           (4096)
@@ -126,6 +161,15 @@ wifi_interface_handle getIfaceHandle(interface_info *info);
 
 #define min(x, y)       ((x) < (y) ? (x) : (y))
 #define max(x, y)       ((x) > (y) ? (x) : (y))
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif /* __cplusplus */
+void hexdump(char *bytes, u16 len);
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 
