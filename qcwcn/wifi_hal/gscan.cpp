@@ -591,7 +591,7 @@ public:
 };
 
 wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface, byte flush,
-        wifi_scan_result *results, int *num) {
+        int max, wifi_scan_result *results, int *num) {
 
     ALOGD("Getting cached scan results, iface handle = %p, num = %d", iface, *num);
 
