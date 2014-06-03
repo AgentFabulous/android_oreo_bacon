@@ -48,6 +48,10 @@ ifdef CONFIG_ANDROID_LOG
 L_CFLAGS += -DCONFIG_ANDROID_LOG
 endif
 
+ifdef CONFIG_P2P
+L_CFLAGS += -DCONFIG_P2P
+endif
+
 ########################
 
 include $(CLEAR_VARS)
