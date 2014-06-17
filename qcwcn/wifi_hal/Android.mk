@@ -34,8 +34,9 @@ LOCAL_SRC_FILES := \
 	wifi_hal.cpp \
 	common.cpp \
 	cpp_bindings.cpp \
+	llstats.cpp \
 	gscan.cpp \
-	llstats.cpp
+	gscan_event_handler.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog

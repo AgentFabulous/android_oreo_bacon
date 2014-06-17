@@ -84,8 +84,8 @@ wifi_error wifi_register_vendor_handler(wifi_handle handle,
         {
             info->event_cb[info->num_event_cb].cb_func = func;
             info->event_cb[info->num_event_cb].cb_arg  = arg;
-            ALOGI("Updated event handler %p for vendor 0x%0x and subcmd 0x%0x arg %p",
-                  func, id, subcmd, arg);
+            ALOGI("Updated event handler %p for vendor 0x%0x, subcmd 0x%0x"
+                " and arg %p", func, id, subcmd, arg);
             return WIFI_SUCCESS;
         }
     }
@@ -97,8 +97,8 @@ wifi_error wifi_register_vendor_handler(wifi_handle handle,
         info->event_cb[info->num_event_cb].cb_func = func;
         info->event_cb[info->num_event_cb].cb_arg  = arg;
         info->num_event_cb++;
-        ALOGI("Added event handler %p for vendor 0x%0x and subcmd 0x%0x arg %p",
-              func, id, subcmd, arg);
+        ALOGI("Added event handler %p for vendor 0x%0x, subcmd 0x%0x and arg"
+            " %p", func, id, subcmd, arg);
         return WIFI_SUCCESS;
     } else {
         return WIFI_ERROR_OUT_OF_MEMORY;

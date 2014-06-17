@@ -67,15 +67,15 @@ static wifi_error wifi_init_interfaces(wifi_handle handle);
 
 void wifi_socket_set_local_port(struct nl_sock *sock, uint32_t port)
 {
-	uint32_t pid = getpid() & 0x3FFFFF;
+    uint32_t pid = getpid() & 0x3FFFFF;
 
-	if (port == 0) {
-		sock->s_flags &= ~NL_OWN_PORT;
-	} else {
-		sock->s_flags |= NL_OWN_PORT;
-	}
+    if (port == 0) {
+        sock->s_flags &= ~NL_OWN_PORT;
+    } else {
+        sock->s_flags |= NL_OWN_PORT;
+    }
 
-	sock->s_local.nl_pid = pid + (port << 22);
+    sock->s_local.nl_pid = pid + (port << 22);
 }
 
 static nl_sock * wifi_create_nl_socket(int port)
@@ -147,7 +147,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
     hal_info *info = (hal_info *)malloc(sizeof(hal_info));
     if (info == NULL) {
         ALOGE("Could not allocate hal_info");
-		return WIFI_ERROR_UNKNOWN;
+        return WIFI_ERROR_UNKNOWN;
     }
 
     memset(info, 0, sizeof(*info));
@@ -200,7 +200,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
         nl_socket_free(cmd_sock);
         nl_socket_free(event_sock);
         free(info);
-		return WIFI_ERROR_UNKNOWN;
+        return WIFI_ERROR_UNKNOWN;
     }
     ALOGI("%s: family_id:%d", __func__, info->nl80211_family_id);
 
@@ -547,6 +547,19 @@ wifi_error wifi_get_iface_name(wifi_interface_handle handle, char *name, size_t 
     interface_info *info = (interface_info *)handle;
     strcpy(name, info->name);
     return WIFI_SUCCESS;
+}
+
+wifi_interface_handle wifi_get_iface_handle(wifi_handle handle, char *name)
+{
+    hal_info *info = (hal_info *)handle;
+    for (int i=0;i<info->num_interfaces;i++)
+    {
+        if (!strcmp(info->interfaces[i]->name, name))
+        {
+            return ((wifi_interface_handle )(info->interfaces)[i]);
+        }
+    }
+    return NULL;
 }
 
 /////////////////////////////////////////////////////////////////////////////

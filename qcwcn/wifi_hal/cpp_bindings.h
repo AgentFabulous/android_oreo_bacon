@@ -202,6 +202,11 @@ public:
     int put_u32(int attribute, uint32_t value) {
         return nla_put(mMsg, attribute, sizeof(value), &value);
     }
+
+    int put_s32(int attribute, int32_t value) {
+        return nla_put(mMsg, attribute, sizeof(int32_t), &value);
+    }
+
     int put_u64(int attribute, uint64_t value) {
         return nla_put(mMsg, attribute, sizeof(value), &value);
     }
@@ -367,6 +372,8 @@ public:
     virtual int put_u16(int attribute, uint16_t value);
 
     virtual int put_u32(int attribute, uint32_t value);
+
+    virtual int put_s32(int attribute, int32_t value);
 
     virtual int put_u64(int attribute, uint64_t value);
 
