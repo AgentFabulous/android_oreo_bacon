@@ -65,7 +65,7 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
         case QCA_NL80211_VENDOR_SUBCMD_GSCAN_START:
         {
             /* Register handlers for northbound asychronous scan events. */
-            ALOGD("%s: wait for GSCAN_RESULTS_AVAILABLE,"
+            ALOGD("%s: wait for GSCAN_RESULTS_AVAILABLE, "
                 "FULL_SCAN_RESULT, and SCAN EVENT events. \n", __func__);
             ret = registerVendorHandler(mVendor_id,
                     QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_RESULTS_AVAILABLE) ||
@@ -394,7 +394,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
     ALOGI("GScanCommandEventHandler::handleEvent: Got a GSCAN Event"
         " message from the Driver.");
     unsigned i=0;
-    int ret = NL_SKIP;
+    int ret = WIFI_SUCCESS;
     u32 status;
     wifi_scan_result *result;
     struct nlattr *tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_MAX + 1];
@@ -413,6 +413,9 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             u32 len = 0;
             u32 resultsBufSize = 0;
             u32 lengthOfInfoElements = 0;
+
+            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_FULL_SCAN_RESULT "
+                "received.");
 
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
@@ -646,6 +649,10 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             wifi_request_id id;
             u32 numResults = 0;
 
+            ALOGD("Event "
+                "QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_RESULTS_AVAILABLE "
+                "received.");
+
             if (!tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID]) {
                 ALOGE("%s: QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID"
                     "not found. Exit", __func__);
@@ -688,6 +695,9 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             u32 resultsBufSize = 0;
             u32 numResults = 0;
             u32 startingIndex, sizeOfObtainedResults;
+
+            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_FOUND "
+                "received.");
 
             id = nla_get_u32(
                     tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID]
@@ -793,7 +803,8 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             struct nlattr *scanResultsInfo;
             int rem = 0;
 
-            ALOGE("QCA_NL80211_VENDOR_SUBCMD_GSCAN_SIGNIFICANT_CHANGE");
+            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_SIGNIFICANT_CHANGE "
+                "received.");
 
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
@@ -954,10 +965,45 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
         case QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_EVENT:
         {
             wifi_scan_event scanEvent;
-            u32 scanEventStatus;
+            u32 scanEventStatus = 0;
+            wifi_request_id reqId;
 
+            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_EVENT "
+                "received.");
+
+            if (!tbVendor[
+                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
+            {
+                ALOGE("%s: ATTR_GSCAN_RESULTS_REQUEST_ID not found. Exit.",
+                    __func__);
+                ret = WIFI_ERROR_INVALID_ARGS;
+                break;
+            }
+            reqId = nla_get_u32(
+                    tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID]
+                    );
+            /* If this is not for us, just ignore it. */
+            if (reqId != mRequestId) {
+                ALOGE("%s: Event has Req. ID:%d <> ours:%d",
+                    __func__, reqId, mRequestId);
+                break;
+            }
+
+            if (!tbVendor[
+                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_EVENT_TYPE]) {
+                ALOGE("%s: GSCAN_RESULTS_SCAN_EVENT_TYPE not"
+                    " found. Stop parsing and exit.", __func__);
+                break;
+            }
             scanEvent = (wifi_scan_event) nla_get_u8(tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_EVENT_TYPE]);
+
+            if (!tbVendor[
+                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_EVENT_STATUS]) {
+                ALOGE("%s: GSCAN_RESULTS_SCAN_EVENT_STATUS not"
+                    " found. Stop parsing and exit.", __func__);
+                break;
+            }
             scanEventStatus = nla_get_u32(tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_EVENT_STATUS]);
 
@@ -1013,9 +1059,13 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             case QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_RESULTS_AVAILABLE:
             break;
 
+            case QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_EVENT:
+            break;
+
             default:
-                ALOGE("%s: Wrong GScan subcmd received %d", __func__, mSubcmd);
+                ALOGE("%s: Parsing err handler: wrong GScan subcmd "
+                    "received %d", __func__, mSubcmd);
         }
     }
-    return ret;
+    return NL_SKIP;
 }
