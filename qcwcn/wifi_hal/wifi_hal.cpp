@@ -564,3 +564,12 @@ wifi_interface_handle wifi_get_iface_handle(wifi_handle handle, char *name)
 
 /////////////////////////////////////////////////////////////////////////////
 
+wifi_error wifi_get_supported_feature_set(wifi_interface_handle handle, feature_set *set) {
+    return WIFI_ERROR_NOT_SUPPORTED;
+}
+
+wifi_error wifi_get_concurrency_matrix(wifi_interface_handle handle, int max_size,
+        feature_set *matrix, int *size) {
+    return WIFI_ERROR_NOT_SUPPORTED;
+}
+
