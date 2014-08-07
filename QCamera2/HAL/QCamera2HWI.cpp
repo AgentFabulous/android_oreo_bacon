@@ -1030,7 +1030,8 @@ QCamera2HardwareInterface::QCamera2HardwareInterface(int cameraId)
       mSnapshotJob(-1),
       mPostviewJob(-1),
       mMetadataJob(-1),
-      mReprocJob(-1)
+      mReprocJob(-1),
+      mPreviewFrameSkipValid(0)
 {
     mCameraDevice.common.tag = HARDWARE_DEVICE_TAG;
     mCameraDevice.common.version = HARDWARE_DEVICE_API_VERSION(1, 0);
@@ -1057,6 +1058,9 @@ QCamera2HardwareInterface::QCamera2HardwareInterface(int cameraId)
 #endif
 
     memset(mDeffOngoingJobs, 0, sizeof(mDeffOngoingJobs));
+
+    //reset preview frame skip
+    memset(&mPreviewFrameSkipIdxRange, 0, sizeof(cam_frame_idx_range_t));
 
     mDefferedWorkThread.launch(defferedWorkRoutine, this);
     mDefferedWorkThread.sendCmd(CAMERA_CMD_TYPE_START_DATA_PROC, FALSE, FALSE);
@@ -2044,6 +2048,10 @@ int QCamera2HardwareInterface::stopPreview()
     // stop preview stream
     stopChannel(QCAMERA_CH_TYPE_ZSL);
     stopChannel(QCAMERA_CH_TYPE_PREVIEW);
+
+    //reset preview frame skip
+    mPreviewFrameSkipValid = 0;
+    memset(&mPreviewFrameSkipIdxRange, 0, sizeof(cam_frame_idx_range_t));
 
     // delete all channels from preparePreview
     unpreparePreview();
