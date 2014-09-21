@@ -7939,13 +7939,6 @@ static int taiko_codec_probe(struct snd_soc_codec *codec)
 	snd_soc_dapm_sync(dapm);
 
 	codec->ignore_pmdown_time = 1;
-<<<<<<< HEAD
-=======
-/* OPPO 2013-11-12 xuzhaoan Add begin for America Headset Detect */
-#ifdef CONFIG_MACH_MSM8974_14001
-    priv_headset_type = taiko;
-#endif
-/* OPPO 2013-11-12 xuzhaoan Add end */
 
 	/*
 	 * Get the default values during probe
@@ -7956,7 +7949,6 @@ static int taiko_codec_probe(struct snd_soc_codec *codec)
 		TAIKO_A_CDC_RX3_VOL_CTL_B2_CTL);
 	soundcontrol.default_mic_value = taiko_read(codec,
 		TAIKO_A_CDC_TX3_VOL_CTL_GAIN);
->>>>>>> 3a01e4f... sound: add sound control to increase headphones, speaker and mic gain.
 
 	return ret;
 
