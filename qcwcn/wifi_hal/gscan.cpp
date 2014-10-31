@@ -292,7 +292,7 @@ wifi_error wifi_start_gscan(wifi_request_id id,
             params.max_ap_per_scan) ||
         gScanCommand->put_u8(
             QCA_WLAN_VENDOR_ATTR_GSCAN_SCAN_CMD_PARAMS_REPORT_THRESHOLD,
-            params.report_threshold) ||
+            params.report_threshold_percent) ||
         gScanCommand->put_u8(
             QCA_WLAN_VENDOR_ATTR_GSCAN_SCAN_CMD_PARAMS_NUM_BUCKETS,
             num_scan_buckets))
@@ -1215,6 +1215,73 @@ cleanup:
     delete gScanCommand;
     return (wifi_error)ret;
 }
+
+wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
+                                                byte flush, int max_scans,
+                                                wifi_cached_scan_results *scans,
+                                                int *num_scans)
+{
+
+    if (max_scans < 1 || scans == NULL || num_scans == NULL) {
+        ALOGE("%s: no space to return results", __func__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    int num_scan_results = 1024;
+    wifi_scan_result *scan_results = static_cast<wifi_scan_result *>(
+                malloc(num_scan_results * sizeof (wifi_scan_result)));
+    if (scan_results == NULL) {
+        ALOGE("%s: failed to allocate memory", __func__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    wifi_error result = wifi_get_cached_gscan_results(
+            iface, flush, num_scan_results, scan_results, &num_scan_results);
+    if (result != WIFI_SUCCESS) {
+        *num_scans = 0;
+        free(scan_results);
+        return result;
+    }
+
+    if (num_scan_results == 0) {
+        *num_scans = 0;
+        free(scan_results);
+        return WIFI_SUCCESS;
+    }
+
+    /* TODO: This code tries to figure out number of scans based on timestamp */
+    /* While this works in lot of cases, it doesn't always work well. It is best */
+    /* to get the scan information from the firmware to be more accurate */
+
+    const wifi_timestamp TDIFFMAX = 1600 * 1000;            // 1.6 second
+    *num_scans = 0;
+    int j = 0;
+    for (int i = 0; i < max_scans && j < num_scan_results; i++) {
+        (*num_scans)++;
+        scans[i].scan_id = 0;
+        /* TODO: This should be set to 1 for truncated scans */
+        scans[i].flags = 0;
+        scans[i].num_results = 0;
+        scans[i].results = scan_results + j;
+
+        wifi_timestamp ts = scan_results[j].ts;
+        for ( ; j < num_scan_results; j++) {
+            wifi_timestamp tdiff = abs(scan_results[j].ts - ts);
+            if (tdiff < TDIFFMAX) {
+                scans[i].num_results++;
+            }
+        }
+    }
+
+    free(scan_results);
+
+    if (j < num_scan_results) {
+        ALOGW("%s: could not return all the results", __func__);
+    }
+    return WIFI_SUCCESS;
+}
+
+
 
 GScanCommand::GScanCommand(wifi_handle handle, int id, u32 vendor_id,
                                   u32 subcmd)
