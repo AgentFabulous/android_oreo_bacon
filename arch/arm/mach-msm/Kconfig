@@ -1894,6 +1894,12 @@ config THUNDERPLUG_CONTROL
 	  This driver hotplugs cpu cores based on per-core load
 >>>>>>> bc38fb7... Revert "Voltage Control: generic voltage control for DTS based kernels"
 
+config CPU_VOLTAGE_TABLE
+	bool "Enable CPU Voltage Table via sysfs for adjustements"
+	default n
+	help
+	  DTS based kernel User Votlage Control
+
 config MSM_AVS_HW
 	bool "Enable Adaptive Voltage Scaling (AVS)"
 	default n
