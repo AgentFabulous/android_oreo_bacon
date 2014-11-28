@@ -38,6 +38,12 @@ LOCAL_C_INCLUDES := \
         $(LOCAL_PATH)/../util \
         $(LOCAL_PATH)/wrapper
 
+ifeq ($(call is-platform-sdk-version-at-least,20),true)
+LOCAL_C_INCLUDES += system/media/camera/include
+else
+LOCAL_CFLAGS += -DUSE_KK_CODE
+endif
+
 ifeq ($(TARGET_USE_VENDOR_CAMERA_EXT),true)
 LOCAL_C_INCLUDES += hardware/qcom/display/msm8974/libgralloc
 else

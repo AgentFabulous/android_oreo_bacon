@@ -35,6 +35,9 @@ LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/media
 LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_C_INCLUDES += hardware/qcom/media/mm-core/inc
+ifeq ($(call is-platform-sdk-version-at-least,20),true)
+LOCAL_C_INCLUDES += system/media/camera/include
+endif
 
 ifneq ($(call is-platform-sdk-version-at-least,17),true)
   LOCAL_CFLAGS += -include bionic/libc/kernel/common/linux/socket.h
