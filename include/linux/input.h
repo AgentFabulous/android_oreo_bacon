@@ -478,6 +478,7 @@ struct input_keymap_entry {
 #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
 
 /* Oppo specific keycodes */
+#define KEY_SWEEP_WAKE		116
 #define KEY_GESTURE_CIRCLE		250
 #define KEY_GESTURE_DOUBLE_SWIPE	251
 #define KEY_GESTURE_DOWN_ARROW		252

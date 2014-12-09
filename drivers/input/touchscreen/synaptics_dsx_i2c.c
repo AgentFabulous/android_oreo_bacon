@@ -16,6 +16,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -1335,6 +1336,33 @@ TS_ENABLE_FOPS(left_arrow);
 TS_ENABLE_FOPS(right_arrow);
 TS_ENABLE_FOPS(letter_o);
 
+static int synaptics_rmi4_proc_sweep_wake_read(char *page, char **start, off_t off,
+		int count, int *eof, void *data)
+{
+	return sprintf(page, "%d\n", atomic_read(&syna_rmi4_data->sweep_wake_enable));
+}
+
+static int synaptics_rmi4_proc_sweep_wake_write(struct file *filp, const char __user *buff,
+		unsigned long len, void *data)
+{
+	int enable;
+	char buf[2];
+
+	if (len > 2)
+		return 0;
+
+	if (copy_from_user(buf, buff, len)) {
+		print_ts(TS_DEBUG, KERN_ERR "Read proc input error.\n");
+		return -EFAULT;
+	}
+
+	enable = (buf[0] == '0') ? 0 : 1;
+
+	atomic_set(&syna_rmi4_data->sweep_wake_enable, enable);
+
+	return len;
+}
+
 //smartcover proc read function
 static int synaptics_rmi4_proc_smartcover_read(char *page, char **start, off_t off,
 		int count, int *eof, void *data) {
@@ -1626,6 +1654,13 @@ static int synaptics_rmi4_init_touchpanel_proc(void)
 	if (proc_entry) {
 		proc_entry->write_proc = synaptics_rmi4_proc_letter_o_write;
 		proc_entry->read_proc = synaptics_rmi4_proc_letter_o_read;
+	}
+
+	// sweep wake
+	proc_entry = create_proc_entry("sweep_wake_enable", 0664, procdir);
+	if (proc_entry) {
+		proc_entry->write_proc = synaptics_rmi4_proc_sweep_wake_write;
+		proc_entry->read_proc = synaptics_rmi4_proc_sweep_wake_read;
 	}
 
 	//for pdoze enable/disable interface
@@ -2347,6 +2382,11 @@ static unsigned char synaptics_rmi4_update_gesture2(unsigned char *gesture,
 				(gestureext[24] == 0x48) ? Down2UpSwip      :
 				(gestureext[24] == 0x80) ? DouSwip          :
 				UnknownGesture;
+			if (gesturemode == Left2RightSwip ||
+					gesturemode == Right2LeftSwip) {
+				if (atomic_read(&syna_rmi4_data->sweep_wake_enable))
+					keyvalue = KEY_SWEEP_WAKE;
+			}
 			if (gesturemode == DouSwip ||
 					gesturemode == Down2UpSwip ||
 					gesturemode == Up2DownSwip) {
@@ -3782,6 +3822,7 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 	set_bit(KEY_GESTURE_LEFT_ARROW, rmi4_data->input_dev->keybit);
 	set_bit(KEY_GESTURE_RIGHT_ARROW, rmi4_data->input_dev->keybit);
 	set_bit(KEY_GESTURE_CIRCLE, rmi4_data->input_dev->keybit);
+	set_bit(KEY_SWEEP_WAKE, rmi4_data->input_dev->keybit);
 	synaptics_ts_init_virtual_key(rmi4_data);
 
 	input_set_abs_params(rmi4_data->input_dev,
@@ -3870,6 +3911,7 @@ static int synaptics_rmi4_set_input_dev(struct synaptics_rmi4_data *rmi4_data)
 	atomic_set(&rmi4_data->left_arrow_enable, 0);
 	atomic_set(&rmi4_data->right_arrow_enable, 0);
 	atomic_set(&rmi4_data->letter_o_enable, 0);
+	atomic_set(&rmi4_data->sweep_wake_enable, 0);
 
 	rmi4_data->glove_enable = 0;
 	rmi4_data->pdoze_enable = 0;
@@ -4331,6 +4373,7 @@ static void synaptics_rmi4_init_work(struct work_struct *work)
 		synaptics_enable_pdoze(rmi4_data,false);
 		synaptics_enable_irqwake(rmi4_data,false);
 		atomic_set(&rmi4_data->syna_use_gesture,
+			atomic_read(&rmi4_data->sweep_wake_enable) ||
 			atomic_read(&rmi4_data->double_tap_enable) ||
 			atomic_read(&rmi4_data->double_swipe_enable) ||
 			atomic_read(&rmi4_data->up_arrow_enable) ||
@@ -4740,6 +4783,7 @@ static int synaptics_rmi4_suspend(struct device *dev)
 				&val, sizeof(val));
 
 	atomic_set(&rmi4_data->syna_use_gesture,
+			atomic_read(&rmi4_data->sweep_wake_enable) ||
 			atomic_read(&rmi4_data->double_tap_enable) ||
 			atomic_read(&rmi4_data->double_swipe_enable) ||
 			atomic_read(&rmi4_data->up_arrow_enable) ||

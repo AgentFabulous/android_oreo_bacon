@@ -295,6 +295,7 @@ struct synaptics_rmi4_data {
 	unsigned char bcontinue;
 	struct workqueue_struct *reportqueue;  //for work queue
 	struct work_struct reportwork;
+	atomic_t sweep_wake_enable;
 
 	bool suspended;
 	struct work_struct init_work;
