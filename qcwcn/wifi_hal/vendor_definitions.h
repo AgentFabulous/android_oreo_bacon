@@ -17,37 +17,7 @@
 #ifndef __VENDOR_DEFINITIONS_H__
 #define __VENDOR_DEFINITIONS_H__
 
-/*Internal to Android HAL component */
-enum vendor_subcmds {
-    /* subcommands for link layer statistics start here */
-    QCA_NL80211_VENDOR_SUBCMD_LL_STATS_SET = 14,
-    QCA_NL80211_VENDOR_SUBCMD_LL_STATS_GET = 15,
-    QCA_NL80211_VENDOR_SUBCMD_LL_STATS_CLR = 16,
-    QCA_NL80211_VENDOR_SUBCMD_LL_STATS_RADIO_RESULTS = 17,
-    QCA_NL80211_VENDOR_SUBCMD_LL_STATS_IFACE_RESULTS = 18,
-    QCA_NL80211_VENDOR_SUBCMD_LL_STATS_PEERS_RESULTS = 19,
-    /* subcommands for gscan start here */
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_START = 20,
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_STOP = 21,
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_GET_VALID_CHANNELS = 22,
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_GET_CAPABILITIES = 23,
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_GET_CACHED_RESULTS = 24,
-    /* Used when report_threshold is reached in scan cache. */
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_RESULTS_AVAILABLE = 25,
-    /* Used to report scan results when each probe rsp. is received,
-     * if report_events enabled in wifi_scan_cmd_params.
-     */
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_FULL_SCAN_RESULT = 26,
-    /* Indicates progress of scanning state-machine. */
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_EVENT = 27,
-    /* Indicates BSSID Hotlist. */
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_FOUND = 28,
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_SET_BSSID_HOTLIST = 29,
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_RESET_BSSID_HOTLIST = 30,
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_SIGNIFICANT_CHANGE = 31,
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_SET_SIGNIFICANT_CHANGE = 32,
-    QCA_NL80211_VENDOR_SUBCMD_GSCAN_RESET_SIGNIFICANT_CHANGE = 33,
-};
+/* Internal to Android HAL component */
 
 enum qca_wlan_vendor_attr_ll_stats_set
 {
