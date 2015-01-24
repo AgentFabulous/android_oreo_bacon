@@ -66,4 +66,7 @@ typedef u64 __nocast cputime64_t;
 #define cputime64_to_clock_t(__ct)	\
 	jiffies_64_to_clock_t(cputime64_to_jiffies64(__ct))
 
+#define cputime64_add(__a, __b) ((__a) + (__b))
+#define cputime64_sub(__a, __b) ((__a) - (__b))
+
 #endif
