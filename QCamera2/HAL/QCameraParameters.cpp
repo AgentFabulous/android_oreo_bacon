@@ -1421,49 +1421,18 @@ int32_t QCameraParameters::setJpegThumbnailSize(const QCameraParameters& params)
     int height = params.getInt(KEY_JPEG_THUMBNAIL_HEIGHT);
 
     ALOGV("requested jpeg thumbnail size %d x %d", width, height);
-
     int sizes_cnt = sizeof(THUMBNAIL_SIZES_MAP) / sizeof(cam_dimension_t);
-
-    int pic_width = 0, pic_height = 0;
-    params.getPictureSize(&pic_width, &pic_height);
-    if (pic_height == 0) {
-        ALOGE("%s: picture size is invalid (%d x %d)", __func__, pic_width, pic_height);
-        return BAD_VALUE;
-    }
-    double picAspectRatio = (double)pic_width / pic_height;
-
-    int optimalWidth = 0, optimalHeight = 0;
-    if (width != 0 || height != 0) {
-        // If input jpeg thumnmail size is (0,0), meaning no thumbnail needed
-        // hornor this setting.
-        // Otherwise, find optimal jpeg thumbnail size that has same aspect ration
-        // as picture size
-
-        // Try to find a size matches aspect ratio and has the largest width
-        for (int i = 0; i < sizes_cnt; i++) {
-            if (THUMBNAIL_SIZES_MAP[i].height == 0) {
-                // No thumbnail case, just skip
-                continue;
-            }
-            double ratio =
-                (double)THUMBNAIL_SIZES_MAP[i].width / THUMBNAIL_SIZES_MAP[i].height;
-            if (fabs(ratio - picAspectRatio) > ASPECT_TOLERANCE)  {
-                continue;
-            }
-            if (THUMBNAIL_SIZES_MAP[i].width > optimalWidth) {
-                optimalWidth = THUMBNAIL_SIZES_MAP[i].width;
-                optimalHeight = THUMBNAIL_SIZES_MAP[i].height;
-            }
-        }
-        if (optimalWidth == 0 && optimalHeight == 0) {
-            ALOGD("%s: Could not find optimal size", __func__);
-            optimalWidth = width;
-            optimalHeight = height;
+    // Validate thumbnail size
+    for (int i = 0; i < sizes_cnt; i++) {
+        if (width == THUMBNAIL_SIZES_MAP[i].width &&
+                height == THUMBNAIL_SIZES_MAP[i].height) {
+            set(KEY_JPEG_THUMBNAIL_WIDTH, width);
+            set(KEY_JPEG_THUMBNAIL_HEIGHT, height);
+            return NO_ERROR;
         }
     }
-    set(KEY_JPEG_THUMBNAIL_WIDTH, optimalWidth);
-    set(KEY_JPEG_THUMBNAIL_HEIGHT, optimalHeight);
-    return NO_ERROR;
+    ALOGE("%s: error: setting jpeg thumbnail size (%d, %d)", __func__, width, height);
+    return BAD_VALUE;
 }
 
 /*===========================================================================
