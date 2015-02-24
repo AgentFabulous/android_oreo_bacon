@@ -539,7 +539,7 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
      * Request Id is different from the current one vs (ii) case where both
      * new and Request IDs are the same.
      */
-    if (GScanSetBssidHotlistCmdEventHandler)
+    if (GScanSetBssidHotlistCmdEventHandler) {
         if (id == GScanSetBssidHotlistCmdEventHandler->get_request_id()) {
             ALOGE("%s: GSCAN Set BSSID Hotlist for request Id %d is still"
                 "running. Exit", __func__, id);
@@ -549,6 +549,7 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
                 "is requested. Not supported. Exit", __func__, id);
             return WIFI_ERROR_NOT_SUPPORTED;
         }
+    }
 
     gScanCommand =
         new GScanCommand(
@@ -804,7 +805,7 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
      * Request Id is different from the current one vs (ii) both new and
      * Request Ids are the same.
      */
-    if (GScanSetSignificantChangeCmdEventHandler)
+    if (GScanSetSignificantChangeCmdEventHandler) {
         if (id == GScanSetSignificantChangeCmdEventHandler->get_request_id()) {
             ALOGE("%s: GSCAN Set Significant Change for request Id %d is still"
                 "running. Exit", __func__, id);
@@ -814,6 +815,7 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
                 "Id:%d is requested. Not supported. Exit", __func__, id);
             return WIFI_ERROR_NOT_SUPPORTED;
         }
+    }
 
     gScanCommand = new GScanCommand(
                     wifiHandle,
