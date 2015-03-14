@@ -42,6 +42,12 @@ private:
     bool mSignificantChangeMoreData;
     GScanCallbackHandler mHandler;
     int mRequestId;
+    u32 mHotlistSsidFoundNumResults;
+    bool mHotlistSsidFoundMoreData;
+    u32 mHotlistSsidLostNumResults;
+    bool mHotlistSsidLostMoreData;
+    wifi_scan_result *mHotlistSsidFoundResults;
+    wifi_scan_result *mHotlistSsidLostResults;
     /* Needed because mSubcmd gets overwritten in
      * WifiVendorCommand::handleEvent()
      */
@@ -56,6 +62,11 @@ public:
     virtual void set_request_id(int request_id);
     virtual int handleEvent(WifiEvent &event);
     wifi_error gscan_parse_hotlist_ap_results(
+            u32 num_results,
+            wifi_scan_result *results,
+            u32 starting_index,
+            struct nlattr **tb_vendor);
+    wifi_error gscan_parse_hotlist_ssid_results(
             u32 num_results,
             wifi_scan_result *results,
             u32 starting_index,
