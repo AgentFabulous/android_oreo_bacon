@@ -617,10 +617,13 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
                 apThreshold.low) ||
             gScanCommand->put_s32(
                 QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_RSSI_HIGH,
-                apThreshold.high) ||
-            gScanCommand->put_u32(
+                apThreshold.high) 
+            /* this is removed in latest HAL
+             || gScanCommand->put_u32(
                 QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_CHANNEL,
-                apThreshold.channel))
+                apThreshold.channel)
+            */
+            )
         {
             goto cleanup;
         }
@@ -893,10 +896,13 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
                 apThreshold.low) ||
             gScanCommand->put_s32(
                 QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_RSSI_HIGH,
-                apThreshold.high) ||
-            gScanCommand->put_u32(
+                apThreshold.high)
+            /* this parameter is removed from latest HAL 
+             || gScanCommand->put_u32(
                 QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_CHANNEL,
-                apThreshold.channel) )
+                apThreshold.channel)
+            */
+            )
         {
             goto cleanup;
         }
