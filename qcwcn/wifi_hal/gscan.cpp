@@ -2356,3 +2356,445 @@ void GScanCommand::setNumChannelsPtr(int *num_channels) {
     mNumChannelsPtr = num_channels;
 }
 
+wifi_error wifi_set_ssid_white_list(wifi_request_id id,
+                                    wifi_interface_handle iface,
+                                    int num_networks,
+                                    wifi_ssid *ssids)
+{
+    int ret = 0, i;
+    GScanCommand *roamCommand;
+    struct nlattr *nlData, *nlSsids;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    ALOGI("White list ssid : set");
+    ALOGI("Number of SSIDs : %d", num_networks);
+    for (i = 0; i < num_networks; i++) {
+        ALOGI("ssid %d : %s", i, ssids[i].ssid);
+    }
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    roamCommand = new GScanCommand(
+                                wifiHandle,
+                                id,
+                                OUI_QCA,
+                                QCA_NL80211_VENDOR_SUBCMD_ROAM);
+    if (roamCommand == NULL) {
+        ALOGE("wifi_set_ssid_white_list(): Error roamCommand NULL");
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = roamCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    /* Set the interface Id of the message. */
+    ret = roamCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
+            QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SSID_WHITE_LIST) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID,
+            id) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_NUM_NETWORKS,
+            num_networks)) {
+        goto cleanup;
+    }
+
+    nlSsids =
+      roamCommand->attr_start(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_LIST);
+    for (i = 0; i < num_networks; i++) {
+        struct nlattr *nl_ssid = roamCommand->attr_start(i);
+
+        if ( roamCommand->put_string(
+                    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID,
+                    ssids[i].ssid)) {
+            goto cleanup;
+        }
+
+        roamCommand->attr_end(nl_ssid);
+    }
+    roamCommand->attr_end(nlSsids);
+
+    roamCommand->attr_end(nlData);
+
+    ret = roamCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("wifi_set_ssid_white_list(): requestEvent Error:%d", ret);
+    }
+
+cleanup:
+    delete roamCommand;
+    return (wifi_error)ret;
+
+}
+
+wifi_error wifi_set_gscan_roam_params(wifi_request_id id,
+                                      wifi_interface_handle iface,
+                                      wifi_roam_params * params)
+{
+    int ret = 0;
+    GScanCommand *roamCommand;
+    struct nlattr *nlData;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    ALOGI("set gscan roam params:");
+    if(params) {
+        ALOGI("A_band_boost_threshold   %d", params->A_band_boost_threshold);
+        ALOGI("A_band_penalty_threshol  %d", params->A_band_penalty_threshold);
+        ALOGI("A_band_boost_factor      %u", params->A_band_boost_factor);
+        ALOGI("A_band_penalty_factor    %u", params->A_band_penalty_factor);
+        ALOGI("A_band_max_boost         %u", params->A_band_max_boost);
+        ALOGI("lazy_roam_histeresys     %u", params->lazy_roam_hysteresis);
+        ALOGI("alert_roam_rssi_trigger  %d", params->alert_roam_rssi_trigger);
+    } else {
+        ALOGE("wifi_roam_params is NULL");
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    roamCommand = new GScanCommand(wifiHandle,
+                                   id,
+                                   OUI_QCA,
+                                   QCA_NL80211_VENDOR_SUBCMD_ROAM);
+    if (roamCommand == NULL) {
+        ALOGE("wifi_set_gscan_roam_params(): Error roamCommand NULL");
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = roamCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    /* Set the interface Id of the message. */
+    ret = roamCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
+            QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_GSCAN_ROAM_PARAMS) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID,
+            id) ||
+        roamCommand->put_s32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_BOOST_THRESHOLD,
+            params->A_band_boost_threshold) ||
+        roamCommand->put_s32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_PENALTY_THRESHOLD,
+            params->A_band_penalty_threshold) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_BOOST_FACTOR,
+            params->A_band_boost_factor) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_PENALTY_FACTOR,
+            params->A_band_penalty_factor) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_MAX_BOOST,
+            params->A_band_max_boost) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_LAZY_ROAM_HISTERESYS,
+            params->lazy_roam_hysteresis) ||
+        roamCommand->put_s32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_ALERT_ROAM_RSSI_TRIGGER,
+            params->alert_roam_rssi_trigger)) {
+        goto cleanup;
+    }
+
+    roamCommand->attr_end(nlData);
+
+    ret = roamCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("wifi_set_gscan_roam_params(): requestEvent Error:%d", ret);
+    }
+
+cleanup:
+    delete roamCommand;
+    return (wifi_error)ret;
+
+}
+
+wifi_error wifi_enable_lazy_roam(wifi_request_id id,
+                                 wifi_interface_handle iface,
+                                 int enable)
+{
+    int ret = 0;
+    GScanCommand *roamCommand;
+    struct nlattr *nlData;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    ALOGI("set lazy roam: %s", enable?"ENABLE":"DISABLE");
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    roamCommand =
+         new GScanCommand(wifiHandle,
+                          id,
+                          OUI_QCA,
+                          QCA_NL80211_VENDOR_SUBCMD_ROAM);
+    if (roamCommand == NULL) {
+        ALOGE("%s: Error roamCommand NULL", __func__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = roamCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    /* Set the interface Id of the message. */
+    ret = roamCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
+            QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_LAZY_ROAM) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID,
+            id) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_ENABLE,
+            enable)) {
+        goto cleanup;
+    }
+
+    roamCommand->attr_end(nlData);
+
+    ret = roamCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: Error roamCommand NULL ret = %d", __func__, ret);
+    }
+
+cleanup:
+    delete roamCommand;
+    return (wifi_error)ret;
+
+}
+
+wifi_error wifi_set_bssid_preference(wifi_request_id id,
+                                     wifi_interface_handle iface,
+                                     int num_bssid,
+                                     wifi_bssid_preference *prefs)
+{
+    int ret = 0, i;
+    GScanCommand *roamCommand;
+    struct nlattr *nlData, *nlBssids;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    ALOGI("Set BSSID preferences");
+    ALOGI("Number of BSSIDs: %d", num_bssid);
+    if(prefs && num_bssid) {
+        for (i = 0; i < num_bssid; i++) {
+            ALOGI("BSSID: %d : %02x:%02x:%02x:%02x:%02x:%02x", i,
+                    prefs[i].bssid[0], prefs[i].bssid[1],
+                    prefs[i].bssid[2], prefs[i].bssid[3],
+                    prefs[i].bssid[4], prefs[i].bssid[5]);
+            ALOGI("alert_roam_rssi_trigger : %d", prefs[i].rssi_modifier);
+        }
+    } else {
+        ALOGE("wifi_bssid_preference is NULL");
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    roamCommand =
+         new GScanCommand(wifiHandle,
+                          id,
+                          OUI_QCA,
+                          QCA_NL80211_VENDOR_SUBCMD_ROAM);
+    if (roamCommand == NULL) {
+        ALOGE("%s: Error roamCommand NULL", __func__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = roamCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    /* Set the interface Id of the message. */
+    ret = roamCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
+            QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_BSSID_PREFS) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID,
+            id) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_NUM_BSSID,
+            num_bssid)) {
+        goto cleanup;
+    }
+
+    nlBssids = roamCommand->attr_start(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PREFS);
+    for (i = 0; i < num_bssid; i++) {
+        struct nlattr *nl_ssid = roamCommand->attr_start(i);
+
+        if (roamCommand->put_addr(
+                QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_BSSID,
+                (u8 *)prefs[i].bssid) ||
+            roamCommand->put_s32(
+                QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_RSSI_MODIFIER,
+                prefs[i].rssi_modifier)) {
+            goto cleanup;
+        }
+
+        roamCommand->attr_end(nl_ssid);
+    }
+    roamCommand->attr_end(nlBssids);
+
+    roamCommand->attr_end(nlData);
+
+    ret = roamCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: Error roamCommand NULL %d",__func__, ret);
+    }
+
+cleanup:
+    delete roamCommand;
+    return (wifi_error)ret;
+
+}
+
+wifi_error wifi_set_bssid_blacklist(wifi_request_id id,
+                                    wifi_interface_handle iface,
+                                    wifi_bssid_params params)
+{
+    int ret = 0, i;
+    GScanCommand *roamCommand;
+    struct nlattr *nlData, *nlBssids;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    ALOGI("Set BSSID  blacks list Params");
+    for (i = 0; i < params.num_bssid; i++) {
+        ALOGI("BSSID: %d : %02x:%02x:%02x:%02x:%02x:%02x", i,
+                params.bssids[i][0], params.bssids[i][1],
+                params.bssids[i][2], params.bssids[i][3],
+                params.bssids[i][4], params.bssids[i][5]);
+    }
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    roamCommand =
+         new GScanCommand(wifiHandle,
+                          id,
+                          OUI_QCA,
+                          QCA_NL80211_VENDOR_SUBCMD_ROAM);
+    if (roamCommand == NULL) {
+        ALOGE("%s: Error roamCommand NULL", __func__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = roamCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    /* Set the interface Id of the message. */
+    ret = roamCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
+            QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_BLACKLIST_BSSID) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID,
+            id) ||
+        roamCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS_NUM_BSSID,
+            params.num_bssid)) {
+        goto cleanup;
+    }
+
+    nlBssids = roamCommand->attr_start(
+            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS);
+    for (i = 0; i < params.num_bssid; i++) {
+        struct nlattr *nl_ssid = roamCommand->attr_start(i);
+
+        if (roamCommand->put_addr(
+                QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS_BSSID,
+                (u8 *)params.bssids[i])) {
+            goto cleanup;
+        }
+
+        roamCommand->attr_end(nl_ssid);
+    }
+    roamCommand->attr_end(nlBssids);
+
+    roamCommand->attr_end(nlData);
+
+    ret = roamCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: Error roamCommand NULL %d",__func__, ret);
+    }
+
+cleanup:
+    delete roamCommand;
+    return (wifi_error)ret;
+
+}
