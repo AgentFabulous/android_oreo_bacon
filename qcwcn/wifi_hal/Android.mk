@@ -45,7 +45,8 @@ LOCAL_SRC_FILES := \
 	nan.cpp \
 	nan_ind.cpp \
 	nan_req.cpp \
-	nan_rsp.cpp
+	nan_rsp.cpp \
+	wificonfig.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
