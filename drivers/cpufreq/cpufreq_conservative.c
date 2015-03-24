@@ -52,7 +52,7 @@ static unsigned int min_sampling_rate;
 #define MAX_SAMPLING_DOWN_FACTOR		(10)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(90)
 #define MICRO_FREQUENCY_DOWN_THRESHOLD		(30)
-#define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(50000)
+#define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
 
 static void do_dbs_timer(struct work_struct *work);
