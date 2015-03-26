@@ -93,6 +93,18 @@ typedef struct{
     u32 status;
 } GScanResetSsidHotlistRspParams;
 
+typedef struct{
+    u32 status;
+} GScanPnoSetlistRspParams;
+
+typedef struct{
+    u32 status;
+} GScanPnoSetPasspointListRspParams;
+
+typedef struct{
+    u32 status;
+} GScanPnoResetPasspointListRspParams;
+
 typedef enum{
     eGScanRspParamsInvalid = 0,
     eGScanGetValidChannelsRspParams,
@@ -106,6 +118,9 @@ typedef enum{
     eGScanResetSignificantChangeRspParams,
     eGScanSetSsidHotlistRspParams,
     eGScanResetSsidHotlistRspParams,
+    eGScanPnoSetListRspParams,
+    eGScanPnoSetPasspointListRspParams,
+    eGScanPnoResetPasspointListRspParams,
 } eGScanRspRarams;
 
 /* Response and Event Callbacks */
@@ -141,6 +156,14 @@ typedef struct {
             unsigned num_results, wifi_scan_result *results);
     void (*on_hotlist_ssid_lost)(wifi_request_id id,
             unsigned num_results, wifi_scan_result *results);
+    void (*set_epno_list)(int status);
+    void (*on_pno_network_found)(wifi_request_id id,
+            unsigned num_results, wifi_scan_result *results);
+    void (*set_passpoint_list)(int status);
+    void (*reset_passpoint_list)(int status);
+    void (*on_passpoint_network_found)(wifi_request_id id,
+            unsigned num_matches,
+            wifi_passpoint_match_result *results);
 } GScanCallbackHandler;
 
 class GScanCommand: public WifiVendorCommand
@@ -156,6 +179,9 @@ private:
     GScanResetSsidHotlistRspParams      *mResetSsidHotlistRspParams;
     GScanGetCapabilitiesRspParams       *mGetCapabilitiesRspParams;
     GScanGetCachedResultsRspParams      *mGetCachedResultsRspParams;
+    GScanPnoSetlistRspParams            *mPnoSetListRspParams;
+    GScanPnoSetPasspointListRspParams   *mPnoSetPasspointListRspParams;
+    GScanPnoResetPasspointListRspParams *mPnoResetPasspointListRspParams;
     u32                                 mGetCachedResultsNumResults;
     GScanCallbackHandler                mHandler;
     int                                 mRequestId;
@@ -197,6 +223,9 @@ public:
                                                     int *numResults);
     virtual wifi_error copyCachedScanResults(int numResults,
                                              wifi_cached_scan_results *cached_results);
+    virtual void getPnoSetListRspParams(u32 *status);
+    virtual void getPnoSetPasspointListRspParams(u32 *status);
+    virtual void getPnoResetPasspointListRspParams(u32 *status);
     /* Takes wait time in seconds. */
     virtual int timed_wait(u16 wait_time);
     virtual void waitForRsp(bool wait);

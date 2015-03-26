@@ -31,6 +31,8 @@ GScanCommandEventHandler *GScanStartCmdEventHandler = NULL;
 GScanCommandEventHandler *GScanSetBssidHotlistCmdEventHandler = NULL;
 GScanCommandEventHandler *GScanSetSignificantChangeCmdEventHandler = NULL;
 GScanCommandEventHandler *GScanSetSsidHotlistCmdEventHandler = NULL;
+GScanCommandEventHandler *GScanSetPnoListCmdEventHandler = NULL;
+GScanCommandEventHandler *GScanPnoSetPasspointListCmdEventHandler = NULL;
 
 /* Implementation of the API functions exposed in gscan.h */
 wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
@@ -2158,6 +2160,529 @@ int GScanCommand:: gscan_get_cached_results(u32 num_results,
    return WIFI_SUCCESS;
 }
 
+void set_pno_list_cb(int status)
+{
+    ALOGD("%s: Status = %d.", __func__, status);
+}
+
+/* Set the GSCAN BSSID Hotlist. */
+wifi_error wifi_set_epno_list(wifi_request_id id,
+                                wifi_interface_handle iface,
+                                int num_networks,
+                                wifi_epno_network *networks,
+                                wifi_epno_handler handler)
+{
+    int i, ret = 0;
+    GScanCommand *gScanCommand;
+    struct nlattr *nlData, *nlPnoParamList;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    bool previousGScanSetEpnoListRunning = false;
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_HAL_EPNO)) {
+        ALOGE("%s: Enhanced PNO is not supported by the driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    ALOGE("Setting GScan EPNO List, halHandle = %p", wifiHandle);
+
+    /* Wi-Fi HAL doesn't need to check if a similar request to set ePNO
+     * list was made earlier. If wifi_set_epno_list() is called while
+     * another one is running, the request will be sent down to driver and
+     * firmware. If the new request is successfully honored, then Wi-Fi HAL
+     * will use the new request id for the GScanSetPnoListCmdEventHandler
+     * object.
+     */
+
+    gScanCommand =
+        new GScanCommand(
+                    wifiHandle,
+                    id,
+                    OUI_QCA,
+                    QCA_NL80211_VENDOR_SUBCMD_PNO_SET_LIST);
+    if (gScanCommand == NULL) {
+        ALOGE("%s: Error GScanCommand NULL", __func__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    GScanCallbackHandler callbackHandler;
+    memset(&callbackHandler, 0, sizeof(callbackHandler));
+    callbackHandler.set_epno_list = set_pno_list_cb;
+
+    ret = gScanCommand->setCallbackHandler(callbackHandler);
+    if (ret < 0) {
+        ALOGE("%s: Failed to set callback handler. Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Create the NL message. */
+    ret = gScanCommand->create();
+    if (ret < 0) {
+        ALOGE("%s: Failed to create the NL msg. Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    ret = gScanCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0) {
+        ALOGE("%s: Failed to set iface id. Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        ALOGE("%s: Failed to add attribute NL80211_ATTR_VENDOR_DATA. Error:%d",
+            __func__, ret);
+        goto cleanup;
+    }
+
+    num_networks = (unsigned int)num_networks > MAX_PNO_SSID ?
+        MAX_PNO_SSID : num_networks;
+    if (gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID,
+            id) ||
+        gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_NUM_NETWORKS,
+            num_networks))
+    {
+        ALOGE("%s: Failed to add vendor atributes. Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlPnoParamList =
+        gScanCommand->attr_start(
+                QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORKS_LIST);
+    if (!nlPnoParamList) {
+        ALOGE("%s: Failed to add attr. PNO_SET_LIST_PARAM_EPNO_NETWORKS_LIST. "
+            "Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Add nested NL attributes for ePno List. */
+    for (i = 0; i < num_networks; i++) {
+        wifi_epno_network pnoNetwork = networks[i];
+        struct nlattr *nlPnoNetwork = gScanCommand->attr_start(i);
+        if (!nlPnoNetwork) {
+            ALOGE("%s: Failed attr_start for nlPnoNetwork. Error:%d",
+                __func__, ret);
+            goto cleanup;
+        }
+        if (gScanCommand->put_string(
+                QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_SSID,
+                pnoNetwork.ssid) ||
+                gScanCommand->put_s8(
+           QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_RSSI_THRESHOLD,
+                pnoNetwork.rssi_threshold) ||
+            gScanCommand->put_u8(
+                QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_FLAGS,
+                pnoNetwork.flags) ||
+            gScanCommand->put_u8(
+                QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_AUTH_BIT,
+                pnoNetwork.auth_bit_field))
+        {
+            ALOGE("%s: Failed to add PNO_SET_LIST_PARAM_EPNO_NETWORK_*. "
+                "Error:%d", __func__, ret);
+            goto cleanup;
+        }
+        gScanCommand->attr_end(nlPnoNetwork);
+    }
+
+    gScanCommand->attr_end(nlPnoParamList);
+
+    gScanCommand->attr_end(nlData);
+
+    ret = gScanCommand->allocRspParams(eGScanPnoSetListRspParams);
+    if (ret != 0) {
+        ALOGE("%s: Failed to allocate memory to the response struct. "
+            "Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    callbackHandler.on_pno_network_found = handler.on_network_found;
+
+    /* Create an object of the event handler class to take care of the
+      * asychronous events on the north-bound.
+      */
+    if (GScanSetPnoListCmdEventHandler == NULL) {
+        GScanSetPnoListCmdEventHandler = new GScanCommandEventHandler(
+                            wifiHandle,
+                            id,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_PNO_SET_LIST,
+                            callbackHandler);
+        if (GScanSetPnoListCmdEventHandler == NULL) {
+            ALOGE("%s: Error instantiating "
+                "GScanSetPnoListCmdEventHandler.", __func__);
+            ret = WIFI_ERROR_UNKNOWN;
+            goto cleanup;
+        }
+        ALOGD("%s: Handler object was created for PNO_NETWORK_FOUND.",
+            __func__);
+    } else {
+        previousGScanSetEpnoListRunning = true;
+        ALOGD("%s: "
+                "A PNO_NETWORK_FOUND event handler object already exists"
+                " with request id=%d",
+                __func__,
+                GScanSetPnoListCmdEventHandler->get_request_id());
+    }
+
+    gScanCommand->waitForRsp(false);
+    ret = gScanCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        goto cleanup;
+    }
+
+    gScanCommand->getPnoSetListRspParams((u32 *)&ret);
+    if (ret != 0)
+    {
+        ALOGE("%s: Failed to getPnoSetListRspParams. Error:%d",__func__, ret);
+        goto cleanup;
+    }
+
+    if (GScanSetPnoListCmdEventHandler != NULL) {
+        GScanSetPnoListCmdEventHandler->set_request_id(id);
+    }
+
+cleanup:
+    gScanCommand->freeRspParams(eGScanPnoSetListRspParams);
+    ALOGI("%s: Delete object. ", __func__);
+    delete gScanCommand;
+    /* Delete the command event handler object if ret != 0 */
+    if (!previousGScanSetEpnoListRunning && ret
+        && GScanSetPnoListCmdEventHandler) {
+        delete GScanSetPnoListCmdEventHandler;
+        GScanSetPnoListCmdEventHandler = NULL;
+    }
+    return (wifi_error)ret;
+}
+
+void set_passpoint_list_cb(int status)
+{
+    ALOGD("%s: Status = %d.", __func__, status);
+}
+
+/* Set the ePNO Passpoint List. */
+wifi_error wifi_set_passpoint_list(wifi_request_id id,
+                                    wifi_interface_handle iface, int num,
+                                    wifi_passpoint_network *networks,
+                                    wifi_passpoint_event_handler handler)
+{
+    int i, numAp, ret = 0;
+    GScanCommand *gScanCommand;
+    struct nlattr *nlData, *nlPasspointNetworksParamList;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    bool previousGScanPnoSetPasspointListRunning = false;
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_HAL_EPNO)) {
+        ALOGE("%s: Enhanced PNO is not supported by the driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    ALOGD("Setting ePNO Passpoint List, halHandle = %p", wifiHandle);
+
+    /* Wi-Fi HAL doesn't need to check if a similar request to set ePNO
+     * passpoint list was made earlier. If wifi_set_passpoint_list() is called
+     * while another one is running, the request will be sent down to driver and
+     * firmware. If the new request is successfully honored, then Wi-Fi HAL
+     * will use the new request id for the
+     * GScanPnoSetPasspointListCmdEventHandler object.
+     */
+    gScanCommand =
+        new GScanCommand(
+                    wifiHandle,
+                    id,
+                    OUI_QCA,
+                    QCA_NL80211_VENDOR_SUBCMD_PNO_SET_PASSPOINT_LIST);
+    if (gScanCommand == NULL) {
+        ALOGE("%s: Error GScanCommand NULL", __func__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    GScanCallbackHandler callbackHandler;
+    memset(&callbackHandler, 0, sizeof(callbackHandler));
+    callbackHandler.set_passpoint_list = set_passpoint_list_cb;
+
+    ret = gScanCommand->setCallbackHandler(callbackHandler);
+    if (ret < 0) {
+        ALOGE("%s: Failed to set callback handler. Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Create the NL message. */
+    ret = gScanCommand->create();
+    if (ret < 0) {
+        ALOGE("%s: Failed to create the NL msg. Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    ret = gScanCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0) {
+        ALOGE("%s: Failed to set iface id. Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        ALOGE("%s: Failed to add attribute NL80211_ATTR_VENDOR_DATA. Error:%d",
+            __func__, ret);
+        goto cleanup;
+    }
+
+    if (gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID,
+            id) ||
+        gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_LIST_PARAM_NUM,
+            num))
+    {
+        ALOGE("%s: Failed to add vendor atributes. Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlPasspointNetworksParamList =
+        gScanCommand->attr_start(
+            QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_LIST_PARAM_NETWORK_ARRAY);
+    if (!nlPasspointNetworksParamList) {
+        ALOGE("%s: Failed attr_start for PASSPOINT_LIST_PARAM_NETWORK_ARRAY. "
+            "Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Add nested NL attributes for Passpoint List param. */
+    for (i = 0; i < num; i++) {
+        wifi_passpoint_network passpointNetwork = networks[i];
+        struct nlattr *nlPasspointNetworkParam = gScanCommand->attr_start(i);
+        if (!nlPasspointNetworkParam) {
+            ALOGE("%s: Failed attr_start for nlPasspointNetworkParam. "
+                "Error:%d", __func__, ret);
+            goto cleanup;
+        }
+        if (gScanCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_NETWORK_PARAM_ID,
+                passpointNetwork.id) ||
+            gScanCommand->put_string(
+                QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_NETWORK_PARAM_REALM,
+                passpointNetwork.realm) ||
+            gScanCommand->put_bytes(
+         QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_NETWORK_PARAM_ROAM_CNSRTM_ID,
+                (char*)passpointNetwork.roamingConsortiumIds,
+                16 * sizeof(int64_t)) ||
+            gScanCommand->put_bytes(
+            QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_NETWORK_PARAM_ROAM_PLMN,
+                passpointNetwork.plmn, 3 * sizeof(u8)))
+        {
+            ALOGE("%s: Failed to add PNO_PASSPOINT_NETWORK_PARAM_ROAM_* attr. "
+                "Error:%d", __func__, ret);
+            goto cleanup;
+        }
+        gScanCommand->attr_end(nlPasspointNetworkParam);
+    }
+
+    gScanCommand->attr_end(nlPasspointNetworksParamList);
+
+    gScanCommand->attr_end(nlData);
+
+    ret = gScanCommand->allocRspParams(eGScanPnoSetPasspointListRspParams);
+    if (ret != 0) {
+        ALOGE("%s: Failed to allocate memory to the response struct. "
+            "Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    callbackHandler.on_passpoint_network_found =
+                        handler.on_passpoint_network_found;
+    /* Create an object of the event handler class to take care of the
+      * asychronous events on the north-bound.
+      */
+    if (GScanPnoSetPasspointListCmdEventHandler == NULL) {
+        GScanPnoSetPasspointListCmdEventHandler = new GScanCommandEventHandler(
+                        wifiHandle,
+                        id,
+                        OUI_QCA,
+                        QCA_NL80211_VENDOR_SUBCMD_PNO_SET_PASSPOINT_LIST,
+                        callbackHandler);
+        if (GScanPnoSetPasspointListCmdEventHandler == NULL) {
+            ALOGE("%s: Error instantiating "
+                "GScanPnoSetPasspointListCmdEventHandler.", __func__);
+            ret = WIFI_ERROR_UNKNOWN;
+            goto cleanup;
+        }
+        ALOGD("%s: Handler object was created for PNO_PASSPOINT_"
+            "NETWORK_FOUND.", __func__);
+    } else {
+        previousGScanPnoSetPasspointListRunning = true;
+        ALOGD("%s: "
+                "A PNO_PASSPOINT_NETWORK_FOUND event handler object "
+                "already exists with request id=%d",
+                __func__,
+                GScanPnoSetPasspointListCmdEventHandler->get_request_id());
+    }
+
+    gScanCommand->waitForRsp(false);
+    ret = gScanCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        goto cleanup;
+    }
+
+    gScanCommand->getPnoSetPasspointListRspParams((u32 *)&ret);
+    if (ret != 0)
+    {
+        ALOGE("%s: Failed to getPnoSetPasspointListRspParams. Error:%d",
+            __func__, ret);
+        goto cleanup;
+    }
+    if (GScanPnoSetPasspointListCmdEventHandler != NULL) {
+        GScanPnoSetPasspointListCmdEventHandler->set_request_id(id);
+    }
+
+cleanup:
+    gScanCommand->freeRspParams(eGScanPnoSetPasspointListRspParams);
+    ALOGI("%s: Delete object. ", __func__);
+    delete gScanCommand;
+    /* Delete the command event handler object if ret != 0 */
+    if (!previousGScanPnoSetPasspointListRunning && ret
+        && GScanPnoSetPasspointListCmdEventHandler) {
+        delete GScanPnoSetPasspointListCmdEventHandler;
+        GScanPnoSetPasspointListCmdEventHandler = NULL;
+    }
+    return (wifi_error)ret;
+}
+
+void reset_passpoint_list_cb(int status)
+{
+    ALOGD("%s: Status = %d.", __func__, status);
+}
+
+wifi_error wifi_reset_passpoint_list(wifi_request_id id,
+                            wifi_interface_handle iface)
+{
+    int ret = 0;
+    GScanCommand *gScanCommand;
+    struct nlattr *nlData;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_HAL_EPNO)) {
+        ALOGE("%s: Enhanced PNO is not supported by the driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    ALOGE("Resetting ePNO Passpoint List, halHandle = %p", wifiHandle);
+
+    if (GScanPnoSetPasspointListCmdEventHandler == NULL) {
+        ALOGE("wifi_reset_passpoint_list: ePNO passpoint_list isn't set. "
+            "Nothing to do. Exit");
+        return WIFI_ERROR_NOT_AVAILABLE;
+    }
+
+    gScanCommand = new GScanCommand(
+                    wifiHandle,
+                    id,
+                    OUI_QCA,
+                    QCA_NL80211_VENDOR_SUBCMD_PNO_RESET_PASSPOINT_LIST);
+
+    if (gScanCommand == NULL) {
+        ALOGE("%s: Error GScanCommand NULL", __func__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    GScanCallbackHandler callbackHandler;
+    memset(&callbackHandler, 0, sizeof(callbackHandler));
+    callbackHandler.reset_passpoint_list = reset_passpoint_list_cb;
+
+    ret = gScanCommand->setCallbackHandler(callbackHandler);
+    if (ret < 0) {
+        ALOGE("%s: Failed to set callback handler. Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Create the NL message. */
+    ret = gScanCommand->create();
+    if (ret < 0) {
+        ALOGE("%s: Failed to create the NL msg. Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    ret = gScanCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0) {
+        ALOGE("%s: Failed to set iface id. Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        ALOGE("%s: Failed to add attribute NL80211_ATTR_VENDOR_DATA. Error:%d",
+            __func__, ret);
+        goto cleanup;
+    }
+
+    ret = gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID, id);
+    if (ret < 0) {
+        ALOGE("%s: Failed to add vendor data attributes. Error:%d",
+            __func__, ret);
+        goto cleanup;
+    }
+
+    gScanCommand->attr_end(nlData);
+
+    ret = gScanCommand->allocRspParams(eGScanPnoResetPasspointListRspParams);
+    if (ret != 0) {
+        ALOGE("%s: Failed to allocate memory to the response struct. "
+            "Error:%d", __func__, ret);
+        goto cleanup;
+    }
+
+    gScanCommand->waitForRsp(false);
+    ret = gScanCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        if (ret == ETIMEDOUT)
+        {
+            if (GScanPnoSetPasspointListCmdEventHandler) {
+                delete GScanPnoSetPasspointListCmdEventHandler;
+                GScanPnoSetPasspointListCmdEventHandler = NULL;
+            }
+        }
+        goto cleanup;
+    }
+
+    gScanCommand->getPnoResetPasspointListRspParams((u32 *)&ret);
+    if (ret != 0)
+    {
+        ALOGE("%s: Failed to getPnoResetPasspointListRspParams. Error:%d",
+            __func__, ret);
+        goto cleanup;
+    }
+    if (GScanPnoSetPasspointListCmdEventHandler) {
+        delete GScanPnoSetPasspointListCmdEventHandler;
+        GScanPnoSetPasspointListCmdEventHandler = NULL;
+    }
+
+cleanup:
+    gScanCommand->freeRspParams(eGScanPnoResetPasspointListRspParams);
+    ALOGI("%s: Delete object.", __func__);
+    delete gScanCommand;
+    return (wifi_error)ret;
+}
+
 /* This function will be the main handler for incoming (from driver)  GSscan_SUBCMD.
  *  Calls the appropriate callback handler after parsing the vendor data.
  */
@@ -2734,6 +3259,32 @@ int GScanCommand::allocRspParams(eGScanRspRarams cmd)
             else
                 mResetSsidHotlistRspParams->status = -1;
         break;
+        case eGScanPnoSetListRspParams:
+            mPnoSetListRspParams = (GScanPnoSetlistRspParams *)
+                malloc(sizeof(GScanPnoSetlistRspParams));
+            if (!mPnoSetListRspParams)
+                ret = -1;
+            else
+                mPnoSetListRspParams->status = -1;
+        break;
+        case eGScanPnoSetPasspointListRspParams:
+            mPnoSetPasspointListRspParams =
+                (GScanPnoSetPasspointListRspParams *)
+                malloc(sizeof(GScanPnoSetPasspointListRspParams));
+            if (!mPnoSetPasspointListRspParams)
+                ret = -1;
+            else
+                mPnoSetPasspointListRspParams->status = -1;
+        break;
+        case eGScanPnoResetPasspointListRspParams:
+            mPnoResetPasspointListRspParams =
+                (GScanPnoResetPasspointListRspParams *)
+                malloc(sizeof(GScanPnoResetPasspointListRspParams));
+            if (!mPnoResetPasspointListRspParams)
+                ret = -1;
+            else
+                mPnoResetPasspointListRspParams->status = -1;
+        break;
         default:
             ALOGD("%s: Wrong request for alloc.", __func__);
             ret = -1;
@@ -2810,6 +3361,24 @@ void GScanCommand::freeRspParams(eGScanRspRarams cmd)
             if (mResetSsidHotlistRspParams) {
                 free(mResetSsidHotlistRspParams);
                 mResetSsidHotlistRspParams = NULL;
+            }
+        break;
+        case eGScanPnoSetListRspParams:
+            if (mPnoSetListRspParams) {
+                free(mPnoSetListRspParams);
+                mPnoSetListRspParams = NULL;
+            }
+        break;
+        case eGScanPnoSetPasspointListRspParams:
+            if (mPnoSetPasspointListRspParams) {
+                free(mPnoSetPasspointListRspParams);
+                mPnoSetPasspointListRspParams = NULL;
+            }
+        break;
+        case eGScanPnoResetPasspointListRspParams:
+            if (mPnoResetPasspointListRspParams) {
+                free(mPnoResetPasspointListRspParams);
+                mPnoResetPasspointListRspParams = NULL;
             }
         break;
         default:
@@ -2962,6 +3531,35 @@ void GScanCommand::getResetSsidHotlistRspParams(u32 *status)
     }
 }
 
+void GScanCommand::getPnoSetListRspParams(u32 *status)
+{
+    if (mPnoSetListRspParams)
+    {
+        *status = mPnoSetListRspParams->status;
+    } else {
+        ALOGD("%s: mPnoSetListRspParams is NULL", __func__);
+    }
+}
+
+void GScanCommand::getPnoSetPasspointListRspParams(u32 *status)
+{
+    if (mPnoSetPasspointListRspParams)
+    {
+        *status = mPnoSetPasspointListRspParams->status;
+    } else {
+        ALOGD("%s: mPnoSetPasspointListRspParams is NULL", __func__);
+    }
+}
+
+void GScanCommand::getPnoResetPasspointListRspParams(u32 *status)
+{
+    if (mPnoResetPasspointListRspParams)
+    {
+        *status = mPnoResetPasspointListRspParams->status;
+    } else {
+        ALOGD("%s: mPnoResetPasspointListRspParams is NULL", __func__);
+    }
+}
 
 int GScanCommand::timed_wait(u16 wait_time)
 {

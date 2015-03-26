@@ -48,6 +48,13 @@ private:
     bool mHotlistSsidLostMoreData;
     wifi_scan_result *mHotlistSsidFoundResults;
     wifi_scan_result *mHotlistSsidLostResults;
+    wifi_passpoint_match_result *mPasspointNetworkFoundResults;
+    u32 mPasspointNetworkFoundNumResults;
+    bool mPasspointNetworkFoundMoreData;
+    wifi_scan_result *mPnoNetworkFoundResults;
+    u32 mPnoNetworkFoundNumResults;
+    bool mPnoNetworkFoundMoreData;
+
     /* Needed because mSubcmd gets overwritten in
      * WifiVendorCommand::handleEvent()
      */
@@ -71,6 +78,16 @@ public:
             wifi_scan_result *results,
             u32 starting_index,
             struct nlattr **tb_vendor);
+    wifi_error gscan_parse_passpoint_network_results(
+            u32 num_results,
+            wifi_passpoint_match_result *results,
+            u32 starting_index,
+            struct nlattr **tb_vendor);
+    wifi_error gscan_parse_pno_network_results(
+            u32 numResults,
+            wifi_scan_result *mPnoNetworkFoundResults,
+            u32 startingIndex,
+            struct nlattr **tbVendor);
 };
 
 #ifdef __cplusplus
