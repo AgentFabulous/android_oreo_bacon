@@ -12,3 +12,10 @@ wifi_error wifi_rtt_range_cancel(wifi_request_id id,  wifi_interface_handle ifac
         unsigned num_devices, mac_addr addr[]) {
     return WIFI_ERROR_NOT_SUPPORTED;
 }
+
+/* API to get RTT capability */
+wifi_error wifi_get_rtt_capabilities(wifi_interface_handle iface,
+        wifi_rtt_capabilities *capabilities)
+{
+    return WIFI_ERROR_NOT_SUPPORTED;
+}
