@@ -118,7 +118,7 @@ void get_gscan_capabilities_cb(int status, wifi_gscan_capabilities capa)
             "max_significant_wifi_change_aps:%d.",
             __func__, capa.max_ap_cache_per_scan,
             capa.max_bssid_history_entries,
-            capa.max_hotlist_aps, capa.max_rssi_sample_size,
+            capa.max_hotlist_bssids, capa.max_rssi_sample_size,
             capa.max_scan_buckets,
             capa.max_scan_cache_size, capa.max_scan_reporting_threshold,
             capa.max_significant_wifi_change_aps);
@@ -585,7 +585,7 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
     if (!nlData)
         goto cleanup;
 
-    numAp = (unsigned int)params.num_ap > MAX_HOTLIST_APS ? MAX_HOTLIST_APS : params.num_ap;
+    numAp = (unsigned int)params.num_bssid > MAX_HOTLIST_APS ? MAX_HOTLIST_APS : params.num_bssid;
     if (gScanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID,
             id) ||
@@ -853,8 +853,8 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
     if (!nlData)
         goto cleanup;
 
-    numAp = (unsigned int)params.num_ap > MAX_SIGNIFICANT_CHANGE_APS ?
-        MAX_SIGNIFICANT_CHANGE_APS : params.num_ap;
+    numAp = (unsigned int)params.num_bssid > MAX_SIGNIFICANT_CHANGE_APS ?
+        MAX_SIGNIFICANT_CHANGE_APS : params.num_bssid;
 
     if (gScanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID,
@@ -1824,7 +1824,7 @@ int GScanCommand::handleEvent(WifiEvent &event)
                 ret = WIFI_ERROR_INVALID_ARGS;
                 break;
             }
-            mGetCapabilitiesRspParams->capabilities.max_hotlist_aps =
+            mGetCapabilitiesRspParams->capabilities.max_hotlist_bssids =
                     nla_get_u32(tbVendor[
                     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_HOTLIST_APS]);
 
