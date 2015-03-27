@@ -32,8 +32,11 @@ private:
     // TODO: derive 3 other command event handler classes from this base and separate
     // the data member vars
     wifi_scan_result *mHotlistApFoundResults;
+    wifi_scan_result *mHotlistApLostResults;
     u32 mHotlistApFoundNumResults;
+    u32 mHotlistApLostNumResults;
     bool mHotlistApFoundMoreData;
+    bool mHotlistApLostMoreData;
     wifi_significant_change_result **mSignificantChangeResults;
     u32 mSignificantChangeNumResults;
     bool mSignificantChangeMoreData;
@@ -50,7 +53,13 @@ public:
     virtual ~GScanCommandEventHandler();
     virtual int create();
     virtual int get_request_id();
+    virtual void set_request_id(int request_id);
     virtual int handleEvent(WifiEvent &event);
+    wifi_error gscan_parse_hotlist_ap_results(
+            u32 num_results,
+            wifi_scan_result *results,
+            u32 starting_index,
+            struct nlattr **tb_vendor);
 };
 
 #ifdef __cplusplus

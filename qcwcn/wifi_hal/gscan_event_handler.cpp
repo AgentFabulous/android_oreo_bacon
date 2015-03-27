@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#define LOG_TAG  "WifiHAL"
+
+#include <utils/Log.h>
 #include "gscan_event_handler.h"
 #include "vendor_definitions.h"
 
@@ -40,6 +43,11 @@ out:
 int GScanCommandEventHandler::get_request_id()
 {
     return mRequestId;
+}
+
+void GScanCommandEventHandler::set_request_id(int request_id)
+{
+    mRequestId = request_id;
 }
 
 GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
@@ -96,6 +104,12 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
             if (ret < 0)
                 ALOGD("%s: Error in registering handler for"
                     " GSCAN_HOTLIST_AP_FOUND. \n", __func__);
+
+            ret = registerVendorHandler(mVendor_id,
+                    QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_LOST);
+            if (ret < 0)
+                ALOGD("%s: Error in registering handler for"
+                    " GSCAN_HOTLIST_AP_LOST. \n", __func__);
         }
         break;
     }
@@ -131,12 +145,15 @@ GScanCommandEventHandler::~GScanCommandEventHandler()
         {
             unregisterVendorHandler(mVendor_id,
                     QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_FOUND);
+            unregisterVendorHandler(mVendor_id,
+                    QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_LOST);
         }
         break;
     }
 }
 
-static wifi_error gscan_get_hotlist_ap_found_results(u32 num_results,
+wifi_error GScanCommandEventHandler::gscan_parse_hotlist_ap_results(
+                                            u32 num_results,
                                             wifi_scan_result *results,
                                             u32 starting_index,
                                             struct nlattr **tb_vendor)
@@ -145,7 +162,7 @@ static wifi_error gscan_get_hotlist_ap_found_results(u32 num_results,
     struct nlattr *scanResultsInfo;
     int rem = 0;
     u32 len = 0;
-    ALOGE("gscan_get_hotlist_ap_found_results: starting counter: %d", i);
+    ALOGE("gscan_parse_hotlist_ap_results: starting counter: %d", i);
 
     for (scanResultsInfo = (struct nlattr *) nla_data(tb_vendor[
             QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST]),
@@ -165,7 +182,7 @@ static wifi_error gscan_get_hotlist_ap_found_results(u32 num_results,
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_TIME_STAMP
                 ])
         {
-            ALOGE("gscan_get_hotlist_ap_found_results: "
+            ALOGE("gscan_parse_hotlist_ap_results: "
                 "RESULTS_SCAN_RESULT_TIME_STAMP not found");
             return WIFI_ERROR_INVALID_ARGS;
         }
@@ -179,7 +196,7 @@ static wifi_error gscan_get_hotlist_ap_found_results(u32 num_results,
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_SSID
                 ])
         {
-            ALOGE("gscan_get_hotlist_ap_found_results: "
+            ALOGE("gscan_parse_hotlist_ap_results: "
                 "RESULTS_SCAN_RESULT_SSID not found");
             return WIFI_ERROR_INVALID_ARGS;
         }
@@ -195,7 +212,7 @@ static wifi_error gscan_get_hotlist_ap_found_results(u32 num_results,
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_BSSID
                 ])
         {
-            ALOGE("gscan_get_hotlist_ap_found_results: "
+            ALOGE("gscan_parse_hotlist_ap_results: "
                 "RESULTS_SCAN_RESULT_BSSID not found");
             return WIFI_ERROR_INVALID_ARGS;
         }
@@ -211,7 +228,7 @@ static wifi_error gscan_get_hotlist_ap_found_results(u32 num_results,
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_CHANNEL
                 ])
         {
-            ALOGE("gscan_get_hotlist_ap_found_results: "
+            ALOGE("gscan_parse_hotlist_ap_results: "
                 "RESULTS_SCAN_RESULT_CHANNEL not found");
             return WIFI_ERROR_INVALID_ARGS;
         }
@@ -223,19 +240,19 @@ static wifi_error gscan_get_hotlist_ap_found_results(u32 num_results,
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RSSI
                 ])
         {
-            ALOGE("gscan_get_hotlist_ap_found_results: "
+            ALOGE("gscan_parse_hotlist_ap_results: "
                 "RESULTS_SCAN_RESULT_RSSI not found");
             return WIFI_ERROR_INVALID_ARGS;
         }
         results[i].rssi =
-            nla_get_u32(
+            get_s32(
             tb2[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RSSI]);
         if (!
             tb2[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT
                 ])
         {
-            ALOGE("gscan_get_hotlist_ap_found_results: "
+            ALOGE("gscan_parse_hotlist_ap_results: "
                 "RESULTS_SCAN_RESULT_RTT not found");
             return WIFI_ERROR_INVALID_ARGS;
         }
@@ -247,7 +264,7 @@ static wifi_error gscan_get_hotlist_ap_found_results(u32 num_results,
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT_SD
             ])
         {
-            ALOGE("gscan_get_hotlist_ap_found_results: "
+            ALOGE("gscan_parse_hotlist_ap_results: "
                 "RESULTS_SCAN_RESULT_RTT_SD not found");
             return WIFI_ERROR_INVALID_ARGS;
         }
@@ -255,18 +272,18 @@ static wifi_error gscan_get_hotlist_ap_found_results(u32 num_results,
             nla_get_u32(
             tb2[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT_SD]);
 
-        ALOGE("gscan_get_hotlist_ap_found_results: ts  %lld ", results[i].ts);
-        ALOGE("gscan_get_hotlist_ap_found_results: SSID  %s ",
+        ALOGE("gscan_parse_hotlist_ap_results: ts  %lld ", results[i].ts);
+        ALOGE("gscan_parse_hotlist_ap_results: SSID  %s ",
             results[i].ssid) ;
-        ALOGE("gscan_get_hotlist_ap_found_results: "
+        ALOGE("gscan_parse_hotlist_ap_results: "
             "BSSID: %02x:%02x:%02x:%02x:%02x:%02x \n",
             results[i].bssid[0], results[i].bssid[1], results[i].bssid[2],
             results[i].bssid[3], results[i].bssid[4], results[i].bssid[5]);
-        ALOGE("gscan_get_hotlist_ap_found_results: channel %d ",
+        ALOGE("gscan_parse_hotlist_ap_results: channel %d ",
             results[i].channel);
-        ALOGE("gscan_get_hotlist_ap_found_results: rssi %d ", results[i].rssi);
-        ALOGE("gscan_get_hotlist_ap_found_results: rtt %lld ", results[i].rtt);
-        ALOGE("gscan_get_hotlist_ap_found_results: rtt_sd %lld ",
+        ALOGE("gscan_parse_hotlist_ap_results: rssi %d ", results[i].rssi);
+        ALOGE("gscan_parse_hotlist_ap_results: rtt %lld ", results[i].rtt);
+        ALOGE("gscan_parse_hotlist_ap_results: rtt_sd %lld ",
             results[i].rtt_sd);
         /* Increment loop index for next record */
         i++;
@@ -386,8 +403,9 @@ static wifi_error gscan_get_significant_change_results(u32 num_results,
     return WIFI_SUCCESS;
 }
 
-/* This function will be the main handler for incoming (from driver)  GSscan_SUBCMD.
- *  Calls the appropriate callback handler after parsing the vendor data.
+/* This function will be the main handler for incoming (from driver)
+ * GScan_SUBCMD. Calls the appropriate callback handler after parsing
+ * the vendor data.
  */
 int GScanCommandEventHandler::handleEvent(WifiEvent &event)
 {
@@ -428,11 +446,13 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             reqId = nla_get_u32(
                     tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID]
                     );
-            /* If this is not for us, just ignore it. */
+            /* If event has a different request_id, ignore that and use the
+             *  request_id value which we're maintaining.
+             */
             if (reqId != mRequestId) {
-                ALOGE("%s: Event has Req. ID:%d <> Ours:%d, ignore it.",
+                ALOGE("%s: Event has Req. ID:%d <> Ours:%d, continue...",
                     __func__, reqId, mRequestId);
-                break;
+                reqId = mRequestId;
             }
 
             /* Parse and extract the results. */
@@ -542,7 +562,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 break;
             }
             result->rssi =
-                nla_get_u32(
+                get_s32(
                 tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RSSI]
                 );
 
@@ -752,7 +772,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                                             mHotlistApFoundNumResults);
 
             /* To support fragmentation from firmware, monitor the
-             * MORE_DTATA flag and cache results until MORE_DATA = 0.
+             * MORE_DATA flag and cache results until MORE_DATA = 0.
              * Only then we can pass on the results to framework through
              * the callback function.
              */
@@ -774,14 +794,14 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             startingIndex = mHotlistApFoundNumResults - numResults;
             ALOGE("%s: starting_index:%d",
                 __func__, startingIndex);
-            ret = gscan_get_hotlist_ap_found_results(numResults,
+            ret = gscan_parse_hotlist_ap_results(numResults,
                                                 mHotlistApFoundResults,
                                                 startingIndex,
                                                 tbVendor);
             /* If a parsing error occurred, exit and proceed for cleanup. */
             if (ret)
                 break;
-            /* Send the results if no more result data fragments are expected. */
+            /* Send the results if no more result data fragments are expected */
             if (!mHotlistApFoundMoreData) {
                 (*mHandler.on_hotlist_ap_found)(id,
                                                 mHotlistApFoundNumResults,
@@ -791,6 +811,112 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 mHotlistApFoundResults = NULL;
                 mHotlistApFoundMoreData = false;
                 mHotlistApFoundNumResults = 0;
+            }
+        }
+        break;
+
+        case QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_LOST:
+        {
+            wifi_request_id id;
+            u32 resultsBufSize = 0;
+            u32 numResults = 0;
+            u32 startingIndex, sizeOfObtainedResults;
+
+            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_LOST "
+                "received.");
+
+            id = nla_get_u32(
+                    tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID]
+                    );
+            /* If this is not for us, just ignore it. */
+            if (id != mRequestId) {
+                ALOGE("%s: Event has Req. ID:%d <> ours:%d",
+                    __func__, id, mRequestId);
+                break;
+            }
+            if (!tbVendor[
+                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE]) {
+                ALOGE("%s: GSCAN_RESULTS_NUM_RESULTS_AVAILABLE not found",
+                    __func__);
+                ret = WIFI_ERROR_INVALID_ARGS;
+                break;
+            }
+            numResults = nla_get_u32(tbVendor[
+                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE]);
+            ALOGE("%s: number of results:%d", __func__, numResults);
+
+            /* Get the memory size of previous fragments, if any. */
+            sizeOfObtainedResults = mHotlistApLostNumResults *
+                          sizeof(wifi_scan_result);
+
+            mHotlistApLostNumResults += numResults;
+            resultsBufSize += mHotlistApLostNumResults *
+                                            sizeof(wifi_scan_result);
+
+            /* Check if this chunck of scan results is a continuation of
+             * a previous one.
+             */
+            if (mHotlistApLostMoreData) {
+                mHotlistApLostResults = (wifi_scan_result *)
+                            realloc (mHotlistApLostResults, resultsBufSize);
+            } else {
+                mHotlistApLostResults = (wifi_scan_result *)
+                            malloc (resultsBufSize);
+            }
+
+            if (!mHotlistApLostResults) {
+                ALOGE("%s: Failed to alloc memory for results array. Exit.\n",
+                    __func__);
+                ret = WIFI_ERROR_OUT_OF_MEMORY;
+                break;
+            }
+            /* Initialize the newly allocated memory area with 0. */
+            memset((u8 *)mHotlistApLostResults + sizeOfObtainedResults, 0,
+                    resultsBufSize - sizeOfObtainedResults);
+
+            ALOGE("%s: Num of AP Lost results = %d. \n", __func__,
+                                            mHotlistApLostNumResults);
+
+            /* To support fragmentation from firmware, monitor the
+             * MORE_DATA flag and cache results until MORE_DATA = 0.
+             * Only then we can pass on the results to framework through
+             * the callback function.
+             */
+            if (!tbVendor[
+                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_MORE_DATA]) {
+                ALOGE("%s: GSCAN_RESULTS_NUM_RESULTS_MORE_DATA not"
+                    " found", __func__);
+                ret = WIFI_ERROR_INVALID_ARGS;
+                break;
+            } else {
+                mHotlistApLostMoreData = nla_get_u8(
+                    tbVendor[
+                    QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_MORE_DATA]);
+                ALOGE("%s: More data = %d. \n",
+                    __func__, mHotlistApLostMoreData);
+            }
+
+            ALOGE("%s: Extract hotlist_ap_Lost results.\n", __func__);
+            startingIndex = mHotlistApLostNumResults - numResults;
+            ALOGE("%s: starting_index:%d",
+                __func__, startingIndex);
+            ret = gscan_parse_hotlist_ap_results(numResults,
+                                                mHotlistApLostResults,
+                                                startingIndex,
+                                                tbVendor);
+            /* If a parsing error occurred, exit and proceed for cleanup. */
+            if (ret)
+                break;
+            /* Send the results if no more result data fragments are expected */
+            if (!mHotlistApLostMoreData) {
+                (*mHandler.on_hotlist_ap_lost)(id,
+                                               mHotlistApLostNumResults,
+                                               mHotlistApLostResults);
+                /* Reset flag and num counter. */
+                free(mHotlistApLostResults);
+                mHotlistApLostResults = NULL;
+                mHotlistApLostMoreData = false;
+                mHotlistApLostNumResults = 0;
             }
         }
         break;
@@ -901,7 +1027,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                     (wifi_significant_change_result *) malloc (resultsBufSize);
 
                 if (!mSignificantChangeResults[index]) {
-                    ALOGE("%s: Failed to alloc memory for results array. Exit.\n",
+                    ALOGE("%s: Failed to alloc memory for results array Exit",
                         __func__);
                     ret = WIFI_ERROR_OUT_OF_MEMORY;
                     break;
@@ -926,7 +1052,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             if (ret)
                 break;
             /* To support fragmentation from firmware, monitor the
-             * MORE_DTATA flag and cache results until MORE_DATA = 0.
+             * MORE_DATA flag and cache results until MORE_DATA = 0.
              * Only then we can pass on the results to framework through
              * the callback function.
              */
@@ -948,14 +1074,17 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 (*mHandler.on_significant_change)(reqId,
                                               mSignificantChangeNumResults,
                                               mSignificantChangeResults);
-                /* Reset flag and num counter. */
-                for (index = 0; index  < mSignificantChangeNumResults; index++)
-                {
-                    free(mSignificantChangeResults[index]);
-                    mSignificantChangeResults[index] = NULL;
+                if (mSignificantChangeResults) {
+                    /* Reset flag and num counter. */
+                    for (index = 0; index < mSignificantChangeNumResults;
+                         index++)
+                    {
+                        free(mSignificantChangeResults[index]);
+                        mSignificantChangeResults[index] = NULL;
+                    }
+                    free(mSignificantChangeResults);
+                    mSignificantChangeResults = NULL;
                 }
-                free(mSignificantChangeResults);
-                mSignificantChangeResults = NULL;
                 mSignificantChangeNumResults = 0;
                 mSignificantChangeMoreData = false;
             }
@@ -1042,15 +1171,17 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
 
             case QCA_NL80211_VENDOR_SUBCMD_GSCAN_SIGNIFICANT_CHANGE:
             {
-                for (i = 0; i < mSignificantChangeNumResults; i++)
-                {
-                    if (mSignificantChangeResults[i]) {
-                        free(mSignificantChangeResults[i]);
-                        mSignificantChangeResults[i] = NULL;
+                if (mSignificantChangeResults) {
+                    for (i = 0; i < mSignificantChangeNumResults; i++)
+                    {
+                        if (mSignificantChangeResults[i]) {
+                            free(mSignificantChangeResults[i]);
+                            mSignificantChangeResults[i] = NULL;
+                        }
                     }
+                    free(mSignificantChangeResults);
+                    mSignificantChangeResults = NULL;
                 }
-                free(mSignificantChangeResults);
-                mSignificantChangeResults = NULL;
                 mSignificantChangeNumResults = 0;
                 mSignificantChangeMoreData = false;
             }
@@ -1060,6 +1191,16 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             break;
 
             case QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_EVENT:
+            break;
+
+            case QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_LOST:
+            {
+                /* Reset flag and num counter. */
+                free(mHotlistApLostResults);
+                mHotlistApLostResults = NULL;
+                mHotlistApLostMoreData = false;
+                mHotlistApLostNumResults = 0;
+            }
             break;
 
             default:
