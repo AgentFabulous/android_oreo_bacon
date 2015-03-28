@@ -67,6 +67,19 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
     mSignificantChangeResults = NULL;
     mSignificantChangeNumResults = 0;
     mSignificantChangeMoreData = false;
+    mHotlistSsidFoundNumResults = 0;
+    mHotlistSsidFoundMoreData = false;
+    mHotlistSsidLostNumResults = 0;
+    mHotlistSsidLostMoreData = false;
+    mHotlistSsidFoundResults = NULL;
+    mHotlistSsidLostResults = NULL;
+    mPnoNetworkFoundResults = NULL;
+    mPnoNetworkFoundNumResults = 0;
+    mPnoNetworkFoundMoreData = false;
+    mPasspointNetworkFoundResult = NULL;
+    mPasspointAnqp = NULL;
+    mPasspointAnqpLen = 0;
+    mPasspointNetId = -1;
 
     switch(mSubCommandId)
     {
@@ -601,17 +614,14 @@ wifi_error GScanCommandEventHandler::gscan_parse_hotlist_ssid_results(
     return WIFI_SUCCESS;
 }
 
-wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_results(
-                                            u32 num_results,
-                                            wifi_passpoint_match_result *results,
-                                            u32 starting_index,
-                                            struct nlattr **tb_vendor)
+wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_result(
+            struct nlattr **tb_vendor)
 {
-    u32 i = starting_index, j = 0;
     struct nlattr *scanResultsInfo, *wifiScanResultsInfo;
-    int rem = 0;
+    u32 resultsBufSize = 0;
     u32 len = 0;
-    ALOGE("gscan_parse_passpoint_network_results: starting counter: %d", i);
+    int rem = 0;
+    ALOGE("%s: Entering", __func__);
 
     for (scanResultsInfo = (struct nlattr *) nla_data(tb_vendor[
             QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_RESULT_LIST]),
@@ -631,11 +641,11 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_results(
                 QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ID
                 ])
         {
-            ALOGE("gscan_parse_passpoint_network_results: "
-                "GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ID not found");
+            ALOGE("%s: GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ID not found",
+                  __func__);
             return WIFI_ERROR_INVALID_ARGS;
         }
-        results[i].id =
+        mPasspointNetId =
             nla_get_u32(
             tb2[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ID
@@ -654,16 +664,46 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_results(
             (struct nlattr *) nla_data(wifiScanResultsInfo),
                      nla_len(wifiScanResultsInfo), NULL);
 
+            resultsBufSize = sizeof(wifi_scan_result);
+            if (!
+                tb3[
+                    QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH
+                ])
+            {
+                ALOGE("%s: RESULTS_SCAN_RESULT_IE_LENGTH not found", __func__);
+                return WIFI_ERROR_INVALID_ARGS;
+            }
+            resultsBufSize +=
+                nla_get_u32(
+                tb3[
+                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH]);
+
+            /* Allocate the appropriate memory for mPasspointNetworkFoundResult */
+            mPasspointNetworkFoundResult = (wifi_scan_result *)
+                                malloc (resultsBufSize);
+
+            if (!mPasspointNetworkFoundResult) {
+                ALOGE("%s: Failed to alloc memory for result struct. Exit.\n",
+                    __func__);
+                return WIFI_ERROR_OUT_OF_MEMORY;
+            }
+            memset(mPasspointNetworkFoundResult, 0, resultsBufSize);
+
+            mPasspointNetworkFoundResult->ie_length =
+                nla_get_u32(
+                tb3[
+                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH]);
+
             if (!
                 tb3[
                     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_TIME_STAMP
                     ])
             {
-                ALOGE("gscan_parse_passpoint_network_results: "
-                    "RESULTS_SCAN_RESULT_TIME_STAMP not found");
+                ALOGE("%s: RESULTS_SCAN_RESULT_TIME_STAMP not found",
+                      __func__);
                 return WIFI_ERROR_INVALID_ARGS;
             }
-            results[i].scan_result->ts =
+            mPasspointNetworkFoundResult->ts =
                 nla_get_u64(
                 tb3[
                     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_TIME_STAMP
@@ -673,16 +713,15 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_results(
                     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_SSID
                     ])
             {
-                ALOGE("gscan_parse_passpoint_network_results: "
-                    "RESULTS_SCAN_RESULT_SSID not found");
+                ALOGE("%s: RESULTS_SCAN_RESULT_SSID not found", __func__);
                 return WIFI_ERROR_INVALID_ARGS;
             }
              len = nla_len(tb3[
                      QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_SSID]);
              len =
-                 sizeof(results[i].scan_result->ssid) <= len ?
-                 sizeof(results[i].scan_result->ssid) : len;
-             memcpy((void *)&results[i].scan_result->ssid,
+                 sizeof(mPasspointNetworkFoundResult->ssid) <= len ?
+                 sizeof(mPasspointNetworkFoundResult->ssid) : len;
+             memcpy((void *)&(mPasspointNetworkFoundResult->ssid[0]),
                  nla_data(
                  tb3[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_SSID]), len);
              if (!
@@ -690,16 +729,15 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_results(
                      QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_BSSID
                      ])
              {
-                 ALOGE("gscan_parse_passpoint_network_results: "
-                    "RESULTS_SCAN_RESULT_BSSID not found");
+                 ALOGE("%s: RESULTS_SCAN_RESULT_BSSID not found", __func__);
                  return WIFI_ERROR_INVALID_ARGS;
              }
              len = nla_len(
                  tb3[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_BSSID]);
              len =
-                 sizeof(results[i].scan_result->bssid) <= len ?
-                 sizeof(results[i].scan_result->bssid) : len;
-             memcpy(&results[i].scan_result->bssid,
+                 sizeof(mPasspointNetworkFoundResult->bssid) <= len ?
+                 sizeof(mPasspointNetworkFoundResult->bssid) : len;
+             memcpy(&(mPasspointNetworkFoundResult->bssid[0]),
                  nla_data(
                  tb3[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_BSSID]),
                  len);
@@ -708,11 +746,10 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_results(
                      QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_CHANNEL
                      ])
              {
-                 ALOGE("gscan_parse_passpoint_network_results: "
-                    "RESULTS_SCAN_RESULT_CHANNEL not found");
+                 ALOGE("%s: RESULTS_SCAN_RESULT_CHANNEL not found", __func__);
                  return WIFI_ERROR_INVALID_ARGS;
              }
-             results[i].scan_result->channel =
+             mPasspointNetworkFoundResult->channel =
                  nla_get_u32(
                  tb3[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_CHANNEL]);
              if (!
@@ -720,11 +757,10 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_results(
                      QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RSSI
                      ])
              {
-                 ALOGE("gscan_parse_passpoint_network_results: "
-                    "RESULTS_SCAN_RESULT_RSSI not found");
+                 ALOGE("%s: RESULTS_SCAN_RESULT_RSSI not found", __func__);
                  return WIFI_ERROR_INVALID_ARGS;
              }
-             results[i].scan_result->rssi =
+             mPasspointNetworkFoundResult->rssi =
                  get_s32(
                  tb3[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RSSI]);
              if (!
@@ -732,11 +768,10 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_results(
                      QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT
                      ])
              {
-                 ALOGE("gscan_parse_passpoint_network_results: "
-                    "RESULTS_SCAN_RESULT_RTT not found");
+                 ALOGE("%s: RESULTS_SCAN_RESULT_RTT not found", __func__);
                  return WIFI_ERROR_INVALID_ARGS;
              }
-             results[i].scan_result->rtt =
+             mPasspointNetworkFoundResult->rtt =
                  nla_get_u32(
                  tb3[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT]);
              if (!
@@ -744,11 +779,10 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_results(
                      QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT_SD
                  ])
              {
-                 ALOGE("gscan_parse_passpoint_network_results: "
-                    "RESULTS_SCAN_RESULT_RTT_SD not found");
+                 ALOGE("%s: RESULTS_SCAN_RESULT_RTT_SD not found", __func__);
                  return WIFI_ERROR_INVALID_ARGS;
              }
-             results[i].scan_result->rtt_sd =
+             mPasspointNetworkFoundResult->rtt_sd =
                  nla_get_u32(
                  tb3[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT_SD]);
 
@@ -756,14 +790,13 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_results(
                  tb3[
                  QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_BEACON_PERIOD])
              {
-                 ALOGE("gscan_parse_passpoint_network_results: "
-                     "RESULTS_SCAN_RESULT_BEACON_PERIOD not found",
+                 ALOGE("%s: RESULTS_SCAN_RESULT_BEACON_PERIOD not found",
                      __func__);
                  return WIFI_ERROR_INVALID_ARGS;
              }
-             results[i].scan_result->beacon_period =
+             mPasspointNetworkFoundResult->beacon_period =
                  nla_get_u16(
-                 tb2[
+                 tb3[
                  QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_BEACON_PERIOD]);
 
              if (!
@@ -771,92 +804,100 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_results(
                      QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_CAPABILITY
                      ])
              {
-                 ALOGE("gscan_parse_passpoint_network_results: "
-                     "RESULTS_SCAN_RESULT_CAPABILITY not found", __func__);
+                 ALOGE("%s: RESULTS_SCAN_RESULT_CAPABILITY not found", __func__);
                  return WIFI_ERROR_INVALID_ARGS;
              }
-             results[i].scan_result->capability =
+             mPasspointNetworkFoundResult->capability =
                  nla_get_u16(
-                 tb2[
+                 tb3[
                  QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_CAPABILITY]);
 
              if (!
                  tb3[
-                     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH
+                     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_DATA
                  ])
              {
-                 ALOGE("gscan_parse_passpoint_network_results: "
-                    "RESULTS_SCAN_RESULT_IE_LENGTH not found", __func__);
+                 ALOGE("%s: RESULTS_SCAN_RESULT_IE_DATA not found", __func__);
                  return WIFI_ERROR_INVALID_ARGS;
              }
-             results[i].scan_result->ie_length =
-                 nla_get_u32(
-                 tb3[
-                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH]);
+             memcpy(&(mPasspointNetworkFoundResult->ie_data[0]),
+                 nla_data(tb3[
+                     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_DATA]),
+                 mPasspointNetworkFoundResult->ie_length);
 
-             ALOGE("gscan_parse_passpoint_network_results: ts  %lld ",
-                 results[i].scan_result->ts);
-             ALOGE("gscan_parse_passpoint_network_results: SSID  %s ",
-                 results[i].scan_result->ssid);
-             ALOGE("gscan_parse_passpoint_network_results: "
-                 "BSSID: %02x:%02x:%02x:%02x:%02x:%02x \n",
-                 results[i].scan_result->bssid[0],
-                 results[i].scan_result->bssid[1],
-                 results[i].scan_result->bssid[2],
-                 results[i].scan_result->bssid[3],
-                 results[i].scan_result->bssid[4],
-                 results[i].scan_result->bssid[5]);
-             ALOGE("gscan_parse_passpoint_network_results: channel %d ",
-                 results[i].scan_result->channel);
-             ALOGE("gscan_parse_passpoint_network_results: rssi  %d ",
-                 results[i].scan_result->rssi);
-             ALOGE("gscan_parse_passpoint_network_results: rtt  %lld ",
-                 results[i].scan_result->rtt);
-             ALOGE("gscan_parse_passpoint_network_results: rtt_sd  %lld ",
-                 results[i].scan_result->rtt_sd);
-             /* Increment loop index for next record */
-             /* j++; */
+             ALOGE("%s: ts  %lld ", __func__,
+                 mPasspointNetworkFoundResult->ts);
+             ALOGE("%s: SSID  %s ", __func__,
+                 mPasspointNetworkFoundResult->ssid);
+             ALOGE("%s: BSSID: %02x:%02x:%02x:%02x:%02x:%02x \n",
+                 __func__,
+                 mPasspointNetworkFoundResult->bssid[0],
+                 mPasspointNetworkFoundResult->bssid[1],
+                 mPasspointNetworkFoundResult->bssid[2],
+                 mPasspointNetworkFoundResult->bssid[3],
+                 mPasspointNetworkFoundResult->bssid[4],
+                 mPasspointNetworkFoundResult->bssid[5]);
+             ALOGE("%s: channel %d ", __func__,
+                 mPasspointNetworkFoundResult->channel);
+             ALOGE("%s: rssi  %d ", __func__,
+                 mPasspointNetworkFoundResult->rssi);
+             ALOGE("%s: rtt  %lld ", __func__,
+                 mPasspointNetworkFoundResult->rtt);
+             ALOGE("%s: rtt_sd  %lld ", __func__,
+                 mPasspointNetworkFoundResult->rtt_sd);
+             ALOGE("%s: ie_length  %lld ", __func__,
+                 mPasspointNetworkFoundResult->ie_length);
+             ALOGE("%s: ie_data", __func__);
+             hexdump(mPasspointNetworkFoundResult->ie_data,
+                     mPasspointNetworkFoundResult->ie_length);
         }
 
         if (!
            tb2[
                QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ANQP_LEN
            ])
-       {
-           ALOGE("%s:PNO_RESULTS_PASSPOINT_MATCH_ANQP_LEN not found",
-            __func__);
-           return WIFI_ERROR_INVALID_ARGS;
-       }
-       results[i].anqp_len =
+        {
+            ALOGE("%s:PNO_RESULTS_PASSPOINT_MATCH_ANQP_LEN not found",
+                  __func__);
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        mPasspointAnqpLen =
             nla_get_u32(
-            tb2[
-            QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ANQP_LEN]);
+                tb2[
+                QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ANQP_LEN]);
         ALOGI("%s: PNO_RESULTS_PASSPOINT_MATCH_ANQP_LEN = %d",
-            __func__, results[i].anqp_len);
+              __func__, mPasspointAnqpLen);
 
-        results[i].anqp = (u8 *) malloc (results[i].anqp_len);
-        if (!results[i].anqp) {
+        if (!mPasspointAnqpLen)
+        {
+            break;
+        }
+        mPasspointAnqp = (u8 *) malloc (mPasspointAnqpLen);
+        if (!mPasspointAnqp) {
             ALOGE("%s: Failed to alloc memory for result struct. Exit.\n",
-                __func__);
+                  __func__);
             return WIFI_ERROR_OUT_OF_MEMORY;
         }
 
-        memset(results[i].anqp, 0, results[i].anqp_len);
+        memset(mPasspointAnqp, 0, mPasspointAnqpLen);
         if (!
             tb2[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ANQP
             ])
-        {
-            ALOGE("%s: RESULTS_SCAN_RESULT_IE_DATA not found", __func__);
+            {
+            ALOGE("%s: RESULTS_PASSPOINT_MATCH_ANQP not found", __func__);
             return WIFI_ERROR_INVALID_ARGS;
         }
-        memcpy(&(results[i].anqp[0]),
-            nla_data(tb2[
-                QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ANQP]),
-            results[i].anqp_len);
+        memcpy(&(mPasspointAnqp[0]),
+               nla_data(tb2[
+                 QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ANQP]),
+               mPasspointAnqpLen);
 
-        /* Increment loop index for next record */
-        i++;
+        ALOGE("%s: ANQP LEN:%d, ANQP IE:", __func__, mPasspointAnqpLen);
+        hexdump((char*)mPasspointAnqp, mPasspointAnqpLen);
+
+        /* expecting only one result break out after the first loop */
+        break;
     }
     return WIFI_SUCCESS;
 }
@@ -2119,12 +2160,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
         break;
         case QCA_NL80211_VENDOR_SUBCMD_PNO_PASSPOINT_NETWORK_FOUND:
         {
-            /* TODO: complete event handing logic. */
-
             wifi_request_id id;
-            u32 resultsBufSize = 0;
-            u32 numResults = 0;
-            u32 startingIndex, sizeOfObtainedResults;
 
             ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_PNO_PASSPOINT_"
                 "NETWORK_FOUND received.");
@@ -2148,97 +2184,31 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 }
             }
 
-            if (!tbVendor[
-                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE]) {
-                ALOGE("%s: GSCAN_RESULTS_NUM_RESULTS_AVAILABLE not found",
-                    __func__);
-                ret = WIFI_ERROR_INVALID_ARGS;
-                break;
-            }
-            numResults = nla_get_u32(tbVendor[
-                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE]);
-            ALOGE("%s: number of results:%d", __func__, numResults);
-
-            /* Get the memory size of previous fragments, if any. */
-            sizeOfObtainedResults = mPasspointNetworkFoundNumResults *
-                          sizeof(wifi_passpoint_match_result);
-
-            mPasspointNetworkFoundNumResults += numResults;
-            resultsBufSize += mPasspointNetworkFoundNumResults *
-                                        sizeof(wifi_passpoint_match_result);
-
-            /* Check if this chunck of scan results is a continuation of
-             * a previous one.
-             */
-            if (mPasspointNetworkFoundMoreData) {
-                mPasspointNetworkFoundResults = (wifi_passpoint_match_result *)
-                            realloc (mPasspointNetworkFoundResults,
-                                    resultsBufSize);
-            } else {
-                mPasspointNetworkFoundResults = (wifi_passpoint_match_result *)
-                            malloc (resultsBufSize);
-            }
-
-            if (!mPasspointNetworkFoundResults) {
-                ALOGE("%s: Failed to alloc memory for results array. Exit.\n",
-                    __func__);
-                ret = WIFI_ERROR_OUT_OF_MEMORY;
-                break;
-            }
-            /* Initialize the newly allocated memory area with 0. */
-            memset((u8 *)mPasspointNetworkFoundResults +
-                    sizeOfObtainedResults, 0,
-                    resultsBufSize - sizeOfObtainedResults);
-
-            ALOGE("%s: Num of Passpoint FOUND results = %d. \n", __func__,
-                                            mPasspointNetworkFoundNumResults);
-
-            /* To support fragmentation from firmware, monitor the
-             * MORE_DATA flag and cache results until MORE_DATA = 0.
-             * Only then we can pass on the results to framework through
-             * the callback function.
-             */
-            if (!tbVendor[
-                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_MORE_DATA]) {
-                ALOGE("%s: GSCAN_RESULTS_NUM_RESULTS_MORE_DATA not"
-                    " found", __func__);
-                ret = WIFI_ERROR_INVALID_ARGS;
-                break;
-            } else {
-                mPasspointNetworkFoundMoreData = nla_get_u8(
-                    tbVendor[
-                    QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_MORE_DATA]);
-                ALOGE("%s: More data = %d. \n",
-                    __func__, mPasspointNetworkFoundMoreData);
-            }
-
-            ALOGE("%s: Extract passpoint_network_found results.\n", __func__);
-            startingIndex = mPasspointNetworkFoundNumResults - numResults;
-            ALOGE("%s: starting_index:%d",
-                __func__, startingIndex);
-            ret = gscan_parse_passpoint_network_results(numResults,
-                                                mPasspointNetworkFoundResults,
-                                                startingIndex,
-                                                tbVendor);
+            ret = gscan_parse_passpoint_network_result(tbVendor);
             /* If a parsing error occurred, exit and proceed for cleanup. */
             if (ret)
+            {
+                ALOGE("%s: gscan_parse_passpoint_network_result"
+                      "returned error: %d.\n", __func__, ret);
                 break;
-            /* Send the results if no more result data fragments are expected */
-            if (!mPasspointNetworkFoundMoreData) {
-                (*mHandler.on_passpoint_network_found)(id,
-                                            mPasspointNetworkFoundNumResults,
-                                            mPasspointNetworkFoundResults);
-                /* Reset flag and num counter. */
-                if (mPasspointNetworkFoundResults) {
-                    if (mPasspointNetworkFoundResults->anqp) {
-                        free(mPasspointNetworkFoundResults->anqp);
-                    }
-                    free(mPasspointNetworkFoundResults);
-                    mPasspointNetworkFoundResults = NULL;
-                }
-                mPasspointNetworkFoundMoreData = false;
-                mPasspointNetworkFoundNumResults = 0;
             }
+            (*mHandler.on_passpoint_network_found)(id,
+                                                   mPasspointNetId,
+                                                   mPasspointNetworkFoundResult,
+                                                   mPasspointAnqpLen,
+                                                   mPasspointAnqp);
+            if (mPasspointNetworkFoundResult)
+            {
+                free(mPasspointNetworkFoundResult);
+                mPasspointNetworkFoundResult = NULL;
+            }
+            if (mPasspointAnqp)
+            {
+                free(mPasspointAnqp);
+                mPasspointAnqp = NULL;
+            }
+            mPasspointNetId = -1;
+            mPasspointAnqpLen = 0;
         }
         break;
         default:
@@ -2334,16 +2304,18 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
 
             case QCA_NL80211_VENDOR_SUBCMD_PNO_PASSPOINT_NETWORK_FOUND:
             {
-                /* Reset flag and num counter. */
-                if (mPasspointNetworkFoundResults) {
-                    if (mPasspointNetworkFoundResults->anqp) {
-                        free(mPasspointNetworkFoundResults->anqp);
-                    }
-                    free(mPasspointNetworkFoundResults);
-                    mPasspointNetworkFoundResults = NULL;
+                if (mPasspointNetworkFoundResult)
+                {
+                    free(mPasspointNetworkFoundResult);
+                    mPasspointNetworkFoundResult = NULL;
                 }
-                mPasspointNetworkFoundMoreData = false;
-                mPasspointNetworkFoundNumResults = 0;
+                if (mPasspointAnqp)
+                {
+                    free(mPasspointAnqp);
+                    mPasspointAnqp = NULL;
+                }
+                mPasspointNetId = -1;
+                mPasspointAnqpLen = 0;
             }
             break;
 

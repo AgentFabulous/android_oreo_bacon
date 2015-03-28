@@ -1909,10 +1909,9 @@ int GScanCommand:: gscan_get_cached_results(u32 num_results,
                                           u32 starting_index,
                                           struct nlattr **tb_vendor)
 {
-    u32 i = starting_index;
+    u32 i = starting_index, j = 0;
     struct nlattr *scanResultsInfo, *wifiScanResultsInfo;
     int rem = 0;
-    u32 j = 0;
     u32 len = 0;
     ALOGE("starting counter: %d", i);
 
@@ -2295,13 +2294,6 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
 
     gScanCommand->attr_end(nlData);
 
-    ret = gScanCommand->allocRspParams(eGScanPnoSetListRspParams);
-    if (ret != 0) {
-        ALOGE("%s: Failed to allocate memory to the response struct. "
-            "Error:%d", __func__, ret);
-        goto cleanup;
-    }
-
     callbackHandler.on_pno_network_found = handler.on_network_found;
 
     /* Create an object of the event handler class to take care of the
@@ -2338,19 +2330,11 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
         goto cleanup;
     }
 
-    gScanCommand->getPnoSetListRspParams((u32 *)&ret);
-    if (ret != 0)
-    {
-        ALOGE("%s: Failed to getPnoSetListRspParams. Error:%d",__func__, ret);
-        goto cleanup;
-    }
-
     if (GScanSetPnoListCmdEventHandler != NULL) {
         GScanSetPnoListCmdEventHandler->set_request_id(id);
     }
 
 cleanup:
-    gScanCommand->freeRspParams(eGScanPnoSetListRspParams);
     ALOGI("%s: Delete object. ", __func__);
     delete gScanCommand;
     /* Delete the command event handler object if ret != 0 */
@@ -2481,7 +2465,7 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
                 16 * sizeof(int64_t)) ||
             gScanCommand->put_bytes(
             QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_NETWORK_PARAM_ROAM_PLMN,
-                passpointNetwork.plmn, 3 * sizeof(u8)))
+                (char*)passpointNetwork.plmn, 3 * sizeof(u8)))
         {
             ALOGE("%s: Failed to add PNO_PASSPOINT_NETWORK_PARAM_ROAM_* attr. "
                 "Error:%d", __func__, ret);
@@ -2493,13 +2477,6 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
     gScanCommand->attr_end(nlPasspointNetworksParamList);
 
     gScanCommand->attr_end(nlData);
-
-    ret = gScanCommand->allocRspParams(eGScanPnoSetPasspointListRspParams);
-    if (ret != 0) {
-        ALOGE("%s: Failed to allocate memory to the response struct. "
-            "Error:%d", __func__, ret);
-        goto cleanup;
-    }
 
     callbackHandler.on_passpoint_network_found =
                         handler.on_passpoint_network_found;
@@ -2537,19 +2514,11 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
         goto cleanup;
     }
 
-    gScanCommand->getPnoSetPasspointListRspParams((u32 *)&ret);
-    if (ret != 0)
-    {
-        ALOGE("%s: Failed to getPnoSetPasspointListRspParams. Error:%d",
-            __func__, ret);
-        goto cleanup;
-    }
     if (GScanPnoSetPasspointListCmdEventHandler != NULL) {
         GScanPnoSetPasspointListCmdEventHandler->set_request_id(id);
     }
 
 cleanup:
-    gScanCommand->freeRspParams(eGScanPnoSetPasspointListRspParams);
     ALOGI("%s: Delete object. ", __func__);
     delete gScanCommand;
     /* Delete the command event handler object if ret != 0 */
@@ -2643,13 +2612,6 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
 
     gScanCommand->attr_end(nlData);
 
-    ret = gScanCommand->allocRspParams(eGScanPnoResetPasspointListRspParams);
-    if (ret != 0) {
-        ALOGE("%s: Failed to allocate memory to the response struct. "
-            "Error:%d", __func__, ret);
-        goto cleanup;
-    }
-
     gScanCommand->waitForRsp(false);
     ret = gScanCommand->requestEvent();
     if (ret != 0) {
@@ -2664,20 +2626,12 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
         goto cleanup;
     }
 
-    gScanCommand->getPnoResetPasspointListRspParams((u32 *)&ret);
-    if (ret != 0)
-    {
-        ALOGE("%s: Failed to getPnoResetPasspointListRspParams. Error:%d",
-            __func__, ret);
-        goto cleanup;
-    }
     if (GScanPnoSetPasspointListCmdEventHandler) {
         delete GScanPnoSetPasspointListCmdEventHandler;
         GScanPnoSetPasspointListCmdEventHandler = NULL;
     }
 
 cleanup:
-    gScanCommand->freeRspParams(eGScanPnoResetPasspointListRspParams);
     ALOGI("%s: Delete object.", __func__);
     delete gScanCommand;
     return (wifi_error)ret;
@@ -3259,32 +3213,6 @@ int GScanCommand::allocRspParams(eGScanRspRarams cmd)
             else
                 mResetSsidHotlistRspParams->status = -1;
         break;
-        case eGScanPnoSetListRspParams:
-            mPnoSetListRspParams = (GScanPnoSetlistRspParams *)
-                malloc(sizeof(GScanPnoSetlistRspParams));
-            if (!mPnoSetListRspParams)
-                ret = -1;
-            else
-                mPnoSetListRspParams->status = -1;
-        break;
-        case eGScanPnoSetPasspointListRspParams:
-            mPnoSetPasspointListRspParams =
-                (GScanPnoSetPasspointListRspParams *)
-                malloc(sizeof(GScanPnoSetPasspointListRspParams));
-            if (!mPnoSetPasspointListRspParams)
-                ret = -1;
-            else
-                mPnoSetPasspointListRspParams->status = -1;
-        break;
-        case eGScanPnoResetPasspointListRspParams:
-            mPnoResetPasspointListRspParams =
-                (GScanPnoResetPasspointListRspParams *)
-                malloc(sizeof(GScanPnoResetPasspointListRspParams));
-            if (!mPnoResetPasspointListRspParams)
-                ret = -1;
-            else
-                mPnoResetPasspointListRspParams->status = -1;
-        break;
         default:
             ALOGD("%s: Wrong request for alloc.", __func__);
             ret = -1;
@@ -3361,24 +3289,6 @@ void GScanCommand::freeRspParams(eGScanRspRarams cmd)
             if (mResetSsidHotlistRspParams) {
                 free(mResetSsidHotlistRspParams);
                 mResetSsidHotlistRspParams = NULL;
-            }
-        break;
-        case eGScanPnoSetListRspParams:
-            if (mPnoSetListRspParams) {
-                free(mPnoSetListRspParams);
-                mPnoSetListRspParams = NULL;
-            }
-        break;
-        case eGScanPnoSetPasspointListRspParams:
-            if (mPnoSetPasspointListRspParams) {
-                free(mPnoSetPasspointListRspParams);
-                mPnoSetPasspointListRspParams = NULL;
-            }
-        break;
-        case eGScanPnoResetPasspointListRspParams:
-            if (mPnoResetPasspointListRspParams) {
-                free(mPnoResetPasspointListRspParams);
-                mPnoResetPasspointListRspParams = NULL;
             }
         break;
         default:
@@ -3528,36 +3438,6 @@ void GScanCommand::getResetSsidHotlistRspParams(u32 *status)
         *status = mResetSsidHotlistRspParams->status;
     } else {
         ALOGD("%s: mResetSsidHotlistRspParams is NULL", __func__);
-    }
-}
-
-void GScanCommand::getPnoSetListRspParams(u32 *status)
-{
-    if (mPnoSetListRspParams)
-    {
-        *status = mPnoSetListRspParams->status;
-    } else {
-        ALOGD("%s: mPnoSetListRspParams is NULL", __func__);
-    }
-}
-
-void GScanCommand::getPnoSetPasspointListRspParams(u32 *status)
-{
-    if (mPnoSetPasspointListRspParams)
-    {
-        *status = mPnoSetPasspointListRspParams->status;
-    } else {
-        ALOGD("%s: mPnoSetPasspointListRspParams is NULL", __func__);
-    }
-}
-
-void GScanCommand::getPnoResetPasspointListRspParams(u32 *status)
-{
-    if (mPnoResetPasspointListRspParams)
-    {
-        *status = mPnoResetPasspointListRspParams->status;
-    } else {
-        ALOGD("%s: mPnoResetPasspointListRspParams is NULL", __func__);
     }
 }
 
