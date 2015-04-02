@@ -37,6 +37,8 @@
 #include <ctype.h>
 #include <cutils/properties.h>
 #include <stdlib.h>
+#include <string.h>
+#include "bt_types.h"
 #include "bt_hci_bdroid.h"
 #include "bt_vendor_qcom.h"
 
