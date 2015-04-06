@@ -46,23 +46,22 @@ typedef struct {
                                wifi_ring_buffer_id ring_id,
                                char *buffer, int buffer_size,
                                wifi_ring_buffer_status *status);
+  void (*on_firmware_memory_dump) (char *buffer,
+                                   int buffer_size);
+
 } WifiLoggerCallbackHandler;
 
 
 class WifiLoggerCommand : public WifiVendorCommand
 {
 private:
-    static WifiLoggerCommand *mWifiLoggerCommandInstance;
     WifiLoggerCallbackHandler mHandler;
     char                      **mVersion;
     int                       *mVersionLen;
+    int                       mRequestId;
     bool                      mWaitforRsp;
+    bool                      mMoreData;
 public:
-    u8      *mTailMemoryDumBuffer;
-    u8      *mMemoryDumBuffer;
-    u8      mNumMemoryDumBufferRecv;
-    u32     mMemoryDumBufferLen;
-    bool    mMoreData;
 
     WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
 

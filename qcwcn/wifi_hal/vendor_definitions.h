@@ -1050,4 +1050,25 @@ enum qca_wlan_vendor_attr_wifi_logger_start {
     QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_START_GET_MAX  =
         QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_START_AFTER_LAST - 1,
 };
+
+enum qca_wlan_vendor_attr_logger_results
+{
+    QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_INVALID = 0,
+
+    /* Unsigned 32-bit value; must match the request Id supplied by Wi-Fi HAL
+     * in the corresponding subcmd NL msg
+     */
+    QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_REQUEST_ID,
+
+    /* Unsigned 32-bit value; used to indicate the size of memory
+       dump to be allocated.
+     */
+    QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MEMDUMP_SIZE,
+
+    /* keep last */
+    QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_AFTER_LAST,
+    QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MAX =
+        QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_AFTER_LAST - 1,
+
+};
 #endif

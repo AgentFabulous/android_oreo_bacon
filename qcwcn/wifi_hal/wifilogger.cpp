@@ -35,12 +35,8 @@
 #include <utils/Log.h>
 #include "wifiloggercmd.h"
 
-#define WIFI_MEMORY_DUMP_WAIT_TIME_SECONDS    4
-#define WIFI_MEMORY_DUMP_MAX_SIZE             300000
-
-//Singleton Static Instance
-WifiLoggerCommand* WifiLoggerCommand::mWifiLoggerCommandInstance  = NULL;
-
+#define LOGGER_MEMDUMP_FILENAME "/proc/debug/fwdump"
+#define LOGGER_MEMDUMP_CHUNKSIZE (4 * 1024)
 
 //Implementation of the functions exposed in wifi_logger.h
 
@@ -348,7 +344,7 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
                             requestId,
                             OUI_QCA,
                             QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP);
-    ALOGI("%s: Sending Memory Dump Request. \n", __FUNCTION__);
+    ALOGI("%s: Sending Memory Dump Request. \n", __func__);
     if (wifiLoggerCommand == NULL) {
         ALOGE("%s: Error WifiLoggerCommand NULL", __func__);
         return WIFI_ERROR_UNKNOWN;
@@ -373,36 +369,28 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
 
     wifiLoggerCommand->attr_end(nlData);
 
-    /* Send the msg and wait for a response. */
-    ret = wifiLoggerCommand->requestResponse();
+    /* copy the callback into callback handler */
+    WifiLoggerCallbackHandler callbackHandler;
+    memset(&callbackHandler, 0, sizeof(callbackHandler));
+    callbackHandler.on_firmware_memory_dump = \
+        handler.on_firmware_memory_dump;
+
+    ret = wifiLoggerCommand->setCallbackHandler(callbackHandler);
+    if (ret < 0)
+        goto cleanup;
+
+    /* Send the msg and wait for the memory dump event */
+    wifiLoggerCommand->waitForRsp(true);
+    ret = wifiLoggerCommand->requestEvent();
     if (ret) {
         ALOGE("%s: Error %d happened. ", __func__, ret);
-    }
-
-    wifiLoggerCommand->mMemoryDumBuffer =(u8*)malloc(WIFI_MEMORY_DUMP_MAX_SIZE);
-
-    if (wifiLoggerCommand->mMemoryDumBuffer == NULL) {
-        ALOGE("%s: Failed to allocate memory", __func__);
-        goto cleanup;
-    }
-
-    /* Send the msg and wait for a response. */
-    ret = wifiLoggerCommand->requestResponse();
-    if (ret) {
-        ALOGE("%s: Error %d happened. ", __func__, ret);
-        goto cleanup;
     }
 
 cleanup:
-    if (wifiLoggerCommand->mMemoryDumBuffer != NULL) {
-        free(wifiLoggerCommand->mMemoryDumBuffer);
-        wifiLoggerCommand->mMemoryDumBuffer = NULL;
-    }
     ALOGI("%s: Delete object.", __func__);
     delete wifiLoggerCommand;
     return (wifi_error)ret;
 }
-
 
 WifiLoggerCommand::WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
@@ -410,6 +398,10 @@ WifiLoggerCommand::WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, 
     ALOGV("WifiLoggerCommand %p constructed", this);
     mVersion = NULL;
     mVersionLen = NULL;
+    mRequestId = id;
+    memset(&mHandler, 0,sizeof(mHandler));
+    mWaitforRsp = false;
+    mMoreData = false;
 }
 
 WifiLoggerCommand::~WifiLoggerCommand()
@@ -417,32 +409,6 @@ WifiLoggerCommand::~WifiLoggerCommand()
     ALOGD("WifiLoggerCommand %p destructor", this);
     unregisterVendorHandler(mVendor_id, mSubcmd);
 }
-
-WifiLoggerCommand* WifiLoggerCommand::instance(wifi_handle handle)
-{
-    if (handle == NULL) {
-        ALOGE("Interface Handle is invalid");
-        return NULL;
-    }
-    if (mWifiLoggerCommandInstance == NULL) {
-        mWifiLoggerCommandInstance = new WifiLoggerCommand(handle, 0,
-                OUI_QCA,
-                QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_START);
-        ALOGV("WifiLoggerCommand %p created", mWifiLoggerCommandInstance);
-        return mWifiLoggerCommandInstance;
-    }
-    else
-    {
-        if (handle != getWifiHandle(mWifiLoggerCommandInstance->mInfo))
-        {
-            ALOGE("Handle different");
-            return NULL;
-        }
-    }
-    ALOGV("WifiLoggerCommand %p created already", mWifiLoggerCommandInstance);
-    return mWifiLoggerCommandInstance;
-}
-
 
 /* This function implements creation of Vendor command */
 int WifiLoggerCommand::create() {
@@ -518,7 +484,6 @@ int WifiLoggerCommand::requestEvent()
     }
 
     /* Send message */
-    ALOGE("%s:Handle:%p Socket Value:%p", __func__, mInfo, mInfo->cmd_sock);
     res = nl_send_auto_complete(mInfo->cmd_sock, mMsg.getMessage());
     if (res < 0)
         goto out;
@@ -556,7 +521,6 @@ out:
 int WifiLoggerCommand::requestResponse()
 {
     ALOGD("%s: request a response", __func__);
-
     return WifiCommand::requestResponse(mMsg);
 }
 
@@ -608,16 +572,6 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
         }
         break;
 
-        case QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP:
-        {
-            /*
-             * TBD malloc buffer.
-             * Device open, initiate a read from proc
-             * interface.
-             * Attributes need to determine the size
-             */
-        }
-        break;
         default :
             ALOGE("%s: Wrong Wifi Logger subcmd response received %d",
                 __func__, mSubcmd);
@@ -636,8 +590,126 @@ int WifiLoggerCommand::handleEvent(WifiEvent &event)
     unsigned i = 0;
     u32 status;
     int ret = WIFI_SUCCESS;
+    char* memBuffer = NULL;
+    FILE* memDumpFilePtr = NULL;
+
     WifiVendorCommand::handleEvent(event);
-    /* TBD Handle Event */
+
+    struct nlattr *tbVendor[
+        QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MAX + 1];
+    nla_parse(tbVendor, QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MAX,
+            (struct nlattr *)mVendorData,
+            mDataLen, NULL);
+
+    switch(mSubcmd)
+    {
+        case QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP:
+        {
+            int id = 0;
+            u32 memDumpSize = 0;
+            int numRecordsRead = 0;
+            u32 remaining = 0;
+            char* buffer = NULL;
+
+            if (!tbVendor[
+                QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_REQUEST_ID]) {
+                ALOGE("%s: LOGGER_RESULTS_REQUEST_ID not"
+                    "found, continuing...", __func__);
+            }
+            else {
+                id = nla_get_u32(tbVendor[
+                          QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_REQUEST_ID]
+                      );
+                ALOGI("%s: Event has Req. ID:%d, ours:%d",
+                    __func__, id, mRequestId);
+            }
+
+            if (!tbVendor[
+                QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MEMDUMP_SIZE]) {
+                ALOGE("%s: LOGGER_RESULTS_MEMDUMP_SIZE not"
+                    "found", __func__);
+                break;
+            }
+
+            memDumpSize = nla_get_u32(
+                tbVendor[QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MEMDUMP_SIZE]
+                );
+
+            /* Allocate the memory indicated in memDumpSize */
+            memBuffer = (char*) malloc(sizeof(char) * memDumpSize);
+            if (memBuffer == NULL) {
+                ALOGE("%s: No Memory for allocating Buffer ",
+                      "size of %d", __func__, memDumpSize);
+                break;
+            }
+            memset(memBuffer, 0, sizeof(char) * memDumpSize);
+
+            ALOGI("%s: Memory Dump size: %u", __func__,
+                  memDumpSize);
+
+            /* Open the proc or debugfs filesystem */
+            memDumpFilePtr = fopen(LOGGER_MEMDUMP_FILENAME, "r");
+            if (memDumpFilePtr == NULL) {
+                ALOGE("Failed to open %s file", LOGGER_MEMDUMP_FILENAME);
+                break;
+            }
+
+            /* Read the memDumpSize value at once */
+            numRecordsRead = fread(memBuffer, 1, memDumpSize,
+                                   memDumpFilePtr);
+            if (numRecordsRead <= 0 ||
+                numRecordsRead != (int) memDumpSize) {
+                ALOGE("%s: Read %d failed for reading at once.",
+                      __func__, numRecordsRead);
+                /* Lets try to read in chunks */
+                rewind(memDumpFilePtr);
+                remaining = memDumpSize;
+                buffer = memBuffer;
+                while (remaining) {
+                    u32 readSize = 0;
+                    if (remaining >= LOGGER_MEMDUMP_CHUNKSIZE) {
+                        readSize = LOGGER_MEMDUMP_CHUNKSIZE;
+                    }
+                    else {
+                        readSize = remaining;
+                    }
+                    numRecordsRead = fread(buffer, 1,
+                                           readSize, memDumpFilePtr);
+                    if (numRecordsRead) {
+                        remaining -= readSize;
+                        buffer += readSize;
+                        ALOGI("%s: Read successful for size:%u "
+                              "remaining:%u", __func__, readSize,
+                              remaining);
+                    }
+                    else {
+                        ALOGE("%s: Chunk read failed for size:%u",
+                              __func__, readSize);
+                        break;
+                    }
+                }
+            }
+
+            /* After successful read, call the callback handler*/
+            if (mHandler.on_firmware_memory_dump) {
+                mHandler.on_firmware_memory_dump(memBuffer,
+                                                 memDumpSize);
+
+            }
+        }
+        break;
+
+       default:
+           /* Error case should not happen print log */
+           ALOGE("%s: Wrong subcmd received %d", __func__, mSubcmd);
+           break;
+    }
+
+cleanup:
+    /* free the allocated memory */
+    if (memBuffer) {
+        free(memBuffer);
+    }
     return NL_SKIP;
 }
 
@@ -647,7 +719,6 @@ int WifiLoggerCommand::setCallbackHandler(WifiLoggerCallbackHandler nHandler)
     mHandler = nHandler;
     res = registerVendorHandler(mVendor_id, mSubcmd);
     if (res != 0) {
-        /* Error case: should not happen, so print a log when it does. */
         ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x subcmd=%u",
               __func__, mVendor_id, mSubcmd);
     }
