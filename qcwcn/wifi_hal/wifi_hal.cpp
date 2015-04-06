@@ -189,7 +189,7 @@ cleanup:
     return (wifi_error)ret;
 }
 
-/*initialize function pointer table with Broadcom HHAL API*/
+/*initialize function pointer table with Qualcomm HAL API*/
 wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     if (fn == NULL) {
         return WIFI_ERROR_UNKNOWN;
