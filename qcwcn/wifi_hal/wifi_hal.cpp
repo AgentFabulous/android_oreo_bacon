@@ -197,7 +197,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
 
     fn->wifi_initialize = wifi_initialize;
     fn->wifi_cleanup = wifi_cleanup;
-    fn->wifi_event_loop = wifi_event_loop_stub;
+    fn->wifi_event_loop = wifi_event_loop;
     fn->wifi_get_supported_feature_set = wifi_get_supported_feature_set;
     fn->wifi_get_concurrency_matrix = wifi_get_concurrency_matrix;
     fn->wifi_set_scanning_mac_oui =  wifi_set_scanning_mac_oui;
@@ -217,7 +217,6 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_rtt_range_cancel = wifi_rtt_range_cancel;
     fn->wifi_get_rtt_capabilities = wifi_get_rtt_capabilities;
     fn->wifi_set_nodfs_flag = wifi_set_nodfs_flag;
-    fn->wifi_start_logging = wifi_start_logging;
     fn->wifi_set_epno_list = wifi_set_epno_list;
     fn->wifi_set_country_code = wifi_set_country_code;
 
