@@ -65,7 +65,6 @@ LLStatsCommand::~LLStatsCommand()
 {
     ALOGW("LLStatsCommand %p distructor", this);
     mLLStatsCommandInstance = NULL;
-    unregisterVendorHandler(mVendor_id, mSubcmd);
 }
 
 LLStatsCommand* LLStatsCommand::instance(wifi_handle handle)
@@ -104,43 +103,14 @@ void LLStatsCommand::setSubCmd(u32 subcmd)
 {
     mSubcmd = subcmd;
 }
-//callback handlers registered for nl message send
-static int error_handler_LLStats(struct sockaddr_nl *nla, struct nlmsgerr *err,
-                         void *arg)
+
+void LLStatsCommand::setHandler(wifi_stats_result_handler handler)
 {
-    struct sockaddr_nl * tmp;
-    int *ret = (int *)arg;
-    tmp = nla;
-    *ret = err->error;
-    ALOGE("%s: Error code:%d (%s)", __func__, *ret, strerror(-(*ret)));
-    return NL_STOP;
+    mHandler = handler;
 }
 
-//callback handlers registered for nl message send
-static int ack_handler_LLStats(struct nl_msg *msg, void *arg)
-{
-    int *ret = (int *)arg;
-    struct nl_msg * a;
-
-    ALOGE("%s: called", __func__);
-    a = msg;
-    *ret = 0;
-    return NL_STOP;
-}
-
-//callback handlers registered for nl message send
-static int finish_handler_LLStats(struct nl_msg *msg, void *arg)
-{
-  int *ret = (int *)arg;
-  struct nl_msg * a;
-
-  ALOGE("%s: called", __func__);
-  a = msg;
-  *ret = 0;
-  return NL_SKIP;
-}
-
-static int get_wifi_interface_info(wifi_interface_link_layer_info *stats, struct nlattr **tb_vendor)
+static wifi_error get_wifi_interface_info(wifi_interface_link_layer_info *stats,
+                                          struct nlattr **tb_vendor)
 {
     u32 len = 0;
     u8 *data;
@@ -235,7 +205,8 @@ static int get_wifi_interface_info(wifi_interface_link_layer_info *stats, struct
     return WIFI_SUCCESS;
 }
 
-static int get_wifi_wmm_ac_stat(wifi_wmm_ac_stat *stats, struct nlattr **tb_vendor)
+static wifi_error get_wifi_wmm_ac_stat(wifi_wmm_ac_stat *stats,
+                                       struct nlattr **tb_vendor)
 {
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_WMM_AC_AC])
@@ -367,7 +338,8 @@ static int get_wifi_wmm_ac_stat(wifi_wmm_ac_stat *stats, struct nlattr **tb_vend
     return WIFI_SUCCESS;
 }
 
-static int get_wifi_rate_stat(wifi_rate_stat *stats, struct nlattr **tb_vendor)
+static wifi_error get_wifi_rate_stat(wifi_rate_stat *stats,
+                                     struct nlattr **tb_vendor)
 {
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RATE_PREAMBLE])
@@ -462,13 +434,14 @@ static int get_wifi_rate_stat(wifi_rate_stat *stats, struct nlattr **tb_vendor)
     return WIFI_SUCCESS;
 }
 
-static int get_wifi_peer_info(wifi_peer_info *stats, struct nlattr **tb_vendor)
+static wifi_error get_wifi_peer_info(wifi_peer_info *stats,
+                                     struct nlattr **tb_vendor)
 {
     u32 i = 0, len = 0;
     int rem;
     wifi_rate_stat * pRateStats;
     struct nlattr *rateInfo;
-    int ret = WIFI_SUCCESS;
+    wifi_error ret = WIFI_SUCCESS;
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO_TYPE])
     {
@@ -532,12 +505,13 @@ static int get_wifi_peer_info(wifi_peer_info *stats, struct nlattr **tb_vendor)
     return WIFI_SUCCESS;
 }
 
-int LLStatsCommand::get_wifi_iface_stats(wifi_iface_stat *stats, struct nlattr **tb_vendor)
+wifi_error LLStatsCommand::get_wifi_iface_stats(wifi_iface_stat *stats,
+                                                struct nlattr **tb_vendor)
 {
     struct nlattr *wmmInfo;
     wifi_wmm_ac_stat *pWmmStats;
     int i=0, rem;
-    int ret = WIFI_SUCCESS;
+    wifi_error ret = WIFI_SUCCESS;
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_BEACON_RX])
     {
@@ -686,13 +660,14 @@ int LLStatsCommand::get_wifi_iface_stats(wifi_iface_stat *stats, struct nlattr *
     return WIFI_SUCCESS;
 }
 
-static int get_wifi_radio_stats(wifi_radio_stat *stats, struct nlattr **tb_vendor)
+static wifi_error get_wifi_radio_stats(wifi_radio_stat *stats,
+                                       struct nlattr **tb_vendor)
 {
     u32 i = 0;
     struct nlattr *chInfo;
     wifi_channel_stat *pChStats;
     int rem;
-    int ret = WIFI_SUCCESS;
+    wifi_error ret = WIFI_SUCCESS;
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_ID])
     {
@@ -831,275 +806,6 @@ static int get_wifi_radio_stats(wifi_radio_stat *stats, struct nlattr **tb_vendo
     return WIFI_SUCCESS;
 }
 
-// This function will be the main handler for incoming event LLStats_SUBCMD
-//Call the appropriate callback handler after parsing the vendor data.
-int LLStatsCommand::handleEvent(WifiEvent &event)
-{
-    ALOGI("Got a LLStats message from Driver");
-    unsigned i=0;
-    u32 status;
-    int ret = WIFI_SUCCESS;
-    WifiVendorCommand::handleEvent(event);
-
-    // Parse the vendordata and get the attribute
-
-    switch(mSubcmd)
-    {
-        case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_RADIO_RESULTS:
-            {
-                wifi_request_id id;
-                u32 resultsBufSize = 0;
-                struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX + 1];
-                int rem;
-                nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX,
-                        (struct nlattr *)mVendorData,
-                        mDataLen, NULL);
-
-                ALOGI("QCA_NL80211_VENDOR_SUBCMD_LL_STATS_RADIO_RESULTS Received");
-                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS])
-                {
-                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS not found", __func__);
-                    return WIFI_ERROR_INVALID_ARGS;
-                }
-
-                ALOGI(" NumChan is %d\n ",
-                        nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS]));
-
-                resultsBufSize += (nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS]) * sizeof(wifi_channel_stat)
-                        + sizeof(wifi_radio_stat));
-                mResultsParams.radio_stat = (wifi_radio_stat *)malloc(resultsBufSize);
-                if (!mResultsParams.radio_stat)
-                {
-                    ALOGE("%s: radio_stat: malloc Failed", __func__);
-                    return WIFI_ERROR_OUT_OF_MEMORY;
-                }
-                memset(mResultsParams.radio_stat, 0, resultsBufSize);
-                ALOGI(" rxTime is %u\n ", mResultsParams.radio_stat->rx_time);
-
-                wifi_channel_stat *pWifiChannelStats;
-                u32 i =0;
-                ret = get_wifi_radio_stats(mResultsParams.radio_stat, tb_vendor);
-                if(ret != WIFI_SUCCESS)
-                {
-                    return ret;
-                }
-
-                ALOGI(" radio is %u ", mResultsParams.radio_stat->radio);
-                ALOGI(" onTime is %u ", mResultsParams.radio_stat->on_time);
-                ALOGI(" txTime is %u ", mResultsParams.radio_stat->tx_time);
-                ALOGI(" rxTime is %u ", mResultsParams.radio_stat->rx_time);
-                ALOGI(" onTimeScan is %u ", mResultsParams.radio_stat->on_time_scan);
-                ALOGI(" onTimeNbd is %u ", mResultsParams.radio_stat->on_time_nbd);
-                ALOGI(" onTimeGscan is %u ", mResultsParams.radio_stat->on_time_gscan);
-                ALOGI(" onTimeRoamScan is %u", mResultsParams.radio_stat->on_time_roam_scan);
-                ALOGI(" onTimePnoScan is %u ", mResultsParams.radio_stat->on_time_pno_scan);
-                ALOGI(" onTimeHs20 is %u ", mResultsParams.radio_stat->on_time_hs20);
-                ALOGI(" numChannels is %u ", mResultsParams.radio_stat->num_channels);
-                for ( i=0; i < mResultsParams.radio_stat->num_channels; i++)
-                {
-                    pWifiChannelStats = (wifi_channel_stat *) ((u8 *)mResultsParams.radio_stat->channels + (i * sizeof(wifi_channel_stat)));
-
-                    ALOGI("  width is %u ", pWifiChannelStats->channel.width);
-                    ALOGI("  CenterFreq %u ", pWifiChannelStats->channel.center_freq);
-                    ALOGI("  CenterFreq0 %u ", pWifiChannelStats->channel.center_freq0);
-                    ALOGI("  CenterFreq1 %u ", pWifiChannelStats->channel.center_freq1);
-                    ALOGI("  onTime %u ", pWifiChannelStats->on_time);
-                    ALOGI("  ccaBusyTime %u ", pWifiChannelStats->cca_busy_time);
-                }
-                ALOGI(" rxTime is %u in %s:%d\n", mResultsParams.radio_stat->rx_time, __func__, __LINE__);
-            }
-            break;
-
-        case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_IFACE_RESULTS:
-            {
-                wifi_request_id id;
-                u32 resultsBufSize = 0;
-                struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX + 1];
-                nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX,
-                        (struct nlattr *)mVendorData,
-                        mDataLen, NULL);
-
-                ALOGI("QCA_NL80211_VENDOR_SUBCMD_LL_STATS_IFACE_RESULTS"
-                        " Received");
-                resultsBufSize = sizeof(wifi_iface_stat);
-                mResultsParams.iface_stat =
-                    (wifi_iface_stat *) malloc (resultsBufSize);
-                if (!mResultsParams.iface_stat)
-                {
-                    ALOGE("%s: iface_stat: malloc Failed", __func__);
-                    return WIFI_ERROR_OUT_OF_MEMORY;
-                }
-                memset(mResultsParams.iface_stat, 0, resultsBufSize);
-                ret = get_wifi_interface_info(&mResultsParams.iface_stat->info,
-                        tb_vendor);
-                if(ret != WIFI_SUCCESS)
-                {
-                   return ret;
-                }
-                ret = get_wifi_iface_stats(mResultsParams.iface_stat, tb_vendor);
-                if(ret != WIFI_SUCCESS)
-                {
-                   return ret;
-                }
-                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
-                {
-                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS"
-                            " not found", __func__);
-                    ALOGE("Expecting Peer stats event");
-                } else {
-                    mResultsParams.iface_stat->num_peers =
-                        nla_get_u32(tb_vendor[
-                                QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS]);
-                    ALOGI("%s: numPeers is %u\n", __func__,
-                            mResultsParams.iface_stat->num_peers);
-                    if(mResultsParams.iface_stat->num_peers == 0)
-                    {
-                        ALOGE("Not Expecting Peer stats event");
-                        // Number of Radios are 1 for now
-                        mHandler.on_link_stats_results(mRequestId,
-                                mResultsParams.iface_stat,
-                                1,
-                                mResultsParams.radio_stat);
-                        if(mResultsParams.radio_stat)
-                        {
-                            free(mResultsParams.radio_stat);
-                            mResultsParams.radio_stat = NULL;
-                        }
-                        free(mResultsParams.iface_stat);
-                        mResultsParams.iface_stat = NULL;
-                    }
-                }
-            }
-            break;
-
-        case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_PEERS_RESULTS:
-            {
-                wifi_request_id id;
-                u32 resultsBufSize = 0, i=0, num_rates = 0;
-                u32 numPeers;
-                int rem;
-                struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX + 1];
-                struct nlattr *peerInfo;
-                wifi_iface_stat *pIfaceStat;
-                nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX,
-                        (struct nlattr *)mVendorData,
-                        mDataLen, NULL);
-
-                ALOGI("QCA_NL80211_VENDOR_SUBCMD_LL_STATS_PEERS_RESULTS Received");
-                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
-                {
-                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS not found", __func__);
-                    return WIFI_ERROR_INVALID_ARGS;
-                }
-                ALOGI(" numPeers is %u in %s:%d\n", nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS]), __func__, __LINE__);
-
-                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
-                {
-                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS not found", __func__);
-                    return WIFI_ERROR_INVALID_ARGS;
-                }
-                if((numPeers = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])) > 0)
-                {
-                    if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO])
-                    {
-                        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO not found", __func__);
-                        return WIFI_ERROR_INVALID_ARGS;
-                    }
-                    for (peerInfo = (struct nlattr *) nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]), rem = nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]);
-                            nla_ok(peerInfo, rem);
-                            peerInfo = nla_next(peerInfo, &(rem)))
-                    {
-                        struct nlattr *tb2[ QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX+ 1];
-
-                        nla_parse(tb2, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX, (struct nlattr *) nla_data(peerInfo), nla_len(peerInfo), NULL);
-
-                        if (!tb2[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO_NUM_RATES])
-                        {
-                            ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO_NUM_RATES not found", __func__);
-                            return WIFI_ERROR_INVALID_ARGS;
-                        }
-                        num_rates += nla_get_u32(tb2[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO_NUM_RATES]);
-                    }
-                    resultsBufSize += (numPeers * sizeof(wifi_peer_info)
-                            + num_rates * sizeof(wifi_rate_stat) + sizeof (wifi_iface_stat));
-                    pIfaceStat = (wifi_iface_stat *) malloc (resultsBufSize);
-                    if (!pIfaceStat)
-                    {
-                        ALOGE("%s: pIfaceStat: malloc Failed", __func__);
-                        return WIFI_ERROR_OUT_OF_MEMORY;
-                    }
-
-                    memset(pIfaceStat, 0, resultsBufSize);
-                    if(mResultsParams.iface_stat)
-                        memcpy ( pIfaceStat, mResultsParams.iface_stat , sizeof(wifi_iface_stat));
-                    wifi_peer_info *pPeerStats;
-                    pIfaceStat->num_peers = numPeers;
-
-                    if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO])
-                    {
-                        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO not found", __func__);
-                        return WIFI_ERROR_INVALID_ARGS;
-                    }
-                    for (peerInfo = (struct nlattr *) nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]), rem = nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]);
-                            nla_ok(peerInfo, rem);
-                            peerInfo = nla_next(peerInfo, &(rem)))
-                    {
-                        struct nlattr *tb2[ QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX+ 1];
-                        pPeerStats = (wifi_peer_info *) ((u8 *)pIfaceStat->peer_info + (i++ * sizeof(wifi_peer_info)));
-                        nla_parse(tb2, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX, (struct nlattr *) nla_data(peerInfo), nla_len(peerInfo), NULL);
-                        ret = get_wifi_peer_info(pPeerStats, tb2);
-                        if(ret != WIFI_SUCCESS)
-                        {
-                            return ret;
-                        }
-                    }
-                    if(mResultsParams.iface_stat)
-                        free (mResultsParams.iface_stat);
-                    mResultsParams.iface_stat = pIfaceStat;
-                }
-
-                // Number of Radios are 1 for now
-                mHandler.on_link_stats_results(mRequestId,
-                        mResultsParams.iface_stat, 1, mResultsParams.radio_stat);
-                if(mResultsParams.radio_stat)
-                {
-                    free(mResultsParams.radio_stat);
-                    mResultsParams.radio_stat = NULL;
-                }
-                if(mResultsParams.iface_stat)
-                {
-                    free(mResultsParams.iface_stat);
-                    mResultsParams.iface_stat = NULL;
-                }
-            }
-            break;
-
-        default:
-            //error case should not happen print log
-            ALOGE("%s: Wrong LLStats subcmd received %d", __func__, mSubcmd);
-    }
-
-    return NL_SKIP;
-}
-
-int LLStatsCommand::setCallbackHandler(LLStatsCallbackHandler nHandler, u32 event)
-{
-    int res = 0;
-    mHandler = nHandler;
-    res = registerVendorHandler(mVendor_id, event);
-    if (res != 0) {
-        //error case should not happen print log
-        ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x subcmd=%u",
-              __func__, mVendor_id, mSubcmd);
-    }
-    return res;
-}
-
-void LLStatsCommand::unregisterHandler(u32 subCmd)
-{
-    unregisterVendorHandler(mVendor_id, subCmd);
-}
-
 void LLStatsCommand::getClearRspParams(u32 *stats_clear_rsp_mask, u8 *stop_rsp)
 {
     *stats_clear_rsp_mask =  mClearRspParams.stats_clear_rsp_mask;
@@ -1115,53 +821,361 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
 {
     ALOGI("Got a LLStats message from Driver");
     unsigned i=0;
-    u32 status;
+    int status = WIFI_ERROR_NONE;
     WifiVendorCommand::handleResponse(reply);
 
     // Parse the vendordata and get the attribute
 
     switch(mSubcmd)
     {
-        case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_CLR:
+        case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_GET:
+        {
+            u32 resultsBufSize = 0;
+            struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX + 1];
+            int rem;
+
+            nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX,
+                    (struct nlattr *)mVendorData,
+                    mDataLen, NULL);
+
+            if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE])
             {
-                struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_MAX + 1];
-                nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_MAX,
-                        (struct nlattr *)mVendorData,
-                        mDataLen, NULL);
-
-                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK])
-                {
-                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK not found", __func__);
-                    return WIFI_ERROR_INVALID_ARGS;
-                }
-                ALOGI("Resp mask : %d\n", nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK]));
-
-                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP])
-                {
-                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP not found", __func__);
-                    return WIFI_ERROR_INVALID_ARGS;
-                }
-                ALOGI("STOP resp : %d\n", nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP]));
-
-                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK])
-                {
-                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK not found", __func__);
-                    return WIFI_ERROR_INVALID_ARGS;
-                }
-                mClearRspParams.stats_clear_rsp_mask = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK]);
-
-                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP])
-                {
-                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP not found", __func__);
-                    return WIFI_ERROR_INVALID_ARGS;
-                }
-                mClearRspParams.stop_rsp = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP]);
-                break;
+                ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE not found",
+                        __func__);
+                status = WIFI_ERROR_INVALID_ARGS;
+                goto cleanup;
             }
+
+            switch(nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE]))
+            {
+                case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_TYPE_RADIO:
+                {
+                    ALOGI("QCA_NL80211_VENDOR_SUBCMD_LL_STATS_RADIO_RESULTS"
+                          " Received");
+                    if (!tb_vendor[
+                        QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS
+                        ])
+                    {
+                        ALOGE("%s:"
+                            "QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS"
+                            " not found", __func__);
+                        status = WIFI_ERROR_INVALID_ARGS;
+                        goto cleanup;
+                    }
+
+                    ALOGI(" NumChan is %d\n ",
+                            nla_get_u32(tb_vendor[
+                            QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS]));
+
+                    resultsBufSize += (nla_get_u32(tb_vendor[
+                            QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS])
+                            * sizeof(wifi_channel_stat)
+                            + sizeof(wifi_radio_stat));
+                    mResultsParams.radio_stat =
+                            (wifi_radio_stat *)malloc(resultsBufSize);
+                    if (!mResultsParams.radio_stat)
+                    {
+                        ALOGE("%s: radio_stat: malloc Failed", __func__);
+                        status = WIFI_ERROR_OUT_OF_MEMORY;
+                        goto cleanup;
+                    }
+                    memset(mResultsParams.radio_stat, 0, resultsBufSize);
+
+                    wifi_channel_stat *pWifiChannelStats;
+                    status = get_wifi_radio_stats(mResultsParams.radio_stat,
+                              tb_vendor);
+                    if(status != WIFI_SUCCESS)
+                    {
+                        goto cleanup;
+                    }
+
+                    ALOGI(" radio is %u ", mResultsParams.radio_stat->radio);
+                    ALOGI(" onTime is %u ", mResultsParams.radio_stat->on_time);
+                    ALOGI(" txTime is %u ", mResultsParams.radio_stat->tx_time);
+                    ALOGI(" rxTime is %u ", mResultsParams.radio_stat->rx_time);
+                    ALOGI(" onTimeScan is %u ",
+                        mResultsParams.radio_stat->on_time_scan);
+                    ALOGI(" onTimeNbd is %u ",
+                        mResultsParams.radio_stat->on_time_nbd);
+                    ALOGI(" onTimeGscan is %u ",
+                        mResultsParams.radio_stat->on_time_gscan);
+                    ALOGI(" onTimeRoamScan is %u",
+                        mResultsParams.radio_stat->on_time_roam_scan);
+                    ALOGI(" onTimePnoScan is %u ",
+                        mResultsParams.radio_stat->on_time_pno_scan);
+                    ALOGI(" onTimeHs20 is %u ",
+                        mResultsParams.radio_stat->on_time_hs20);
+                    ALOGI(" numChannels is %u ",
+                        mResultsParams.radio_stat->num_channels);
+                    for ( i=0; i < mResultsParams.radio_stat->num_channels; i++)
+                    {
+                        pWifiChannelStats =
+                            (wifi_channel_stat *) (
+                                (u8 *)mResultsParams.radio_stat->channels
+                                + (i * sizeof(wifi_channel_stat)));
+
+                        ALOGI("  width is %u ",
+                             pWifiChannelStats->channel.width);
+                        ALOGI("  CenterFreq %u ",
+                             pWifiChannelStats->channel.center_freq);
+                        ALOGI("  CenterFreq0 %u ",
+                             pWifiChannelStats->channel.center_freq0);
+                        ALOGI("  CenterFreq1 %u ",
+                             pWifiChannelStats->channel.center_freq1);
+                        ALOGI("  onTime %u ",
+                             pWifiChannelStats->on_time);
+                        ALOGI("  ccaBusyTime %u ",
+                             pWifiChannelStats->cca_busy_time);
+                    }
+                }
+                break;
+
+                case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_TYPE_IFACE:
+                {
+                    ALOGI("QCA_NL80211_VENDOR_SUBCMD_LL_STATS_IFACE_RESULTS"
+                            " Received");
+                    resultsBufSize = sizeof(wifi_iface_stat);
+                    mResultsParams.iface_stat =
+                        (wifi_iface_stat *) malloc (resultsBufSize);
+                    if (!mResultsParams.iface_stat)
+                    {
+                        ALOGE("%s: iface_stat: malloc Failed", __func__);
+                        status = WIFI_ERROR_OUT_OF_MEMORY;
+                        goto cleanup;
+                    }
+                    memset(mResultsParams.iface_stat, 0, resultsBufSize);
+                    status = get_wifi_interface_info(
+                            &mResultsParams.iface_stat->info, tb_vendor);
+                    if(status != WIFI_SUCCESS)
+                    {
+                        goto cleanup;
+                    }
+                    status = get_wifi_iface_stats(mResultsParams.iface_stat,
+                            tb_vendor);
+                    if(status != WIFI_SUCCESS)
+                    {
+                        goto cleanup;
+                    }
+                    if (!tb_vendor[
+                        QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
+                    {
+                        ALOGE("%s:QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS"
+                                " not found", __func__);
+                        ALOGE("Expecting Peer stats event");
+                    } else {
+                        mResultsParams.iface_stat->num_peers =
+                            nla_get_u32(tb_vendor[
+                                QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS]);
+                        ALOGI("%s: numPeers is %u\n", __func__,
+                                mResultsParams.iface_stat->num_peers);
+                        if(mResultsParams.iface_stat->num_peers == 0)
+                        {
+                            ALOGE("Not Expecting Peer stats event");
+                            // Number of Radios are 1 for now
+                            mHandler.on_link_stats_results(mRequestId,
+                                    mResultsParams.iface_stat,
+                                    1,
+                                    mResultsParams.radio_stat);
+                            if(mResultsParams.radio_stat)
+                            {
+                                free(mResultsParams.radio_stat);
+                                mResultsParams.radio_stat = NULL;
+                            }
+                            free(mResultsParams.iface_stat);
+                            mResultsParams.iface_stat = NULL;
+                        }
+                    }
+                }
+                break;
+
+                case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_TYPE_PEERS:
+                {
+                    struct nlattr *peerInfo;
+                    wifi_iface_stat *pIfaceStat;
+                    u32 numPeers, num_rates = 0;
+                    ALOGI("QCA_NL80211_VENDOR_SUBCMD_LL_STATS_PEERS_RESULTS"
+                          " Received");
+                    if (!tb_vendor[
+                            QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
+                    {
+                        ALOGE("%s:QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS"
+                              " not found", __func__);
+                        status = WIFI_ERROR_INVALID_ARGS;
+                        goto cleanup;
+                    }
+                    ALOGI(" numPeers is %u in %s\n",
+                            nla_get_u32(tb_vendor[
+                            QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS]),
+                            __func__);
+
+                    if((numPeers = nla_get_u32(tb_vendor[
+                        QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])) > 0)
+                    {
+                        if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO])
+                        {
+                            ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO"
+                                    " not found", __func__);
+                            status = WIFI_ERROR_INVALID_ARGS;
+                            goto cleanup;
+                        }
+                        for (peerInfo = (struct nlattr *) nla_data(tb_vendor[
+                             QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]),
+                             rem = nla_len(tb_vendor[
+                             QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]);
+                                nla_ok(peerInfo, rem);
+                                peerInfo = nla_next(peerInfo, &(rem)))
+                        {
+                            struct nlattr *tb2[
+                                QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX+ 1];
+
+                            nla_parse(tb2, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX,
+                                    (struct nlattr *) nla_data(peerInfo),
+                                    nla_len(peerInfo), NULL);
+
+                            if (!tb2[
+                             QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO_NUM_RATES])
+                            {
+                                ALOGE("%s:"
+                             "QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO_NUM_RATES"
+                             " not found", __func__);
+                                status = WIFI_ERROR_INVALID_ARGS;
+                                goto cleanup;
+                            }
+                            num_rates += nla_get_u32(tb2[
+                            QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO_NUM_RATES]);
+                        }
+                        resultsBufSize += (numPeers * sizeof(wifi_peer_info)
+                                + num_rates * sizeof(wifi_rate_stat)
+                                + sizeof (wifi_iface_stat));
+                        pIfaceStat = (wifi_iface_stat *) malloc (
+                                resultsBufSize);
+                        if (!pIfaceStat)
+                        {
+                            ALOGE("%s: pIfaceStat: malloc Failed", __func__);
+                            status = WIFI_ERROR_OUT_OF_MEMORY;
+                            goto cleanup;
+                        }
+
+                        memset(pIfaceStat, 0, resultsBufSize);
+                        if(mResultsParams.iface_stat)
+                            memcpy ( pIfaceStat, mResultsParams.iface_stat,
+                                sizeof(wifi_iface_stat));
+                        wifi_peer_info *pPeerStats;
+                        pIfaceStat->num_peers = numPeers;
+
+                        if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO])
+                        {
+                            ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO"
+                                  " not found", __func__);
+                            status = WIFI_ERROR_INVALID_ARGS;
+                            goto cleanup;
+                        }
+                        for (peerInfo = (struct nlattr *) nla_data(tb_vendor[
+                            QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]),
+                            rem = nla_len(tb_vendor[
+                                QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]);
+                                nla_ok(peerInfo, rem);
+                                peerInfo = nla_next(peerInfo, &(rem)))
+                        {
+                            struct nlattr *tb2[
+                                QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX+ 1];
+                            pPeerStats = (wifi_peer_info *) (
+                                           (u8 *)pIfaceStat->peer_info
+                                           + (i++ * sizeof(wifi_peer_info)));
+                            nla_parse(tb2, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX,
+                                (struct nlattr *) nla_data(peerInfo),
+                                nla_len(peerInfo), NULL);
+                            status = get_wifi_peer_info(pPeerStats, tb2);
+                            if(status != WIFI_SUCCESS)
+                            {
+                                goto cleanup;
+                            }
+                        }
+                        if(mResultsParams.iface_stat)
+                            free (mResultsParams.iface_stat);
+                        mResultsParams.iface_stat = pIfaceStat;
+                    }
+
+                    // Number of Radios are 1 for now
+                    mHandler.on_link_stats_results(mRequestId,
+                            mResultsParams.iface_stat, 1,
+                            mResultsParams.radio_stat);
+                    if(mResultsParams.radio_stat)
+                    {
+                        free(mResultsParams.radio_stat);
+                        mResultsParams.radio_stat = NULL;
+                    }
+                    if(mResultsParams.iface_stat)
+                    {
+                        free(mResultsParams.iface_stat);
+                        mResultsParams.iface_stat = NULL;
+                    }
+                }
+                break;
+
+                case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_TYPE_INVALID:
+                default:
+                    //error case should not happen print log
+                    ALOGE("%s: Wrong LLStats subcmd received %d", __func__,
+                           mSubcmd);
+            }
+        }
+        break;
+
+        case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_CLR:
+        {
+            struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_MAX + 1];
+            nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_MAX,
+                    (struct nlattr *)mVendorData,
+                    mDataLen, NULL);
+
+            if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK])
+            {
+                ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK not found", __func__);
+                return WIFI_ERROR_INVALID_ARGS;
+            }
+            ALOGI("Resp mask : %d\n", nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK]));
+
+            if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP])
+            {
+                ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP not found", __func__);
+                return WIFI_ERROR_INVALID_ARGS;
+            }
+            ALOGI("STOP resp : %d\n", nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP]));
+
+            if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK])
+            {
+                ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK not found", __func__);
+                return WIFI_ERROR_INVALID_ARGS;
+            }
+            mClearRspParams.stats_clear_rsp_mask = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_RSP_MASK]);
+
+            if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP])
+            {
+                ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP not found", __func__);
+                return WIFI_ERROR_INVALID_ARGS;
+            }
+            mClearRspParams.stop_rsp = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_STOP_RSP]);
+            break;
+        }
         default :
             ALOGE("%s: Wrong LLStats subcmd received %d", __func__, mSubcmd);
     }
     return NL_SKIP;
+
+cleanup:
+    if(mResultsParams.radio_stat)
+    {
+        free(mResultsParams.radio_stat);
+        mResultsParams.radio_stat = NULL;
+    }
+
+    if(mResultsParams.iface_stat)
+    {
+        free(mResultsParams.iface_stat);
+        mResultsParams.iface_stat = NULL;
+    }
+    return status;
 }
 
 //Implementation of the functions exposed in linklayer.h
@@ -1236,10 +1250,7 @@ wifi_error wifi_get_link_stats(wifi_request_id id,
 
     LLCommand->initGetContext(id);
 
-    LLStatsCallbackHandler callbackHandler =
-    {
-        .on_link_stats_results = handler.on_link_stats_results
-    };
+    LLCommand->setHandler(handler);
 
     /* create the message */
     ret = LLCommand->create();
@@ -1272,15 +1283,6 @@ wifi_error wifi_get_link_stats(wifi_request_id id,
     if (ret < 0)
         goto cleanup;
 
-    ret = LLCommand->setCallbackHandler(callbackHandler, QCA_NL80211_VENDOR_SUBCMD_LL_STATS_RADIO_RESULTS);
-    if (ret < 0)
-        goto cleanup;
-    ret = LLCommand->setCallbackHandler(callbackHandler, QCA_NL80211_VENDOR_SUBCMD_LL_STATS_IFACE_RESULTS);
-    if (ret < 0)
-        goto cleanup;
-    ret = LLCommand->setCallbackHandler(callbackHandler, QCA_NL80211_VENDOR_SUBCMD_LL_STATS_PEERS_RESULTS);
-    if (ret < 0)
-        goto cleanup;
 cleanup:
     return (wifi_error)ret;
 }
@@ -1337,9 +1339,6 @@ wifi_error wifi_clear_link_stats(wifi_interface_handle iface,
     LLCommand->getClearRspParams(stats_clear_rsp_mask, stop_rsp);
 
 cleanup:
-    LLCommand->unregisterHandler(QCA_NL80211_VENDOR_SUBCMD_LL_STATS_RADIO_RESULTS);
-    LLCommand->unregisterHandler(QCA_NL80211_VENDOR_SUBCMD_LL_STATS_IFACE_RESULTS);
-    LLCommand->unregisterHandler(QCA_NL80211_VENDOR_SUBCMD_LL_STATS_PEERS_RESULTS);
     delete LLCommand;
     return (wifi_error)ret;
 }
