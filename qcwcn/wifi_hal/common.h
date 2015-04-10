@@ -43,6 +43,7 @@
 #include "nl80211_copy.h"
 
 #include <utils/Log.h>
+#include "wifi_logger.h"
 
 #define SOCKET_BUFFER_SIZE      (32768U)
 #define RECV_BUF_SIZE           (4096)
@@ -105,6 +106,9 @@ typedef struct {
 
     feature_set supported_feature_set;
     // add other details
+    int temp_arg;
+    void (*on_ring_buffer_data) (char *ring_name, char *buffer, int buffer_size,
+          wifi_ring_buffer_status *status);
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);
