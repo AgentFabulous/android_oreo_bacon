@@ -48,8 +48,7 @@ WifiLoggerCommand* WifiLoggerCommand::mWifiLoggerCommandInstance  = NULL;
 wifi_error wifi_start_logging(wifi_interface_handle iface,
                               u32 verbose_level, u32 flags,
                               u32 max_interval_sec, u32 min_data_size,
-                              u8 *buffer_name,
-                              wifi_ring_buffer_data_handler handler)
+                              char *buffer_name)
 {
     int requestId, ret = 0;
     WifiLoggerCommand *wifiLoggerCommand;
@@ -114,8 +113,7 @@ cleanup:
 }
 
 /*  Function to get each ring related info */
-wifi_error wifi_get_ring_buffers_status(wifi_request_id id,
-                                        wifi_interface_handle iface,
+wifi_error wifi_get_ring_buffers_status(wifi_interface_handle iface,
                                         u32 *num_buffers,
                                         wifi_ring_buffer_status **status)
 {
@@ -140,8 +138,7 @@ cleanup:
 }
 
 /*  Function to get the supported feature set for logging.*/
-wifi_error wifi_get_logger_supported_feature_set(wifi_request_id id,
-                                                 wifi_interface_handle iface,
+wifi_error wifi_get_logger_supported_feature_set(wifi_interface_handle iface,
                                                  u32 *support)
 {
 
@@ -166,9 +163,8 @@ cleanup:
 }
 
 /*  Function to get the data in each ring for the given ring ID.*/
-wifi_error wifi_get_ring_data(wifi_request_id id,
-                              wifi_interface_handle iface,
-                              wifi_ring_buffer_id ring_id)
+wifi_error wifi_get_ring_data(wifi_interface_handle iface,
+                              char *ring_name)
 {
 
     int requestId, ret = 0;
@@ -198,9 +194,8 @@ void WifiLoggerCommand::setVersionInfo(char **buffer, int *buffer_size) {
 }
 
 /*  Function to send enable request to the wifi driver.*/
-wifi_error wifi_get_firmware_version(wifi_request_id id,
-                              wifi_interface_handle iface,
-                              char **buffer, int *buffer_size)
+wifi_error wifi_get_firmware_version(wifi_interface_handle iface,
+                                     char **buffer, int *buffer_size)
 {
     int requestId, ret = 0;
     WifiLoggerCommand *wifiLoggerCommand;
@@ -265,8 +260,7 @@ cleanup:
 }
 
 /*  Function to get wlan driver version.*/
-wifi_error wifi_get_driver_version(wifi_request_id id,
-                                   wifi_interface_handle iface,
+wifi_error wifi_get_driver_version(wifi_interface_handle iface,
                                    char **buffer, int *buffer_size)
 {
 
@@ -333,8 +327,7 @@ cleanup:
 
 
 /* Function to get the Firmware memory dump. */
-wifi_error wifi_get_firmware_memory_dump(wifi_request_id id,
-                                wifi_interface_handle iface,
+wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
                                 wifi_firmware_memory_dump_handler handler)
 {
     int requestId, ret = 0;
