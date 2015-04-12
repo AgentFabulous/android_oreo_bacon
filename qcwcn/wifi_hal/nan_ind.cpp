@@ -16,6 +16,7 @@
 
 #include "sync.h"
 #include <utils/Log.h>
+#include <errno.h>
 #include "nan.h"
 #include "wifi_hal.h"
 #include "nan_i.h"
@@ -898,7 +899,7 @@ int NanCommand::getNanFurtherAvailabilityMap(const u8 *pInValue,
     }
     for (idx = 0; idx < pFam->numchans; idx++) {
         pNanFurtherAvailabilityChan pRsp = \
-              (pNanFurtherAvailabilityChan)((u8*)pInValue[1] + \
+              (pNanFurtherAvailabilityChan)(pInValue[1] + \
               (idx * sizeof(NanFurtherAvailabilityChan)));
         NanFurtherAvailabilityChannel *pFamChan = &pFam->famchan[idx];
 
