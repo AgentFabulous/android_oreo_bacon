@@ -34,9 +34,26 @@
 #include <errno.h>
 #include <utils/Log.h>
 #include "wifiloggercmd.h"
+#include "rb_wrapper.h"
 
 #define LOGGER_MEMDUMP_FILENAME "/proc/debug/fwdump"
 #define LOGGER_MEMDUMP_CHUNKSIZE (4 * 1024)
+
+char power_events_ring_name[] = "power_events_rb";
+char connectivity_events_ring_name[] = "connectivity_events_rb";
+char pkt_stats_ring_name[] = "pkt_stats_rb";
+
+static int get_ring_id(hal_info *info, char *ring_name)
+{
+    int rb_id;
+
+    for (rb_id = 0; rb_id < NUM_RING_BUFS; rb_id++) {
+        if (is_rb_name_match(&info->rb_infos[rb_id], ring_name)) {
+           return rb_id;
+        }
+    }
+    return -1;
+}
 
 //Implementation of the functions exposed in wifi_logger.h
 
@@ -52,27 +69,149 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
+    int ring_id = 0;
 
     /*
      * No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    srand( time(NULL) );
     requestId = rand();
 
-    /*
-     * TBD Include support to send VENDOR_CMD for PKT LOG.
-     * Create a Ring Buffer
+    if (buffer_name == NULL) {
+        ALOGE("%s: Invalid Ring Name. \n", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ring_id = get_ring_id(info, buffer_name);
+    if (ring_id < 0) {
+        ALOGE("%s: Invalid Ring Buffer Name ", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    if (ring_id == PKT_STATS_RB_ID) {
+        wifiLoggerCommand = new WifiLoggerCommand(
+                                wifiHandle,
+                                requestId,
+                                OUI_QCA,
+                                QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_START);
+
+        if (wifiLoggerCommand == NULL) {
+           ALOGE("%s: Error WifiLoggerCommand NULL", __FUNCTION__);
+           return WIFI_ERROR_UNKNOWN;
+        }
+        /* Create the NL message. */
+        ret = wifiLoggerCommand->create();
+
+        if (ret < 0)
+            goto cleanup;
+
+        /* Set the interface Id of the message. */
+        ret = wifiLoggerCommand->set_iface_id(ifaceInfo->name);
+
+        if (ret < 0)
+            goto cleanup;
+
+        /* Add the vendor specific attributes for the NL command. */
+        nlData = wifiLoggerCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+
+        if (!nlData)
+            goto cleanup;
+
+        if (wifiLoggerCommand->put_u32(
+                    QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_RING_ID, ring_id))
+        {
+            goto cleanup;
+        }
+        if (wifiLoggerCommand->put_u32(
+                    QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_VERBOSE_LEVEL,
+                    verbose_level))
+        {
+            goto cleanup;
+        }
+        if (wifiLoggerCommand->put_u32(
+                    QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_FLAGS,
+                    flags))
+        {
+            goto cleanup;
+        }
+
+        wifiLoggerCommand->attr_end(nlData);
+
+        /* Send the msg and wait for a response. */
+        ret = wifiLoggerCommand->requestResponse();
+        if (ret) {
+            ALOGE("%s: Error %d happened. ", __FUNCTION__, ret);
+        }
+
+    }
+    rb_start_logging(&info->rb_infos[ring_id], verbose_level,
+                    flags, max_interval_sec, min_data_size);
+cleanup:
+    if (wifiLoggerCommand)
+        delete wifiLoggerCommand;
+    return (wifi_error)ret;
+
+}
+
+/*  Function to get each ring related info */
+wifi_error wifi_get_ring_buffers_status(wifi_interface_handle iface,
+                                        u32 *num_buffers,
+                                        wifi_ring_buffer_status **status)
+{
+    int ret = 0;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+    wifi_ring_buffer_status *rbs;
+    struct rb_info *rb_info;
+    int rb_id;
+
+    *status = (wifi_ring_buffer_status *)malloc(
+               NUM_RING_BUFS * sizeof(
+               wifi_ring_buffer_status));
+    if (*status == NULL) {
+        *num_buffers = 0;
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+    for (rb_id = 0; rb_id < NUM_RING_BUFS; rb_id++) {
+        rb_info = &info->rb_infos[rb_id];
+        rbs = *status + rb_id;
+
+        get_rb_status(rb_info, rbs);
+    }
+    *num_buffers = NUM_RING_BUFS;
+    return (wifi_error)ret;
+}
+
+void WifiLoggerCommand::setFeatureSet(u32 *support) {
+    mSupportedSet = support;
+}
+
+/*  Function to get the supported feature set for logging.*/
+wifi_error wifi_get_logger_supported_feature_set(wifi_interface_handle iface,
+                                                 u32 *support)
+{
+
+    int requestId, ret = 0;
+    WifiLoggerCommand *wifiLoggerCommand;
+    struct nlattr *nlData;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    /* No request id from caller, so generate one and pass it on to the driver.
+     * Generate one randomly.
      */
+    requestId = rand();
+
     wifiLoggerCommand = new WifiLoggerCommand(
                             wifiHandle,
                             requestId,
                             OUI_QCA,
-                            QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_START);
-    ALOGI("%s: Sending Start Logging Request. \n", __FUNCTION__);
+                            QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET);
 
     if (wifiLoggerCommand == NULL) {
-        ALOGE("%s: Error WifiLoggerCommand NULL", __func__);
+        ALOGE("%s: Error WifiLoggerCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
     /* Create the NL message. */
@@ -93,68 +232,23 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
     if (!nlData)
         goto cleanup;
 
+    if (wifiLoggerCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_FEATURE_SET, requestId))
+    {
+        goto cleanup;
+    }
     wifiLoggerCommand->attr_end(nlData);
+
+    wifiLoggerCommand->setFeatureSet(support);
 
     /* Send the msg and wait for a response. */
     ret = wifiLoggerCommand->requestResponse();
     if (ret) {
-        ALOGE("%s: Error %d happened. ", __func__, ret);
+        ALOGE("%s: Error %d happened. ", __FUNCTION__, ret);
     }
 
 cleanup:
-    ALOGI("%s: Delete object.", __func__);
     delete wifiLoggerCommand;
-    return (wifi_error)ret;
-
-}
-
-/*  Function to get each ring related info */
-wifi_error wifi_get_ring_buffers_status(wifi_interface_handle iface,
-                                        u32 *num_buffers,
-                                        wifi_ring_buffer_status **status)
-{
-    int requestId, ret = 0;
-    WifiLoggerCommand *wifiLoggerCommand;
-    struct nlattr *nlData;
-    interface_info *ifaceInfo = getIfaceInfo(iface);
-    wifi_handle wifiHandle = getWifiHandle(iface);
-    hal_info *info = getHalInfo(wifiHandle);
-
-    /* No request id from caller, so generate one and pass it on to the driver.
-     * Generate one randomly.
-     */
-    srand( time(NULL) );
-    requestId = rand();
-    /*
-     * TBD need to implement the total rings supported
-     * along with the ring buffer info.
-     */
-cleanup:
-    return (wifi_error)ret;
-}
-
-/*  Function to get the supported feature set for logging.*/
-wifi_error wifi_get_logger_supported_feature_set(wifi_interface_handle iface,
-                                                 u32 *support)
-{
-
-    int requestId, ret = 0;
-    WifiLoggerCommand *wifiLoggerCommand;
-    struct nlattr *nlData;
-    interface_info *ifaceInfo = getIfaceInfo(iface);
-    wifi_handle wifiHandle = getWifiHandle(iface);
-    hal_info *info = getHalInfo(wifiHandle);
-
-    /* No request id from caller, so generate one and pass it on to the driver.
-     * Generate one randomly.
-     */
-    srand( time(NULL) );
-    requestId = rand();
-    /*
-     * TBD need to implement feature set supported in wifi_hal
-     * for the logger app.
-     */
-cleanup:
     return (wifi_error)ret;
 }
 
@@ -169,18 +263,59 @@ wifi_error wifi_get_ring_data(wifi_interface_handle iface,
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
+    int ring_id = 0;
 
-    /* No request id from caller, so generate one and pass it on to the driver.
-     * Generate one randomly.
-     */
-    srand( time(NULL) );
+    ring_id = get_ring_id(info, ring_name);
+    if (ring_id < 0) {
+        ALOGE("%s: Invalid Ring Buffer Name ", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
     requestId = rand();
-    /*
-     * TBD need to implement get ring data to invoke the CB handler
-     * for the given ring_id.
-     */
+
+    wifiLoggerCommand = new WifiLoggerCommand(
+                                wifiHandle,
+                                requestId,
+                                OUI_QCA,
+                                QCA_NL80211_VENDOR_SUBCMD_GET_RING_DATA);
+    if (wifiLoggerCommand == NULL) {
+        ALOGE("%s: Error WifiLoggerCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+    /* Create the NL message. */
+    ret = wifiLoggerCommand->create();
+
+    if (ret < 0)
+        goto cleanup;
+
+    /* Set the interface Id of the message. */
+    ret = wifiLoggerCommand->set_iface_id(ifaceInfo->name);
+
+    if (ret < 0)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = wifiLoggerCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+
+    if (!nlData)
+        goto cleanup;
+
+    if (wifiLoggerCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_RING_ID, ring_id))
+    {
+        goto cleanup;
+    }
+    wifiLoggerCommand->attr_end(nlData);
+
+    //TBD  Is there requestResponse here
+    /* Send the msg and wait for a response. */
+    ret = wifiLoggerCommand->requestResponse();
+    if (ret) {
+        ALOGE("%s: Error %d happened. ", __FUNCTION__, ret);
+    }
 
 cleanup:
+    delete wifiLoggerCommand;
     return (wifi_error)ret;
 }
 
@@ -203,7 +338,6 @@ wifi_error wifi_get_firmware_version(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    srand( time(NULL) );
     requestId = rand();
 
     wifiLoggerCommand = new WifiLoggerCommand(
@@ -211,9 +345,8 @@ wifi_error wifi_get_firmware_version(wifi_interface_handle iface,
                                 requestId,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_INFO);
-    ALOGI("%s: Sending Get Wifi Info Request. \n", __FUNCTION__);
     if (wifiLoggerCommand == NULL) {
-        ALOGE("%s: Error WifiLoggerCommand NULL", __func__);
+        ALOGE("%s: Error WifiLoggerCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
     /* Create the NL message. */
@@ -235,7 +368,7 @@ wifi_error wifi_get_firmware_version(wifi_interface_handle iface,
         goto cleanup;
 
     if (wifiLoggerCommand->put_u32(
-                QCA_WLAN_VENDOR_ATTR_WIFI_INFO_FIRMWARE_VERSION, requestId) )
+                QCA_WLAN_VENDOR_ATTR_WIFI_INFO_FIRMWARE_VERSION, requestId))
     {
         goto cleanup;
     }
@@ -246,10 +379,9 @@ wifi_error wifi_get_firmware_version(wifi_interface_handle iface,
     /* Send the msg and wait for a response. */
     ret = wifiLoggerCommand->requestResponse();
     if (ret) {
-        ALOGE("%s: Error %d happened. ", __func__, ret);
+        ALOGE("%s: Error %d happened. ", __FUNCTION__, ret);
     }
 cleanup:
-    ALOGI("%s: Delete object.", __func__);
     delete wifiLoggerCommand;
     return (wifi_error)ret;
 
@@ -270,7 +402,6 @@ wifi_error wifi_get_driver_version(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    srand( time(NULL) );
     requestId = rand();
 
     wifiLoggerCommand = new WifiLoggerCommand(
@@ -278,9 +409,8 @@ wifi_error wifi_get_driver_version(wifi_interface_handle iface,
                             requestId,
                             OUI_QCA,
                             QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_INFO);
-    ALOGI("%s: Sending Get Wifi Info Request. \n", __FUNCTION__);
     if (wifiLoggerCommand == NULL) {
-        ALOGE("%s: Error WifiLoggerCommand NULL", __func__);
+        ALOGE("%s: Error WifiLoggerCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
     /* Create the NL message. */
@@ -313,10 +443,9 @@ wifi_error wifi_get_driver_version(wifi_interface_handle iface,
     /* Send the msg and wait for a response. */
     ret = wifiLoggerCommand->requestResponse();
     if (ret) {
-        ALOGE("%s: Error %d happened. ", __func__, ret);
+        ALOGE("%s: Error %d happened. ", __FUNCTION__, ret);
     }
 cleanup:
-    ALOGI("%s: Delete object.", __func__);
     delete wifiLoggerCommand;
     return (wifi_error)ret;
 }
@@ -336,7 +465,6 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    srand( time(NULL) );
     requestId = rand();
 
     wifiLoggerCommand = new WifiLoggerCommand(
@@ -344,9 +472,8 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
                             requestId,
                             OUI_QCA,
                             QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP);
-    ALOGI("%s: Sending Memory Dump Request. \n", __func__);
     if (wifiLoggerCommand == NULL) {
-        ALOGE("%s: Error WifiLoggerCommand NULL", __func__);
+        ALOGE("%s: Error WifiLoggerCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
     /* Create the NL message. */
@@ -383,13 +510,65 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
     wifiLoggerCommand->waitForRsp(true);
     ret = wifiLoggerCommand->requestEvent();
     if (ret) {
-        ALOGE("%s: Error %d happened. ", __func__, ret);
+        ALOGE("%s: Error %d happened. ", __FUNCTION__, ret);
     }
 
 cleanup:
-    ALOGI("%s: Delete object.", __func__);
     delete wifiLoggerCommand;
     return (wifi_error)ret;
+}
+
+wifi_error wifi_set_log_handler(wifi_request_id id,
+                                wifi_interface_handle iface,
+                                wifi_ring_buffer_data_handler handler)
+{
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    info->on_ring_buffer_data = handler.on_ring_buffer_data;
+    if (handler.on_ring_buffer_data == NULL) {
+        ALOGE("Input handler is NULL");
+        return WIFI_ERROR_UNKNOWN;
+    }
+    return WIFI_SUCCESS;
+}
+
+wifi_error wifi_reset_log_handler(wifi_request_id id,
+                                  wifi_interface_handle iface)
+{
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    /* Some locking needs to be introduced here */
+    info->on_ring_buffer_data = NULL;
+    return WIFI_SUCCESS;
+}
+
+wifi_error wifi_set_alert_handler(wifi_request_id id,
+                                  wifi_interface_handle iface,
+                                  wifi_alert_handler handler)
+{
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (handler.on_alert) {
+        ALOGE("Input handler is NULL");
+        return WIFI_ERROR_UNKNOWN;
+    }
+    //TODO check locking
+    info->on_alert = handler.on_alert;
+    return WIFI_SUCCESS;
+}
+
+wifi_error wifi_reset_alert_handler(wifi_request_id id,
+                                    wifi_interface_handle iface)
+{
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    /* Some locking needs to be introduced here */
+    info->on_alert = NULL;
+    return WIFI_SUCCESS;
 }
 
 WifiLoggerCommand::WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
@@ -402,6 +581,7 @@ WifiLoggerCommand::WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, 
     memset(&mHandler, 0,sizeof(mHandler));
     mWaitforRsp = false;
     mMoreData = false;
+    mSupportedSet = NULL;
 }
 
 WifiLoggerCommand::~WifiLoggerCommand()
@@ -427,21 +607,66 @@ int WifiLoggerCommand::create() {
         goto out;
 
      ALOGI("%s: mVendor_id = %d, Subcmd = %d.",
-        __func__, mVendor_id, mSubcmd);
+        __FUNCTION__, mVendor_id, mSubcmd);
 
 out:
     return ret;
 }
 
+void rb_timerhandler(hal_info *info)
+{
+   struct timeval now;
+   int rb_id;
+
+   gettimeofday(&now,NULL);
+   for (rb_id = 0; rb_id < NUM_RING_BUFS; rb_id++) {
+       rb_check_for_timeout(&info->rb_infos[rb_id], &now);
+   }
+}
+
+wifi_error wifi_logger_ring_buffers_init(hal_info *info)
+{
+    int ret;
+
+    ret = rb_init(info, &info->rb_infos[POWER_EVENTS_RB_ID],
+                  POWER_EVENTS_RB_ID,
+                  POWER_EVENTS_RB_BUF_SIZE,
+                  POWER_EVENTS_NUM_BUFS,
+                  power_events_ring_name);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    ret = rb_init(info, &info->rb_infos[CONNECTIVITY_EVENTS_RB_ID],
+                  CONNECTIVITY_EVENTS_RB_ID,
+                  CONNECTIVITY_EVENTS_RB_BUF_SIZE,
+                  CONNECTIVITY_EVENTS_NUM_BUFS,
+                  connectivity_events_ring_name);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    ret = rb_init(info, &info->rb_infos[PKT_STATS_RB_ID],
+                  PKT_STATS_RB_ID,
+                  PKT_STATS_RB_BUF_SIZE,
+                  PKT_STATS_NUM_BUFS,
+                  pkt_stats_ring_name);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+cleanup:
+    return (wifi_error)ret;
+}
+
+
 /* Callback handlers registered for nl message send */
-static int error_handler_wifi_logger(struct sockaddr_nl *nla, struct nlmsgerr *err,
-                                   void *arg)
+static int error_handler_wifi_logger(struct sockaddr_nl *nla,
+                                     struct nlmsgerr *err,
+                                     void *arg)
 {
     struct sockaddr_nl *tmp;
     int *ret = (int *)arg;
     tmp = nla;
     *ret = err->error;
-    ALOGE("%s: Error code:%d (%s)", __func__, *ret, strerror(-(*ret)));
+    ALOGE("%s: Error code:%d (%s)", __FUNCTION__, *ret, strerror(-(*ret)));
     return NL_STOP;
 }
 
@@ -451,7 +676,7 @@ static int ack_handler_wifi_logger(struct nl_msg *msg, void *arg)
     int *ret = (int *)arg;
     struct nl_msg * a;
 
-    ALOGE("%s: called", __func__);
+    ALOGE("%s: called", __FUNCTION__);
     a = msg;
     *ret = 0;
     return NL_STOP;
@@ -463,7 +688,7 @@ static int finish_handler_wifi_logger(struct nl_msg *msg, void *arg)
   int *ret = (int *)arg;
   struct nl_msg * a;
 
-  ALOGE("%s: called", __func__);
+  ALOGE("%s: called", __FUNCTION__);
   a = msg;
   *ret = 0;
   return NL_SKIP;
@@ -474,11 +699,11 @@ int WifiLoggerCommand::requestEvent()
     int res = -1;
     struct nl_cb *cb;
 
-    ALOGD("%s: Entry.", __func__);
+    ALOGD("%s: Entry.", __FUNCTION__);
 
     cb = nl_cb_alloc(NL_CB_DEFAULT);
     if (!cb) {
-        ALOGE("%s: Callback allocation failed",__func__);
+        ALOGE("%s: Callback allocation failed",__FUNCTION__);
         res = -1;
         goto out;
     }
@@ -498,7 +723,7 @@ int WifiLoggerCommand::requestEvent()
          nl_recvmsgs(mInfo->cmd_sock, cb);
     }
 
-    ALOGD("%s: Msg sent, res=%d, mWaitForRsp=%d", __func__, res, mWaitforRsp);
+    ALOGD("%s: Msg sent, res=%d, mWaitForRsp=%d", __FUNCTION__, res, mWaitforRsp);
     /* Only wait for the asynchronous event if HDD returns success, res=0 */
     if (!res && (mWaitforRsp == true)) {
         struct timespec abstime;
@@ -507,10 +732,10 @@ int WifiLoggerCommand::requestEvent()
         res = mCondition.wait(abstime);
         if (res == ETIMEDOUT)
         {
-            ALOGE("%s: Time out happened.", __func__);
+            ALOGE("%s: Time out happened.", __FUNCTION__);
         }
         ALOGD("%s: Command invoked return value:%d, mWaitForRsp=%d",
-            __func__, res, mWaitforRsp);
+            __FUNCTION__, res, mWaitforRsp);
     }
 out:
     /* Cleanup the mMsg */
@@ -520,7 +745,6 @@ out:
 
 int WifiLoggerCommand::requestResponse()
 {
-    ALOGD("%s: request a response", __func__);
     return WifiCommand::requestResponse(mMsg);
 }
 
@@ -559,22 +783,36 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
                 *mVersion = (char *)malloc(len*(sizeof(char)) + 1);
                 if (!(*mVersion)) {
                     ALOGE("%s: Failed to allocate memory for Version.",
-                    __func__);
+                    __FUNCTION__);
                     return WIFI_ERROR_OUT_OF_MEMORY;
                 }
                 memset(*mVersion, 0, (len*(sizeof(char))) + 1);
                 *mVersionLen = len;
                 memcpy(*mVersion, nla_data(tb_vendor[version]), len);
-                ALOGD("%s: WLAN version len : %d", __func__, len);
-                ALOGD("%s: WLAN %s version : %s ", __func__,
+                ALOGD("%s: WLAN version len : %d", __FUNCTION__, len);
+                ALOGD("%s: WLAN %s version : %s ", __FUNCTION__,
                       version_type, *mVersion);
             }
         }
         break;
+        case QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET:
+        {
+            struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_WIFI_INFO_GET_MAX + 1];
 
+            nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_WIFI_INFO_GET_MAX,
+                            (struct nlattr *)mVendorData, mDataLen, NULL);
+
+            if (tb_vendor[QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_FEATURE_SET]) {
+                *mSupportedSet =
+                nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_FEATURE_SET]);
+                ALOGD("%s: Supported Feature Set : val %d",
+                      __FUNCTION__, *mSupportedSet);
+            }
+        }
+        break;
         default :
             ALOGE("%s: Wrong Wifi Logger subcmd response received %d",
-                __func__, mSubcmd);
+                __FUNCTION__, mSubcmd);
     }
 
     return NL_SKIP;
@@ -586,7 +824,6 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
  */
 int WifiLoggerCommand::handleEvent(WifiEvent &event)
 {
-    ALOGI("Got a WifiLogger Event message from the Driver.");
     unsigned i = 0;
     u32 status;
     int ret = WIFI_SUCCESS;
@@ -720,7 +957,7 @@ int WifiLoggerCommand::setCallbackHandler(WifiLoggerCallbackHandler nHandler)
     res = registerVendorHandler(mVendor_id, mSubcmd);
     if (res != 0) {
         ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x subcmd=%u",
-              __func__, mVendor_id, mSubcmd);
+              __FUNCTION__, mVendor_id, mSubcmd);
     }
     return res;
 }

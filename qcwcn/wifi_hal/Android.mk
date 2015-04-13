@@ -48,6 +48,7 @@ LOCAL_SRC_FILES := \
 	nan_rsp.cpp \
 	wificonfig.cpp \
 	wifilogger.cpp \
+	wifilogger_diag.cpp \
 	ring_buffer.cpp \
 	rb_wrapper.cpp
 
@@ -97,6 +98,7 @@ LOCAL_SRC_FILES := \
 	nan_rsp.cpp \
 	wificonfig.cpp \
 	wifilogger.cpp \
+	wifilogger_diag.cpp \
 	ring_buffer.cpp \
 	rb_wrapper.cpp
 
