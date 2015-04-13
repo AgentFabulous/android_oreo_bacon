@@ -1271,7 +1271,8 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
         /* TODO: This should be set to 1 for truncated scans */
         scans[i].flags = 0;
         scans[i].num_results = 0;
-        scans[i].results = scan_results + j;
+        //ToDo: Fix build
+        //scans[i].results = scan_results + j;
 
         wifi_timestamp ts = scan_results[j].ts;
         for ( ; j < num_scan_results; j++) {
