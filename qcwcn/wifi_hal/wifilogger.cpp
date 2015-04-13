@@ -31,6 +31,7 @@
 #include "wifi_hal.h"
 #include "common.h"
 #include "cpp_bindings.h"
+#include <errno.h>
 #include <utils/Log.h>
 #include "wifiloggercmd.h"
 
