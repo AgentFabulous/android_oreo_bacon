@@ -148,7 +148,8 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_event_loop = wifi_event_loop;
     fn->wifi_get_supported_feature_set = wifi_get_supported_feature_set;
     fn->wifi_get_concurrency_matrix = wifi_get_concurrency_matrix;
-    fn->wifi_set_scanning_mac_oui =  wifi_set_scanning_mac_oui;
+    //ToDo: Fix build
+    //fn->wifi_set_scanning_mac_oui =  wifi_set_scanning_mac_oui;
     fn->wifi_get_ifaces = wifi_get_ifaces;
     fn->wifi_get_iface_name = wifi_get_iface_name;
     fn->wifi_start_gscan = wifi_start_gscan;
