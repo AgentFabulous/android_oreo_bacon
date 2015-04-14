@@ -39,7 +39,6 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include "link_layer_stats.h"
-#include "vendor_definitions.h"
 
 #ifdef __GNUC__
 #define PRINTF_FORMAT(a,b) __attribute__ ((format (printf, (a), (b))))
@@ -119,6 +118,8 @@ public:
     virtual void unregisterHandler(u32 subCmd);
 
     virtual void getClearRspParams(u32 *stats_clear_rsp_mask, u8 *stop_rsp);
+
+    virtual int get_wifi_iface_stats(wifi_iface_stat *stats, struct nlattr **tb_vendor);
 };
 
 #ifdef __cplusplus

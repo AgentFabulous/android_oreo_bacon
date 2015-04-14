@@ -39,11 +39,11 @@
 #include "common.h"
 #include "cpp_bindings.h"
 
-void appendFmt(char *buf, int &offset, const char *fmt, ...)
+void appendFmt(char *buf, size_t buf_len, int &offset, const char *fmt, ...)
 {
     va_list params;
     va_start(params, fmt);
-    offset += vsprintf(buf + offset, fmt, params);
+    offset += vsnprintf(buf + offset, buf_len - offset, fmt, params);
     va_end(params);
 }
 
@@ -504,24 +504,24 @@ void WifiEvent::log() {
         char line[81];
         int linelen = min(16, len - i);
         int offset = 0;
-        appendFmt(line, offset, "%02x", data[i]);
+        appendFmt(line, sizeof(line), offset, "%02x", data[i]);
         for (int j = 1; j < linelen; j++) {
-            appendFmt(line, offset, " %02x", data[i+j]);
+            appendFmt(line, sizeof(line), offset, " %02x", data[i+j]);
         }
 
         for (int j = linelen; j < 16; j++) {
-            appendFmt(line, offset, "   ");
+            appendFmt(line, sizeof(line), offset, "   ");
         }
 
         line[23] = '-';
 
-        appendFmt(line, offset, "  ");
+        appendFmt(line, sizeof(line), offset, "  ");
 
         for (int j = 0; j < linelen; j++) {
             if (isprint(data[i+j])) {
-                appendFmt(line, offset, "%c", data[i+j]);
+                appendFmt(line, sizeof(line), offset, "%c", data[i+j]);
             } else {
-                appendFmt(line, offset, "-");
+                appendFmt(line, sizeof(line), offset, "-");
             }
         }
 
@@ -696,7 +696,7 @@ int WifiCommand::response_handler(struct nl_msg *msg, void *arg) {
         ALOGE("Failed to parse reply message = %d", res);
         return NL_SKIP;
     } else {
-        reply.log();
+        // reply.log(); /* Don't call log() to avoid excess WiFi HAL logging */
         return cmd->handleResponse(reply);
     }
 }
@@ -845,6 +845,12 @@ out:
 
 }
 
+int WifiVendorCommand::requestResponse()
+{
+    ALOGD("%s: request a response", __func__);
+    return WifiCommand::requestResponse(mMsg);
+}
+
 int WifiVendorCommand::requestEvent()
 {
     int res = requestVendorEvent(mVendor_id, mSubcmd);
@@ -867,13 +873,68 @@ int WifiVendorCommand::put_u32(int attribute, uint32_t value)
     return mMsg.put_u32(attribute, value);
 }
 
-int WifiVendorCommand::put_s32(int attribute, int value) {
-    return mMsg.put_s32(attribute, value);
-}
-
 int WifiVendorCommand::put_u64(int attribute, uint64_t value)
 {
     return mMsg.put_u64(attribute, value);
+}
+
+int WifiVendorCommand::put_s8(int attribute, s8 value)
+{
+    return mMsg.put_s8(attribute, value);
+}
+
+int WifiVendorCommand::put_s16(int attribute, s16 value)
+{
+    return mMsg.put_s16(attribute, value);
+}
+
+int WifiVendorCommand::put_s32(int attribute, s32 value) {
+    return mMsg.put_s32(attribute, value);
+}
+
+int WifiVendorCommand::put_s64(int attribute, s64 value)
+{
+    return mMsg.put_s64(attribute, value);
+}
+
+u8 WifiVendorCommand::get_u8(const struct nlattr *nla)
+{
+    return mMsg.get_u8(nla);
+}
+
+u16 WifiVendorCommand::get_u16(const struct nlattr *nla)
+{
+    return mMsg.get_u16(nla);
+}
+
+u32 WifiVendorCommand::get_u32(const struct nlattr *nla)
+{
+    return mMsg.get_u32(nla);
+}
+
+u64 WifiVendorCommand::get_u64(const struct nlattr *nla)
+{
+    return mMsg.get_u64(nla);
+}
+
+s8 WifiVendorCommand::get_s8(const struct nlattr *nla)
+{
+    return mMsg.get_s8(nla);
+}
+
+s16 WifiVendorCommand::get_s16(const struct nlattr *nla)
+{
+    return mMsg.get_s16(nla);
+}
+
+s32 WifiVendorCommand::get_s32(const struct nlattr *nla)
+{
+    return mMsg.get_s32(nla);
+}
+
+s64 WifiVendorCommand::get_s64(const struct nlattr *nla)
+{
+    return mMsg.get_s64(nla);
 }
 
 int WifiVendorCommand::put_string(int attribute, const char *value)

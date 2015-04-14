@@ -49,6 +49,13 @@
 #define DEFAULT_EVENT_CB_SIZE   (64)
 #define DEFAULT_CMD_SIZE        (64)
 
+#define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
+#define MAC_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
+
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
+
 typedef void (*wifi_internal_event_handler) (wifi_handle handle, int events);
 
 class WifiCommand;
@@ -68,7 +75,7 @@ typedef struct {
 
 typedef struct {
     wifi_handle handle;                             // handle to wifi data
-    char name[8+1];                                 // interface name + trailing null
+    char name[IFNAMSIZ+1];                          // interface name + trailing null
     int  id;                                        // id to use when talking to driver
 } interface_info;
 
@@ -87,6 +94,7 @@ typedef struct {
     cb_info *event_cb;                              // event callbacks
     int num_event_cb;                               // number of event callbacks
     int alloc_event_cb;                             // number of allocated callback objects
+    pthread_mutex_t cb_lock;                        // mutex for the event_cb access
 
     cmd_info *cmd;                                  // Outstanding commands
     int num_cmd;                                    // number of commands
@@ -95,6 +103,7 @@ typedef struct {
     interface_info **interfaces;                    // array of interfaces
     int num_interfaces;                             // number of interfaces
 
+    feature_set supported_feature_set;
     // add other details
 } hal_info;
 
