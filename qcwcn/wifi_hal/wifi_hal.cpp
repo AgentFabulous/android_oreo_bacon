@@ -15,6 +15,7 @@
  */
 
 #include <stdint.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netlink/genl/genl.h>
