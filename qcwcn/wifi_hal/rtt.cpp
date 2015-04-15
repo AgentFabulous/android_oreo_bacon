@@ -282,9 +282,3 @@ cleanup:
     return (wifi_error)ret;
 }
 
-/* API to get RTT capability */
-wifi_error wifi_get_rtt_capabilities(wifi_interface_handle iface,
-        wifi_rtt_capabilities *capabilities)
-{
-    return WIFI_ERROR_NOT_SUPPORTED;
-}

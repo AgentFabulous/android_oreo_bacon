@@ -20,6 +20,7 @@
 #include "wifi_hal.h"
 #include "nan_i.h"
 #include "nancommand.h"
+#include <errno.h>
 
 #define NAN_TERMINATED_BEGINNING_OFFSET       8192
 
