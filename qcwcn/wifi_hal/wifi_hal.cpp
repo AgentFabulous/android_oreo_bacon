@@ -501,8 +501,6 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
         ALOGI("event received %s", event.get_cmdString());
     }
 
-    ALOGI("event received %s, vendor_id = 0x%0x", event.get_cmdString(),
-            vendor_id);
     // event.log();
 
     bool dispatched = false;

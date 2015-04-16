@@ -71,7 +71,6 @@ typedef enum{
 /* Response and Event Callbacks */
 typedef struct {
     /* Various Events Callback */
-    void (*get_capabilities)(wifi_gscan_capabilities capabilities);
     void (*on_hotlist_ap_found)(wifi_request_id id,
         unsigned num_results, wifi_scan_result *results);
     void (*on_hotlist_ap_lost)(wifi_request_id id,
