@@ -203,6 +203,16 @@ static wifi_error wifi_init_user_sock(hal_info *info)
         return WIFI_ERROR_UNKNOWN;
     }
 
+    /* Set the socket buffer size */
+    if (nl_socket_set_buffer_size(user_sock, (256*1024), 0) < 0) {
+        ALOGE("Could not set size for user_sock: %s",
+                   strerror(errno));
+        /* continue anyway with the default (smaller) buffer */
+    }
+    else {
+        ALOGI("nl_socket_set_buffer_size successful for user_sock");
+    }
+
     struct nl_cb *cb = nl_socket_get_cb(user_sock);
     if (cb == NULL) {
         ALOGE("Could not get cb");
@@ -453,6 +463,15 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
+    info->pkt_stats = (struct pkt_stats_s *)malloc(sizeof(struct pkt_stats_s));
+    if (!info->pkt_stats) {
+        ALOGE("%s: malloc Failed for size: %d",
+                __FUNCTION__, sizeof(struct pkt_stats_s));
+        ret = WIFI_ERROR_OUT_OF_MEMORY;
+        goto unload;
+    }
+
+
     ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d Supported"
             " features : %x", NL80211_CMD_VENDOR, info->supported_feature_set);
 
@@ -509,6 +528,7 @@ static void internal_cleaned_up_handler(wifi_handle handle)
         info->user_sock = NULL;
     }
 
+    free(info->pkt_stats);
     wifi_logger_ring_buffers_deinit(info);
 
     (*cleaned_up_handler)(handle);

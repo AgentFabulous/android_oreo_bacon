@@ -43,7 +43,26 @@
 #define WLAN_NL_MSG_CNSS_HOST_EVENT_LOG    17
 #define ANI_NL_MSG_LOG_HOST_EVENT_LOG_TYPE 0x5050
 
+#define WLAN_PKT_LOG_STATS            0x18E0
+
 #define EVENT_WLAN_WAKE_LOCK 0xAA2 /* 96 bytes payload */
+
+/*
+ *  - verbose_level 0 corresponds to no collection
+ *  - verbose_level 1 correspond to normal log level, with minimal user impact.
+ *    this is the default value
+ *  - verbose_level 2 are enabled when user is lazily trying to reproduce a
+ problem, wifi performances and power
+ *     can be impacted but device should not otherwise be significantly impacted
+ *  - verbose_level 3+ are used when trying to actively debug a problem
+ */
+
+enum wifilogger_verbose_level {
+   VERBOSE_NO_COLLECTION,
+   VERBOSE_NORMAL_LOG,
+   VERBOSE_REPRO_PROBLEM,
+   VERBOSE_DEBUG_PROBLEM
+};
 
 enum wifilogger_fw_diag_type {
    DIAG_TYPE_FW_EVENT,     /* send fw event- to diag*/
@@ -52,7 +71,7 @@ enum wifilogger_fw_diag_type {
 };
 
 enum wifilogger_host_diag_type {
-   DIAG_TYPE_HOST_MSGS=1,
+   DIAG_TYPE_HOST_LOG_MSGS=1,
    DIAG_TYPE_HOST_EVENTS=2,
 };
 
@@ -120,5 +139,5 @@ typedef struct wlan_wake_lock_event {
     char name[];
 } wlan_wake_lock_event_t;
 
-int diag_message_handler(hal_info *info, nl_msg *msg);
+wifi_error diag_message_handler(hal_info *info, nl_msg *msg);
 #endif /* __WIFI_HAL_WIFILOGGER_DIAG_H__ */
