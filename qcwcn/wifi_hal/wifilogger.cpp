@@ -64,7 +64,7 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
                               char *buffer_name)
 {
     int requestId, ret = 0;
-    WifiLoggerCommand *wifiLoggerCommand;
+    WifiLoggerCommand *wifiLoggerCommand = NULL;
     struct nlattr *nlData;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -233,7 +233,7 @@ wifi_error wifi_get_logger_supported_feature_set(wifi_interface_handle iface,
         goto cleanup;
 
     if (wifiLoggerCommand->put_u32(
-                QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_FEATURE_SET, requestId))
+                QCA_WLAN_VENDOR_ATTR_FEATURE_SET, requestId))
     {
         goto cleanup;
     }
@@ -797,15 +797,15 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
         break;
         case QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET:
         {
-            struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_WIFI_INFO_GET_MAX + 1];
+            struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET_MAX + 1];
 
-            nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_WIFI_INFO_GET_MAX,
+            nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_FEATURE_SET_MAX,
                             (struct nlattr *)mVendorData, mDataLen, NULL);
 
-            if (tb_vendor[QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_FEATURE_SET]) {
+            if (tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]) {
                 *mSupportedSet =
-                nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_FEATURE_SET]);
-                ALOGD("%s: Supported Feature Set : val %d",
+                nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]);
+                ALOGD("%s: Supported Feature Set : val 0x%x",
                       __FUNCTION__, *mSupportedSet);
             }
         }
