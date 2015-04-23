@@ -38,7 +38,7 @@
 #include "tdlsCommand.h"
 #include "vendor_definitions.h"
 
-//Singleton Static Instance
+/* Singleton Static Instance */
 TdlsCommand* TdlsCommand::mTdlsCommandInstance  = NULL;
 TdlsCommand::TdlsCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
@@ -85,53 +85,19 @@ void TdlsCommand::setSubCmd(u32 subcmd)
 {
     mSubcmd = subcmd;
 }
-//callback handlers registered for nl message send
-static int error_handler_LLStats(struct sockaddr_nl *nla, struct nlmsgerr *err,
-                         void *arg)
-{
-    struct sockaddr_nl * tmp;
-    int *ret = (int *)arg;
-    tmp = nla;
-    *ret = err->error;
-    ALOGE("%s: Error code:%d (%s)", __func__, *ret, strerror(-(*ret)));
-    return NL_STOP;
-}
 
-//callback handlers registered for nl message send
-static int ack_handler_LLStats(struct nl_msg *msg, void *arg)
-{
-    int *ret = (int *)arg;
-    struct nl_msg * a;
-
-    ALOGE("%s: called", __func__);
-    a = msg;
-    *ret = 0;
-    return NL_STOP;
-}
-
-//callback handlers registered for nl message send
-static int finish_handler_LLStats(struct nl_msg *msg, void *arg)
-{
-  int *ret = (int *)arg;
-  struct nl_msg * a;
-
-  ALOGE("%s: called", __func__);
-  a = msg;
-  *ret = 0;
-  return NL_SKIP;
-}
-// This function will be the main handler for incoming event LLStats_SUBCMD
-//Call the appropriate callback handler after parsing the vendor data.
+/* This function will be the main handler for incoming event SUBCMD_TDLS
+ * Call the appropriate callback handler after parsing the vendor data.
+ */
 int TdlsCommand::handleEvent(WifiEvent &event)
 {
-    ALOGI("Got a TDLS message from Driver");
+    ALOGV("Got a TDLS message from Driver");
     unsigned i=0;
     u32 status;
     int ret = WIFI_SUCCESS;
     WifiVendorCommand::handleEvent(event);
 
-    // Parse the vendordata and get the attribute
-
+    /* Parse the vendordata and get the attribute */
     switch(mSubcmd)
     {
         case QCA_NL80211_VENDOR_SUBCMD_TDLS_STATE:
@@ -153,7 +119,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_MAC_ADDR])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_MAC_ADDR not found",
-                            __func__);
+                            __FUNCTION__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 memcpy(addr,
@@ -165,7 +131,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATE])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_STATE not found",
-                            __func__);
+                            __FUNCTION__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 status.state = (wifi_tdls_state)
@@ -175,7 +141,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_REASON])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_REASON not found",
-                            __func__);
+                            __FUNCTION__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 status.reason = (wifi_tdls_reason)
@@ -185,7 +151,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_CHANNEL])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_CHANNEL not found",
-                            __func__);
+                            __FUNCTION__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 status.channel =
@@ -196,7 +162,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                         QCA_WLAN_VENDOR_ATTR_TDLS_GLOBAL_OPERATING_CLASS])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_GLOBAL_OPERATING_CLASS"
-                            " not found", __func__);
+                            " not found", __FUNCTION__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 status.global_operating_class = get_u32(
@@ -212,8 +178,8 @@ int TdlsCommand::handleEvent(WifiEvent &event)
             break;
 
         default:
-            //error case should not happen print log
-            ALOGE("%s: Wrong TDLS subcmd received %d", __func__, mSubcmd);
+            /* Error case should not happen print log */
+            ALOGE("%s: Wrong TDLS subcmd received %d", __FUNCTION__, mSubcmd);
     }
 
     return NL_SKIP;
@@ -244,7 +210,7 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_STATE])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_STATE"
-                            " not found", __func__);
+                            " not found", __FUNCTION__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 mTDLSgetStatusRspParams.state = (wifi_tdls_state)get_u32(
@@ -254,7 +220,7 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_REASON])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_REASON"
-                            " not found", __func__);
+                            " not found", __FUNCTION__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 mTDLSgetStatusRspParams.reason = (wifi_tdls_reason)get_s32(
@@ -264,7 +230,7 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_CHANNEL])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_CHANNEL"
-                            " not found", __func__);
+                            " not found", __FUNCTION__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 mTDLSgetStatusRspParams.channel = get_u32(tb_vendor[
@@ -276,7 +242,7 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                 {
                     ALOGE("%s:"
                    "QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_GLOBAL_OPERATING_CLASS"
-                    " not found", __func__);
+                    " not found", __FUNCTION__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 mTDLSgetStatusRspParams.global_operating_class =
@@ -288,7 +254,7 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
             break;
         default :
             ALOGE("%s: Wrong TDLS subcmd response received %d",
-                __func__, mSubcmd);
+                __FUNCTION__, mSubcmd);
     }
     return NL_SKIP;
 }
@@ -300,9 +266,9 @@ int TdlsCommand::setCallbackHandler(wifi_tdls_handler nHandler, u32 event)
     mHandler = nHandler;
     res = registerVendorHandler(mVendor_id, event);
     if (res != 0) {
-        //error case should not happen print log
+        /* Error case should not happen print log */
         ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x subcmd=%u",
-              __func__, mVendor_id, mSubcmd);
+              __FUNCTION__, mVendor_id, mSubcmd);
     }
     return res;
 }
@@ -337,7 +303,7 @@ int TdlsCommand::requestResponse()
  */
 wifi_error wifi_enable_tdls(wifi_interface_handle iface,
                             mac_addr addr,
-                            wifi_tdls_params params,
+                            wifi_tdls_params *params,
                             wifi_tdls_handler handler)
 {
     int ret = 0;
@@ -346,13 +312,15 @@ wifi_error wifi_enable_tdls(wifi_interface_handle iface,
     interface_info *iinfo = getIfaceInfo(iface);
     wifi_handle handle = getWifiHandle(iface);
     pTdlsCommand = TdlsCommand::instance(handle);
+
+    ALOGI("%s: Enter", __FUNCTION__);
     if (pTdlsCommand == NULL) {
-        ALOGE("%s: Error TdlsCommand NULL", __func__);
+        ALOGE("%s: Error TdlsCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
     pTdlsCommand->setSubCmd(QCA_NL80211_VENDOR_SUBCMD_TDLS_ENABLE);
 
-    /* create the message */
+    /* Create the message */
     ret = pTdlsCommand->create();
     if (ret < 0)
         goto cleanup;
@@ -361,38 +329,37 @@ wifi_error wifi_enable_tdls(wifi_interface_handle iface,
     if (ret < 0)
         goto cleanup;
 
-    /*add the attributes*/
+    /* Add the attributes */
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nl_data)
         goto cleanup;
+    ALOGD("%s: MAC_ADDR: "MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
     ret = pTdlsCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MAC_ADDR,
                                   (char *)addr, 6);
     if (ret < 0)
         goto cleanup;
-    /**/
-    ret = pTdlsCommand->put_u32(
-                        QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_CHANNEL,
-                        params.channel);
-    if (ret < 0)
-        goto cleanup;
-    /**/
-    ret = pTdlsCommand->put_u32(
-                        QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_GLOBAL_OPERATING_CLASS,
-                        params.global_operating_class);
-    if (ret < 0)
-        goto cleanup;
-    /**/
-    ret = pTdlsCommand->put_u32(
-                        QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MAX_LATENCY_MS,
-                        params.max_latency_ms);
-    if (ret < 0)
-        goto cleanup;
-    /**/
-    ret = pTdlsCommand->put_u32(
-                        QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MIN_BANDWIDTH_KBPS,
-                        params.min_bandwidth_kbps);
-    if (ret < 0)
-        goto cleanup;
+
+    if (params != NULL) {
+        ALOGD("%s: Channel: %d, Global operating class: %d, "
+            "Max Latency: %dms, Min Bandwidth: %dKbps",
+            __FUNCTION__, params->channel, params->global_operating_class,
+            params->max_latency_ms, params->min_bandwidth_kbps);
+        ret = pTdlsCommand->put_u32(
+                            QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_CHANNEL,
+                            params->channel) |
+              pTdlsCommand->put_u32(
+                            QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_GLOBAL_OPERATING_CLASS,
+                            params->global_operating_class) |
+              pTdlsCommand->put_u32(
+                            QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MAX_LATENCY_MS,
+                            params->max_latency_ms) |
+              pTdlsCommand->put_u32(
+                            QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MIN_BANDWIDTH_KBPS,
+                            params->min_bandwidth_kbps);
+        if (ret < 0)
+            goto cleanup;
+    }
+
     pTdlsCommand->attr_end(nl_data);
 
     ret = pTdlsCommand->setCallbackHandler(handler,
@@ -402,10 +369,11 @@ wifi_error wifi_enable_tdls(wifi_interface_handle iface,
 
     ret = pTdlsCommand->requestResponse();
     if (ret != 0) {
-        ALOGE("%s: requestResponse Error:%d",__func__, ret);
+        ALOGE("%s: requestResponse Error:%d", __FUNCTION__, ret);
     }
 
 cleanup:
+    ALOGI("%s: Exit", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -425,13 +393,15 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
     interface_info *iinfo = getIfaceInfo(iface);
     wifi_handle handle = getWifiHandle(iface);
     pTdlsCommand = TdlsCommand::instance(handle);
+
+    ALOGI("%s: Enter", __FUNCTION__);
     if (pTdlsCommand == NULL) {
-        ALOGE("%s: Error TdlsCommand NULL", __func__);
+        ALOGE("%s: Error TdlsCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
     pTdlsCommand->setSubCmd(QCA_NL80211_VENDOR_SUBCMD_TDLS_DISABLE);
 
-    /* create the message */
+    /* Create the message */
     ret = pTdlsCommand->create();
     if (ret < 0)
         goto cleanup;
@@ -439,9 +409,10 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
     ret = pTdlsCommand->set_iface_id(iinfo->name);
     if (ret < 0)
         goto cleanup;
-    ALOGE("%s ifindex obtained:%d",__func__, ret);
+    ALOGD("%s: ifindex obtained:%d", __FUNCTION__, ret);
+    ALOGD("%s: MAC_ADDR: "MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
 
-    /*add the attributes*/
+    /* Add the attributes */
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nl_data)
         goto cleanup;
@@ -453,10 +424,11 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
 
     ret = pTdlsCommand->requestResponse();
     if (ret != 0) {
-        ALOGE("%s: requestResponse Error:%d",__func__, ret);
+        ALOGE("%s: requestResponse Error:%d", __FUNCTION__, ret);
     }
 
 cleanup:
+    ALOGI("%s: Exit", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -472,13 +444,15 @@ wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
     interface_info *iinfo = getIfaceInfo(iface);
     wifi_handle handle = getWifiHandle(iface);
     pTdlsCommand = TdlsCommand::instance(handle);
+
+    ALOGI("%s: Enter", __FUNCTION__);
     if (pTdlsCommand == NULL) {
-        ALOGE("%s: Error TdlsCommand NULL", __func__);
+        ALOGE("%s: Error TdlsCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
     pTdlsCommand->setSubCmd(QCA_NL80211_VENDOR_SUBCMD_TDLS_GET_STATUS);
 
-    /* create the message */
+    /* Create the message */
     ret = pTdlsCommand->create();
     if (ret < 0)
         goto cleanup;
@@ -486,9 +460,9 @@ wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
     ret = pTdlsCommand->set_iface_id(iinfo->name);
     if (ret < 0)
         goto cleanup;
-    ALOGE("%s ifindex obtained:%d",__func__, ret);
+    ALOGD("%s: ifindex obtained:%d", __FUNCTION__, ret);
 
-    /*add the attributes*/
+    /* Add the attributes */
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nl_data)
         goto cleanup;
@@ -500,10 +474,11 @@ wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
 
     ret = pTdlsCommand->requestResponse();
     if (ret != 0) {
-        ALOGE("%s: requestResponse Error:%d",__func__, ret);
+        ALOGE("%s: requestResponse Error:%d", __FUNCTION__, ret);
     }
     pTdlsCommand->getStatusRspParams(status);
 
 cleanup:
+    ALOGI("%s: Exit", __FUNCTION__);
     return (wifi_error)ret;
 }
