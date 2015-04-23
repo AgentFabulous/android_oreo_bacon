@@ -104,7 +104,7 @@ static nl_sock * wifi_create_nl_socket(int port, int protocol)
     // ALOGI("Creating socket");
     struct nl_sock *sock = nl_socket_alloc();
     if (sock == NULL) {
-        ALOGE("Could not create handle");
+        ALOGE("Failed to create NL socket");
         return NULL;
     }
 
@@ -299,23 +299,27 @@ wifi_error wifi_initialize(wifi_handle *handle)
     bool driver_loaded = false;
     wifi_error ret = WIFI_SUCCESS;
     wifi_interface_handle iface_handle;
+    struct nl_sock *cmd_sock = NULL;
+    struct nl_sock *event_sock = NULL;
+    struct nl_cb *cb = NULL;
     srand(getpid());
 
     ALOGI("Initializing wifi");
     hal_info *info = (hal_info *)malloc(sizeof(hal_info));
     if (info == NULL) {
         ALOGE("Could not allocate hal_info");
-        return WIFI_ERROR_UNKNOWN;
+        return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
     memset(info, 0, sizeof(*info));
 
     ALOGI("Creating socket");
-    struct nl_sock *cmd_sock = wifi_create_nl_socket(WIFI_HAL_CMD_SOCK_PORT,
+    cmd_sock = wifi_create_nl_socket(WIFI_HAL_CMD_SOCK_PORT,
                                                      NETLINK_GENERIC);
     if (cmd_sock == NULL) {
-        ALOGE("Could not create handle");
-        return WIFI_ERROR_UNKNOWN;
+        ALOGE("Failed to create command socket port");
+        ret = WIFI_ERROR_UNKNOWN;
+        goto unload;
     }
 
     /* Set the socket buffer size */
@@ -328,18 +332,19 @@ wifi_error wifi_initialize(wifi_handle *handle)
         ALOGI("nl_socket_set_buffer_size successful");
     }
 
-    struct nl_sock *event_sock =
+    event_sock =
         wifi_create_nl_socket(WIFI_HAL_EVENT_SOCK_PORT, NETLINK_GENERIC);
     if (event_sock == NULL) {
-        ALOGE("Could not create handle");
-        nl_socket_free(cmd_sock);
-        return WIFI_ERROR_UNKNOWN;
+        ALOGE("Failed to create event socket port");
+        ret = WIFI_ERROR_UNKNOWN;
+        goto unload;
     }
 
-    struct nl_cb *cb = nl_socket_get_cb(event_sock);
+    cb = nl_socket_get_cb(event_sock);
     if (cb == NULL) {
-        ALOGE("Could not create handle");
-        return WIFI_ERROR_UNKNOWN;
+        ALOGE("Failed to get NL control block for event socket port");
+        ret = WIFI_ERROR_UNKNOWN;
+        goto unload;
     }
 
     err = 1;
@@ -358,20 +363,28 @@ wifi_error wifi_initialize(wifi_handle *handle)
     info->in_event_loop = false;
 
     info->event_cb = (cb_info *)malloc(sizeof(cb_info) * DEFAULT_EVENT_CB_SIZE);
+    if (info->event_cb == NULL) {
+        ALOGE("Could not allocate event_cb");
+        ret = WIFI_ERROR_OUT_OF_MEMORY;
+        goto unload;
+    }
     info->alloc_event_cb = DEFAULT_EVENT_CB_SIZE;
     info->num_event_cb = 0;
 
     info->cmd = (cmd_info *)malloc(sizeof(cmd_info) * DEFAULT_CMD_SIZE);
+    if (info->cmd == NULL) {
+        ALOGE("Could not allocate cmd info");
+        ret = WIFI_ERROR_OUT_OF_MEMORY;
+        goto unload;
+    }
     info->alloc_cmd = DEFAULT_CMD_SIZE;
     info->num_cmd = 0;
 
     info->nl80211_family_id = genl_ctrl_resolve(cmd_sock, "nl80211");
     if (info->nl80211_family_id < 0) {
         ALOGE("Could not resolve nl80211 familty id");
-        nl_socket_free(cmd_sock);
-        nl_socket_free(event_sock);
-        free(info);
-        return WIFI_ERROR_UNKNOWN;
+        ret = WIFI_ERROR_UNKNOWN;
+        goto unload;
     }
     ALOGI("%s: family_id:%d", __func__, info->nl80211_family_id);
 
@@ -393,8 +406,8 @@ wifi_error wifi_initialize(wifi_handle *handle)
     if (!is_wifi_driver_loaded()) {
         ret = (wifi_error)wifi_load_driver();
         if(ret != WIFI_SUCCESS) {
-            ALOGE("%s Failed to load driver : %d\n", __func__, ret);
-            return WIFI_ERROR_UNKNOWN;
+            ALOGE("%s Failed to load wifi driver : %d\n", __func__, ret);
+            goto unload;
         }
         driver_loaded = true;
     }
@@ -420,8 +433,9 @@ wifi_error wifi_initialize(wifi_handle *handle)
             free(info->interfaces[i]);
         }
         ALOGE("%s no iface with %s\n", __func__, info->interfaces[0]->name);
-        return WIFI_ERROR_UNKNOWN;
+        goto unload;
     }
+
     ret = acquire_supported_features(iface_handle,
             &info->supported_feature_set);
     if (ret != WIFI_SUCCESS) {
@@ -443,6 +457,18 @@ wifi_error wifi_initialize(wifi_handle *handle)
             " features : %x", NL80211_CMD_VENDOR, info->supported_feature_set);
 
 unload:
+    if (ret != WIFI_SUCCESS) {
+        if (cmd_sock)
+            nl_socket_free(cmd_sock);
+        if (event_sock)
+            nl_socket_free(event_sock);
+        if (info) {
+            if (info->cmd) free(info->cmd);
+            if (info->event_cb) free(info->event_cb);
+            free(info);
+        }
+    }
+
     if (driver_loaded)
         wifi_unload_driver();
     return ret;
@@ -463,7 +489,6 @@ static int wifi_add_membership(wifi_handle handle, const char *group)
         ALOGE("Could not add membership to group %s", group);
     }
 
-    // ALOGI("Successfully added membership for group %s", group);
     return ret;
 }
 
