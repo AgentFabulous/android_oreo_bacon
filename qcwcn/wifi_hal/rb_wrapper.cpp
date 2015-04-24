@@ -94,7 +94,7 @@ void push_out_rb_data(void *cb_ctx)
 {
     struct rb_info *rb_info = (struct rb_info *)cb_ctx;
     hal_info *info = (hal_info *)rb_info->ctx;
-    wifi_ring_buffer_status *rbs;
+    wifi_ring_buffer_status rbs;
 
     if (info->on_ring_buffer_data == NULL) {
         ALOGE("on_ring_buffer_data handle is not set yet");
@@ -105,19 +105,13 @@ void push_out_rb_data(void *cb_ctx)
         size_t length = 0;
         u8 *buf;
 
-        rbs = (wifi_ring_buffer_status *)malloc(sizeof(wifi_ring_buffer_status));
-        if (rbs == NULL) {
-            ALOGE("Failed to allocate memory for rbs");
-            return;
-        }
         buf = rb_get_read_buf(rb_info->rb_ctx, &length);
         if (buf == NULL) {
-            free(rbs);
             break;
         }
-        get_rb_status(rb_info, rbs);
-        info->on_ring_buffer_data(rb_info->name, (char *)buf, length, rbs);
-        // TODO Yet to decide whether to free buf and rbs here or not
+        get_rb_status(rb_info, &rbs);
+        info->on_ring_buffer_data(rb_info->name, (char *)buf, length, &rbs);
+        free(buf);
     };
     gettimeofday(&rb_info->last_push_time, NULL);
 }
