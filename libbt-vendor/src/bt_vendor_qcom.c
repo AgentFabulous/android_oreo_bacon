@@ -25,6 +25,7 @@
 #define LOG_TAG "bt_vendor"
 
 #include <utils/Log.h>
+#include <string.h>
 #include <fcntl.h>
 #include <termios.h>
 #include "bt_vendor_qcom.h"
