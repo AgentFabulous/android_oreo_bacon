@@ -98,6 +98,7 @@ public:
 };
 void rb_timerhandler(hal_info *info);
 wifi_error wifi_logger_ring_buffers_init(hal_info *info);
+void wifi_logger_ring_buffers_deinit(hal_info *info);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

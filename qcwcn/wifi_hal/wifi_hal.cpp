@@ -509,6 +509,8 @@ static void internal_cleaned_up_handler(wifi_handle handle)
         info->user_sock = NULL;
     }
 
+    wifi_logger_ring_buffers_deinit(info);
+
     (*cleaned_up_handler)(handle);
     pthread_mutex_destroy(&info->cb_lock);
     free(info);

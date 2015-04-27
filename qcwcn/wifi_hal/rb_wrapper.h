@@ -45,6 +45,7 @@ struct rb_info {
 struct hal_info_s;
 wifi_error rb_init(struct hal_info_s *info, struct rb_info *rb_info, int id,
                    size_t size_of_buf, int num_bufs, char *name);
+void rb_deinit(struct rb_info *rb_info);
 void get_rb_status(struct rb_info *rb_info, wifi_ring_buffer_status *rbs);
 void rb_check_for_timeout(struct rb_info *rb_info, struct timeval *now);
 wifi_error rb_start_logging(struct rb_info *rb_info, u32 verbose_level,

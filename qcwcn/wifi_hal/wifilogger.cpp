@@ -628,7 +628,7 @@ void rb_timerhandler(hal_info *info)
 
 wifi_error wifi_logger_ring_buffers_init(hal_info *info)
 {
-    int ret;
+    wifi_error ret;
 
     ret = rb_init(info, &info->rb_infos[POWER_EVENTS_RB_ID],
                   POWER_EVENTS_RB_ID,
@@ -653,9 +653,20 @@ wifi_error wifi_logger_ring_buffers_init(hal_info *info)
                   pkt_stats_ring_name);
     if (ret != WIFI_SUCCESS)
         goto cleanup;
+    return ret;
 
 cleanup:
-    return (wifi_error)ret;
+    wifi_logger_ring_buffers_deinit(info);
+    return ret;
+}
+
+void wifi_logger_ring_buffers_deinit(hal_info *info)
+{
+    int i;
+
+    for (i = 0; i < NUM_RING_BUFS; i++) {
+        rb_deinit(&info->rb_infos[i]);
+    }
 }
 
 

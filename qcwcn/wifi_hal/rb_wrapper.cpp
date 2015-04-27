@@ -55,6 +55,15 @@ wifi_error rb_init(hal_info *info, struct rb_info *rb_info, int id,
     return WIFI_SUCCESS;
 }
 
+void rb_deinit(struct rb_info *rb_info)
+{
+    if (rb_info->rb_ctx) {
+        ring_buffer_deinit(rb_info->rb_ctx);
+        rb_info->rb_ctx = NULL;
+    }
+    rb_info->name[0] = '\0';
+}
+
 void get_rb_status(struct rb_info *rb_info, wifi_ring_buffer_status *rbs)
 {
     struct rb_stats rb_stats;
