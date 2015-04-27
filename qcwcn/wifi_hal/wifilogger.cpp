@@ -88,7 +88,8 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
         return WIFI_ERROR_UNKNOWN;
     }
 
-    if (ring_id == PKT_STATS_RB_ID) {
+    if ((ring_id == POWER_EVENTS_RB_ID) ||
+        (ring_id == PKT_STATS_RB_ID)) {
         wifiLoggerCommand = new WifiLoggerCommand(
                                 wifiHandle,
                                 requestId,
@@ -144,6 +145,7 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
         }
 
     }
+    ALOGI("%s: Logging Started for %s.", __FUNCTION__, buffer_name);
     rb_start_logging(&info->rb_infos[ring_id], verbose_level,
                     flags, max_interval_sec, min_data_size);
 cleanup:
