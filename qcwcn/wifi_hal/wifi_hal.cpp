@@ -134,7 +134,6 @@ int ack_handler(struct nl_msg *msg, void *arg)
 {
     int *err = (int *)arg;
     *err = 0;
-    ALOGD("%s invoked",__func__);
     return NL_STOP;
 }
 
@@ -142,7 +141,6 @@ int finish_handler(struct nl_msg *msg, void *arg)
 {
     int *ret = (int *)arg;
     *ret = 0;
-    ALOGD("%s called",__func__);
     return NL_SKIP;
 }
 
@@ -157,7 +155,6 @@ int error_handler(struct sockaddr_nl *nla,
 }
 static int no_seq_check(struct nl_msg *msg, void *arg)
 {
-    ALOGD("no_seq_check received");
     return NL_OK;
 }
 
@@ -410,7 +407,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
     ret = wifi_init_user_sock(info);
     if (ret != WIFI_SUCCESS) {
         ALOGE("Failed to alloc user socket");
-        return ret;
+        goto unload;
     }
 
     if (!is_wifi_driver_loaded()) {
@@ -484,6 +481,7 @@ unload:
         if (info) {
             if (info->cmd) free(info->cmd);
             if (info->event_cb) free(info->event_cb);
+            if (info->user_sock) nl_socket_free(info->user_sock);
             free(info);
         }
     }

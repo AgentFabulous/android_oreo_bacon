@@ -56,16 +56,6 @@ typedef struct {
 
 /*Rx stats specific structures. */
 
-/* To know the type of the packet received
- * mgmt_type bit will be set if the stats are for a mgmt packet
- * ctrl_type bit will be set if the stats are for a control packet*/
-struct rx_attention {
-    u32 reserved1                       :  8; //[7:0]
-    u32 mgmt_type                       :  1; //[8]
-    u32 ctrl_type                       :  1; //[9]
-    u32 reserved2                       :  22;
-} __attribute__((packed));
-
 struct rx_mpdu_start {
     u32 reserved1                       : 13; //[12:0]
     u32 encrypted                       :  1; //[13]
@@ -93,6 +83,12 @@ struct rx_msdu_start {
     u32 reserved3                       : 22; //[31:10]
 } __attribute__((packed));
 
+struct rx_mpdu_end {
+    u32 reserved1                       : 29; //[28:0]
+    u32 tkip_mic_err                    :  1; //[29]
+    u32 reserved2                       :  2; //[31:30]
+} __attribute__((packed));
+
 #define PREAMBLE_L_SIG_RATE     0x04
 #define PREAMBLE_VHT_SIG_A_1    0x08
 #define PREAMBLE_VHT_SIG_A_2    0x0c
@@ -104,7 +100,8 @@ struct rx_ppdu_start {
     u32 rssi_comb                       :  8; //[7:0]
     u32 reserved2                       : 24; //[31:8]
     u32 l_sig_rate                      :  4; //[3:0]
-    u32 reserved3                       : 20; //[23:4]
+    u32 l_sig_rate_select               :  1; //[4]
+    u32 reserved3                       : 19; //[23:5]
     u32 preamble_type                   :  8; //[31:24]
     u32 ht_sig_vht_sig_a_1              : 24; //[23:0]
     u32 reserved4                       :  8; //[31:24]
@@ -121,12 +118,11 @@ struct rx_ppdu_end {
 
 #define RX_HTT_HDR_STATUS_LEN 64
 typedef struct {
-    struct rx_attention attention;
-    u32 reserved1;
+    u32 reserved1[2];
     struct rx_mpdu_start mpdu_start;
     struct rx_msdu_start msdu_start;
     u32 reserved2[5];
-    u32 reserved3;
+    struct rx_mpdu_end   mpdu_end;
     struct rx_ppdu_start ppdu_start;
     struct rx_ppdu_end   ppdu_end;
     char rx_hdr_status[RX_HTT_HDR_STATUS_LEN];
@@ -163,12 +159,14 @@ struct tx_ppdu_end {
 
 /*Tx MCS and data rate ralated stats */
 struct series_bw {
-    u32 reserved1;
-    u32 reserved2                       : 24; //[23:21]
+    u32 reserved1                       : 28; //[27:0]
+    u32 short_gi                        :  1; //[28]
+    u32 reserved2                       :  3; //[31:29]
+    u32 reserved3                       : 24; //[23:21]
     u32 rate                            :  4; //[27:24]
     u32 nss                             :  2; //[29:28]
     u32 preamble_type                   :  2; //[31:30]
-    u32 reserved3[2];
+    u32 reserved4[2];
 } __attribute__((packed));
 
 enum tx_bw {
@@ -227,19 +225,27 @@ typedef struct {
  * prev_seq_no: Can used to track the events that come from driver and identify
  * if any event is missed.
  */
+
+#define RING_BUF_ENTRY_SIZE 512
 struct pkt_stats_s {
     u8 tx_stats_events;
     u32 prev_seq_no;
-    wifi_ring_per_packet_status_entry tx_stats;
+    /* TODO: Need to handle the case if size of the stats are more
+     * than 512 bytes. Currently, the tx size is 34 bytes and ring buffer entry
+     * size is 12 bytes.
+     */
+    u8 tx_stats[RING_BUF_ENTRY_SIZE];
 };
 
-/* Driver sends the below information in the event
- * version    : Driver updates this whenever pkt_stats_event format changes.
- * msg_seq_no : Driver increments it for every event and can be used
- *              to identify if any event is not received to wifihal.
- * payload_len: Length of the payload that follows
- * payload    : Contains packet log info.
- */
+typedef union {
+    struct {
+        u16 rate                            :  4;
+        u16 nss                             :  2;
+        u16 preamble                        :  2;
+        u16 bw                              :  8;
+    } mcs_s;
+    u16 mcs;
+} MCS;
 
 typedef struct drv_msg_s
 {
