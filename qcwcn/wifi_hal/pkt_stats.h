@@ -233,6 +233,14 @@ struct pkt_stats_s {
     wifi_ring_per_packet_status_entry tx_stats;
 };
 
+/* Driver sends the below information in the event
+ * version    : Driver updates this whenever pkt_stats_event format changes.
+ * msg_seq_no : Driver increments it for every event and can be used
+ *              to identify if any event is not received to wifihal.
+ * payload_len: Length of the payload that follows
+ * payload    : Contains packet log info.
+ */
+
 typedef struct drv_msg_s
 {
     u16 length;
@@ -241,6 +249,7 @@ typedef struct drv_msg_s
     u32 timestamp_high;
     union {
         struct {
+            u32 version;
             u32 msg_seq_no;
             u32 payload_len;
             u8  payload[0];
