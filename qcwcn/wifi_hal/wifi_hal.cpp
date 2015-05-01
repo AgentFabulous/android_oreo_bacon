@@ -15,6 +15,7 @@
  */
 
 #include <stdint.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netlink/genl/genl.h>
@@ -248,6 +249,16 @@ wifi_error wifi_initialize(wifi_handle *handle)
     if (cmd_sock == NULL) {
         ALOGE("Could not create handle");
         return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Set the socket buffer size */
+    if (nl_socket_set_buffer_size(cmd_sock, (256*1024), 0) < 0) {
+        ALOGE("Could not set nl_socket RX buffer size: %s",
+                   strerror(errno));
+        /* continue anyway with the default (smaller) buffer */
+    }
+    else {
+        ALOGI("nl_socket_set_buffer_size successful");
     }
 
     struct nl_sock *event_sock =

@@ -38,7 +38,12 @@ LOCAL_SRC_FILES := \
 	rtt.cpp \
 	ifaceeventhandler.cpp \
 	tdls.cpp \
-	wificonfig.cpp
+	nan.cpp \
+	nan_ind.cpp \
+	nan_req.cpp \
+	nan_rsp.cpp \
+	wificonfig.cpp \
+	wifilogger.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
@@ -79,7 +84,12 @@ LOCAL_SRC_FILES := \
 	rtt.cpp \
 	ifaceeventhandler.cpp \
 	tdls.cpp \
-	wificonfig.cpp
+	nan.cpp \
+	nan_ind.cpp \
+	nan_req.cpp \
+	nan_rsp.cpp \
+	wificonfig.cpp \
+	wifilogger.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
