@@ -288,7 +288,9 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_significant_change_handler = wifi_set_significant_change_handler;
     fn->wifi_reset_significant_change_handler = wifi_reset_significant_change_handler;
     fn->wifi_get_gscan_capabilities = wifi_get_gscan_capabilities;
+    fn->wifi_set_link_stats = wifi_set_link_stats;
     fn->wifi_get_link_stats = wifi_get_link_stats;
+    fn->wifi_clear_link_stats = wifi_clear_link_stats;
     fn->wifi_get_valid_channels = wifi_get_valid_channels;
     fn->wifi_rtt_range_request = wifi_rtt_range_request;
     fn->wifi_rtt_range_cancel = wifi_rtt_range_cancel;
@@ -296,6 +298,18 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_nodfs_flag = wifi_set_nodfs_flag;
     fn->wifi_set_epno_list = wifi_set_epno_list;
     fn->wifi_set_country_code = wifi_set_country_code;
+    fn->wifi_enable_tdls = wifi_enable_tdls;
+    fn->wifi_disable_tdls = wifi_disable_tdls;
+    fn->wifi_get_tdls_status = wifi_get_tdls_status;
+    //fn->wifi_get_tdls_capabilities = wifi_get_tdls_capabilities;
+    fn->wifi_get_firmware_memory_dump = wifi_get_firmware_memory_dump;
+    fn->wifi_set_log_handler = wifi_set_log_handler;
+    fn->wifi_set_alert_handler = wifi_set_alert_handler;
+    fn->wifi_get_firmware_version = wifi_get_firmware_version;
+    fn->wifi_get_ring_buffers_status = wifi_get_ring_buffers_status;
+    fn->wifi_get_logger_supported_feature_set = wifi_get_logger_supported_feature_set;
+    fn->wifi_get_ring_data = wifi_get_ring_data;
+    fn->wifi_get_driver_version = wifi_get_driver_version;
 
     return WIFI_SUCCESS;
 }
