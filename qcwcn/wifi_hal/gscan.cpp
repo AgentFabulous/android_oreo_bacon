@@ -1651,8 +1651,8 @@ int GScanCommand::handleResponse(WifiEvent &reply) {
             }
             /* Read num of cached scan results in this data chunk. Note that
              * this value doesn't represent the number of unique gscan scan Ids
-             * since the first scan id in this new chunck could be similar to
-             * the last scan id in the previous chunck.
+             * since the first scan id in this new chunk could be similar to
+             * the last scan id in the previous chunk.
              */
             numResults = nla_get_u32(tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE]);
@@ -1911,7 +1911,7 @@ int GScanCommand:: gscan_get_cached_results(
 {
     u32 j = 0;
     struct nlattr *scanResultsInfo, *wifiScanResultsInfo;
-    int rem = 0;
+    int rem = 0, remResults = 0;
     u32 len = 0, numScanResults = 0;
     u32 i = mGetCachedResultsRspParams->cachedResultsStartingIndex;
     ALOGE("%s: starting counter: %d", __FUNCTION__, i);
@@ -2006,10 +2006,10 @@ int GScanCommand:: gscan_get_cached_results(
 
            for (wifiScanResultsInfo = (struct nlattr *) nla_data(tb2[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST]),
-                rem = nla_len(tb2[
+                remResults = nla_len(tb2[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST]);
-                nla_ok(wifiScanResultsInfo, rem);
-                wifiScanResultsInfo = nla_next(wifiScanResultsInfo, &(rem)))
+                nla_ok(wifiScanResultsInfo, remResults);
+                wifiScanResultsInfo = nla_next(wifiScanResultsInfo, &(remResults)))
            {
                 struct nlattr *tb3[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_MAX + 1];
                 nla_parse(tb3, QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_MAX,
