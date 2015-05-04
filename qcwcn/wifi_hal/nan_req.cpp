@@ -1050,8 +1050,9 @@ void NanCommand::fillNanFurtherAvailabilityMapVal(
     const NanFurtherAvailabilityMap *pFam,
     u8 *pOutValue)
 {
+//ToDo: Fixme - build issue
+#if 0
     int idx = 0;
-
     if (pFam && pOutValue) {
         u32 famsize = calcNanFurtherAvailabilityMapSize(pFam);
         pNanFurtherAvailabilityMapAttrTlv pFwReq = \
@@ -1079,6 +1080,7 @@ void NanCommand::fillNanFurtherAvailabilityMapVal(
         ALOGI("%s: Filled FurtherAvailabilityMapVal", __func__);
         hexdump((char*)pOutValue, famsize);
     }
+#endif
     return;
 }
 
@@ -1091,7 +1093,8 @@ int NanCommand::calcNanFurtherAvailabilityMapSize(
         /* Fixed size of u8 for numchans*/
         ret = sizeof(u8);
         /* numchans * sizeof(FamChannels) */
-        ret += (pFam->numchans * sizeof(NanFurtherAvailabilityChan));
+        //ToDo: Fix build
+        //ret += (pFam->numchans * sizeof(NanFurtherAvailabilityChan));
     }
     ALOGI("%s:size:%d", __func__, ret);
     return ret;
