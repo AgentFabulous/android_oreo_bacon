@@ -50,7 +50,7 @@ inline u64 get_input_time(void)
 }
 
 /* Get input_duration in uS */
-inline int get_input_boost_duration(void)
+int get_input_boost_duration(void)
 {
 	return input_boost_duration_ms * 1000;
 }
