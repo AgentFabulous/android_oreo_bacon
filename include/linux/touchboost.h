@@ -10,6 +10,9 @@
 #ifndef _LINUX_TOUCHBOOST_H
 #define _LINUX_TOUCHBOOST_H
 
+extern int input_boost_freq;
+
 u64 get_input_time(void);
+inline get_input_boost_duration(void);
 
 #endif
