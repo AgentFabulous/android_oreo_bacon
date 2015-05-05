@@ -188,7 +188,7 @@ static int __init init(void)
 	}
 
 	/* Setup sysfs stuff */
-	input_boost_kobj = kobject_create_and_add("input_boost", kernel_kobj);
+	input_boost_kobj = kobject_create_and_add("touch_boost", kernel_kobj);
 	if (input_boost_kobj == NULL) {
 		pr_err("touchboost: subsystem register failed\n");
 		return -ENOMEM;
