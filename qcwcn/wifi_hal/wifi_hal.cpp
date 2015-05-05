@@ -301,7 +301,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_enable_tdls = wifi_enable_tdls;
     fn->wifi_disable_tdls = wifi_disable_tdls;
     fn->wifi_get_tdls_status = wifi_get_tdls_status;
-    //fn->wifi_get_tdls_capabilities = wifi_get_tdls_capabilities;
+    fn->wifi_get_tdls_capabilities = wifi_get_tdls_capabilities;
     fn->wifi_get_firmware_memory_dump = wifi_get_firmware_memory_dump;
     fn->wifi_set_log_handler = wifi_set_log_handler;
     fn->wifi_set_alert_handler = wifi_set_alert_handler;

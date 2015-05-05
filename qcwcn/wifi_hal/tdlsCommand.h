@@ -66,6 +66,15 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+#define IS_GLOBAL_TDLS_SUPPORTED        BIT(0)
+#define IS_PER_MAC_TDLS_SUPPORTED       BIT(1)
+#define IS_OFF_CHANNEL_TDLS_SUPPORTED   BIT(2)
+
+typedef struct {
+    int maxConcurrentTdlsSessionNum;
+    u32 tdlsSupportedFeatures;
+} wifiTdlsCapabilities;
+
 class TdlsCommand: public WifiVendorCommand
 {
 private:
@@ -73,6 +82,7 @@ private:
     wifi_tdls_status mTDLSgetStatusRspParams;
     wifi_request_id mRequestId;
     wifi_tdls_handler mHandler;
+    wifiTdlsCapabilities mTDLSgetCaps;
 
     TdlsCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
 
@@ -93,6 +103,8 @@ public:
     virtual void unregisterHandler(u32 subCmd);
 
     virtual void getStatusRspParams(wifi_tdls_status *status);
+
+    virtual void getCapsRspParams(wifi_tdls_capabilities *caps);
 };
 
 #ifdef __cplusplus

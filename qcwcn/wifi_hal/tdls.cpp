@@ -252,6 +252,38 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                         mTDLSgetStatusRspParams.global_operating_class);
             }
             break;
+        case QCA_NL80211_VENDOR_SUBCMD_TDLS_GET_CAPABILITIES:
+            {
+                struct nlattr *tb_vendor[
+                    QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_MAX + 1];
+                nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_MAX,
+                        (struct nlattr *)mVendorData,
+                        mDataLen, NULL);
+
+                memset(&mTDLSgetCaps, 0, sizeof(wifiTdlsCapabilities));
+
+                if (!tb_vendor[
+                    QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_MAX_CONC_SESSIONS]
+                   )
+                {
+                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_"
+                          "MAX_CONC_SESSIONS not found", __FUNCTION__);
+                    return WIFI_ERROR_INVALID_ARGS;
+                }
+                mTDLSgetCaps.maxConcurrentTdlsSessionNum = get_u32(tb_vendor[
+                        QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_MAX_CONC_SESSIONS]);
+
+                if (!tb_vendor[
+                    QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_FEATURES_SUPPORTED])
+                {
+                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_"
+                          "FEATURES_SUPPORTED not found", __FUNCTION__);
+                    return WIFI_ERROR_INVALID_ARGS;
+                }
+                mTDLSgetCaps.tdlsSupportedFeatures = get_u32(tb_vendor[
+                    QCA_WLAN_VENDOR_ATTR_TDLS_GET_CAPS_FEATURES_SUPPORTED]);
+            }
+            break;
         default :
             ALOGE("%s: Wrong TDLS subcmd response received %d",
                 __FUNCTION__, mSubcmd);
@@ -290,6 +322,27 @@ void TdlsCommand::getStatusRspParams(wifi_tdls_status *status)
 int TdlsCommand::requestResponse()
 {
     return WifiCommand::requestResponse(mMsg);
+}
+
+void TdlsCommand::getCapsRspParams(wifi_tdls_capabilities *caps)
+{
+    caps->max_concurrent_tdls_session_num =
+        mTDLSgetCaps.maxConcurrentTdlsSessionNum;
+    caps->is_global_tdls_supported =
+        !!(mTDLSgetCaps.tdlsSupportedFeatures & IS_GLOBAL_TDLS_SUPPORTED);
+    caps->is_per_mac_tdls_supported =
+        !!(mTDLSgetCaps.tdlsSupportedFeatures & IS_PER_MAC_TDLS_SUPPORTED);
+    caps->is_off_channel_tdls_supported =
+        !!(mTDLSgetCaps.tdlsSupportedFeatures & IS_OFF_CHANNEL_TDLS_SUPPORTED);
+    ALOGI("TDLS capabilities:");
+    ALOGI("max_concurrent_tdls_session_numChannel : %d\n",
+            caps->max_concurrent_tdls_session_num);
+    ALOGI("is_global_tdls_supported : %d\n",
+            caps->is_global_tdls_supported);
+    ALOGI("is_per_mac_tdls_supported : %d\n",
+            caps->is_per_mac_tdls_supported);
+    ALOGI("is_off_channel_tdls_supported : %d \n",
+            caps->is_off_channel_tdls_supported);
 }
 
 /* wifi_enable_tdls - enables TDLS-auto mode for a specific route
@@ -429,6 +482,7 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
 
 cleanup:
     ALOGI("%s: Exit", __FUNCTION__);
+    delete pTdlsCommand;
     return (wifi_error)ret;
 }
 
@@ -480,5 +534,52 @@ wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
 
 cleanup:
     ALOGI("%s: Exit", __FUNCTION__);
+    return (wifi_error)ret;
+}
+
+/* return the current HW + Firmware combination's TDLS capabilities */
+wifi_error wifi_get_tdls_capabilities(wifi_interface_handle iface,
+                                      wifi_tdls_capabilities *capabilities)
+{
+    int ret = 0;
+    TdlsCommand *pTdlsCommand;
+    ALOGI("%s: Enter", __FUNCTION__);
+
+    if (capabilities == NULL) {
+        ALOGE("%s: capabilities is NULL", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    interface_info *iinfo = getIfaceInfo(iface);
+    wifi_handle handle = getWifiHandle(iface);
+    pTdlsCommand = TdlsCommand::instance(handle);
+
+    if (pTdlsCommand == NULL) {
+        ALOGE("%s: Error TdlsCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+    pTdlsCommand->setSubCmd(QCA_NL80211_VENDOR_SUBCMD_TDLS_GET_CAPABILITIES);
+
+    /* Create the message */
+    ret = pTdlsCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    ret = pTdlsCommand->set_iface_id(iinfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    ret = pTdlsCommand->requestResponse();
+    if (ret != 0) {
+        ALOGE("%s: requestResponse Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+    pTdlsCommand->getCapsRspParams(capabilities);
+
+cleanup:
+    ALOGI("%s: Exit", __FUNCTION__);
+    if (ret < 0)
+        memset(capabilities, 0, sizeof(wifi_tdls_capabilities));
+    delete pTdlsCommand;
     return (wifi_error)ret;
 }
