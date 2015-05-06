@@ -158,7 +158,7 @@ cleanup:
 /*  Function to get each ring related info */
 wifi_error wifi_get_ring_buffers_status(wifi_interface_handle iface,
                                         u32 *num_buffers,
-                                        wifi_ring_buffer_status **status)
+                                        wifi_ring_buffer_status *status)
 {
     int ret = 0;
     interface_info *ifaceInfo = getIfaceInfo(iface);
@@ -168,16 +168,16 @@ wifi_error wifi_get_ring_buffers_status(wifi_interface_handle iface,
     struct rb_info *rb_info;
     int rb_id;
 
-    *status = (wifi_ring_buffer_status *)malloc(
-               NUM_RING_BUFS * sizeof(
-               wifi_ring_buffer_status));
-    if (*status == NULL) {
+    if ((*num_buffers) < NUM_RING_BUFS) {
+        ALOGE("%s: Input num_buffers:%d cannot be accommodated, "
+              "Total ring buffer num:%d", __FUNCTION__, num_buffers,
+              NUM_RING_BUFS);
         *num_buffers = 0;
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
     for (rb_id = 0; rb_id < NUM_RING_BUFS; rb_id++) {
         rb_info = &info->rb_infos[rb_id];
-        rbs = *status + rb_id;
+        rbs = status + rb_id;
 
         get_rb_status(rb_info, rbs);
     }
@@ -321,14 +321,14 @@ cleanup:
     return (wifi_error)ret;
 }
 
-void WifiLoggerCommand::setVersionInfo(char **buffer, int *buffer_size) {
+void WifiLoggerCommand::setVersionInfo(char *buffer, int buffer_size) {
     mVersion = buffer;
     mVersionLen = buffer_size;
 }
 
 /*  Function to send enable request to the wifi driver.*/
 wifi_error wifi_get_firmware_version(wifi_interface_handle iface,
-                                     char **buffer, int *buffer_size)
+                                     char *buffer, int buffer_size)
 {
     int requestId, ret = 0;
     WifiLoggerCommand *wifiLoggerCommand;
@@ -391,7 +391,7 @@ cleanup:
 
 /*  Function to get wlan driver version.*/
 wifi_error wifi_get_driver_version(wifi_interface_handle iface,
-                                   char **buffer, int *buffer_size)
+                                   char *buffer, int buffer_size)
 {
 
     int requestId, ret = 0;
@@ -578,7 +578,7 @@ WifiLoggerCommand::WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, 
 {
     ALOGV("WifiLoggerCommand %p constructed", this);
     mVersion = NULL;
-    mVersionLen = NULL;
+    mVersionLen = 0;
     mRequestId = id;
     memset(&mHandler, 0,sizeof(mHandler));
     mWaitforRsp = false;
@@ -766,7 +766,7 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
     u32 status;
     int ret = WIFI_SUCCESS;
     int i = 0;
-    u32 len = 0, version;
+    int len = 0, version;
     char version_type[20];
     WifiVendorCommand::handleResponse(reply);
 
@@ -792,19 +792,16 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
                 memcpy(version_type, "Firmware", strlen("Firmware"));
                 version = QCA_WLAN_VENDOR_ATTR_WIFI_INFO_FIRMWARE_VERSION;
             }
-            if (len) {
-                *mVersion = (char *)malloc(len*(sizeof(char)) + 1);
-                if (!(*mVersion)) {
-                    ALOGE("%s: Failed to allocate memory for Version.",
-                    __FUNCTION__);
-                    return WIFI_ERROR_OUT_OF_MEMORY;
-                }
-                memset(*mVersion, 0, (len*(sizeof(char))) + 1);
-                *mVersionLen = len;
-                memcpy(*mVersion, nla_data(tb_vendor[version]), len);
+            if (len && mVersion && mVersionLen) {
+                memset(mVersion, 0, mVersionLen);
+                /* if len is greater than the incoming length then
+                   accommodate 1 lesser than mVersionLen to have the
+                   string terminated with '\0' */
+                len = (len > mVersionLen)? (mVersionLen - 1) : len;
+                memcpy(mVersion, nla_data(tb_vendor[version]), len);
                 ALOGD("%s: WLAN version len : %d", __FUNCTION__, len);
                 ALOGD("%s: WLAN %s version : %s ", __FUNCTION__,
-                      version_type, *mVersion);
+                      version_type, mVersion);
             }
         }
         break;

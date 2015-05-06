@@ -67,8 +67,8 @@ class WifiLoggerCommand : public WifiVendorCommand
 {
 private:
     WifiLoggerCallbackHandler mHandler;
-    char                      **mVersion;
-    int                       *mVersionLen;
+    char                      *mVersion;
+    int                       mVersionLen;
     u32                       *mSupportedSet;
     int                       mRequestId;
     bool                      mWaitforRsp;
@@ -93,7 +93,7 @@ public:
     /* Takes wait time in seconds. */
     virtual int timed_wait(u16 wait_time);
     virtual void waitForRsp(bool wait);
-    virtual void setVersionInfo(char **buffer, int *buffer_size);
+    virtual void setVersionInfo(char *buffer, int buffer_size);
     virtual void setFeatureSet(u32 *support);
 };
 void rb_timerhandler(hal_info *info);
