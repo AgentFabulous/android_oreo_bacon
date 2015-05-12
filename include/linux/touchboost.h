@@ -11,8 +11,8 @@
 #define _LINUX_TOUCHBOOST_H
 
 extern int input_boost_freq;
+extern u64 last_input_time;
 
-u64 get_input_time(void);
 int get_input_boost_duration(void);
 
 #endif
