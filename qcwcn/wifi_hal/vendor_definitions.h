@@ -83,6 +83,10 @@
 /* Wi-Fi Configuration subcommands */
 #define QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION 74
 #define QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_CONFIGURATION 75
+/* WiFiLogger Support feature set */
+#define QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET 76
+/* WiFiLogger Get Ring Data */
+#define QCA_NL80211_VENDOR_SUBCMD_GET_RING_DATA 77
 
 #endif
 
@@ -1042,12 +1046,33 @@ enum qca_wlan_vendor_attr_get_wifi_info {
  */
 enum qca_wlan_vendor_attr_wifi_logger_start {
     QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_START_INVALID = 0,
-    QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_RING_NAME = 1,
-    QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_VERBOSE_LEVEL = 2,
-    QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_FLAGS = 3,
+    QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_RING_ID = 1,
+    QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_VERBOSE_LEVEL = 2,
+    QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_FLAGS = 3,
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_START_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_START_GET_MAX  =
         QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_START_AFTER_LAST - 1,
+};
+
+enum qca_wlan_vendor_attr_logger_results
+{
+    QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_INVALID = 0,
+
+    /* Unsigned 32-bit value; must match the request Id supplied by Wi-Fi HAL
+     * in the corresponding subcmd NL msg
+     */
+    QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_REQUEST_ID,
+
+    /* Unsigned 32-bit value; used to indicate the size of memory
+       dump to be allocated.
+     */
+    QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MEMDUMP_SIZE,
+
+    /* keep last */
+    QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_AFTER_LAST,
+    QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MAX =
+        QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_AFTER_LAST - 1,
+
 };
 #endif

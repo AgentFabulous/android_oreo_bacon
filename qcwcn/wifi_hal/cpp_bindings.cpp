@@ -625,7 +625,7 @@ int WifiCommand::requestResponse(WifiRequest& request) {
     while (err > 0) {                   /* wait for reply */
         int res = nl_recvmsgs(mInfo->cmd_sock, cb);
         if (res) {
-            ALOGE("nl80211: %s->nl_recvmsgs failed: %d", __func__, res);
+            ALOGE("nl80211: %s->nl_recvmsgs failed: %d", __FUNCTION__, res);
         }
     }
 out:
@@ -770,7 +770,9 @@ WifiVendorCommand::~WifiVendorCommand()
 // in the corresponding object
 int WifiVendorCommand::handleResponse(WifiEvent &reply)
 {
+#ifdef QC_HAL_DEBUG
     ALOGI("WifiVendorCommand::handleResponse");
+#endif
     struct nlattr **tb = reply.attributes();
     struct nlattr *attr = NULL;
     struct genlmsghdr *gnlh = reply.header();
@@ -779,7 +781,9 @@ int WifiVendorCommand::handleResponse(WifiEvent &reply)
         if (tb[NL80211_ATTR_VENDOR_DATA]) {
             mVendorData = (char *)nla_data(tb[NL80211_ATTR_VENDOR_DATA]);
             mDataLen = nla_len(tb[NL80211_ATTR_VENDOR_DATA]);
-            ALOGD("%s: Vendor data len received:%d", __func__, mDataLen);
+#ifdef QC_HAL_DEBUG
+            ALOGD("%s: Vendor data len received:%d", __FUNCTION__, mDataLen);
+#endif
         }
     }
     return NL_SKIP;
@@ -789,7 +793,9 @@ int WifiVendorCommand::handleResponse(WifiEvent &reply)
 // save it in the object
 int WifiVendorCommand::handleEvent(WifiEvent &event)
 {
+#ifdef QC_HAL_DEBUG
     ALOGI("WifiVendorCommand::handleEvent");
+#endif
     struct nlattr **tb = event.attributes();
     struct nlattr *attr = NULL;
     struct genlmsghdr *gnlh = event.header();
@@ -803,13 +809,17 @@ int WifiVendorCommand::handleEvent(WifiEvent &event)
         mVendor_id = nla_get_u32(tb[NL80211_ATTR_VENDOR_ID]);
         mSubcmd = nla_get_u32(tb[NL80211_ATTR_VENDOR_SUBCMD]);
 
+#ifdef QC_HAL_DEBUG
         ALOGD("%s: Vendor event: vendor_id=0x%x subcmd=%u",
-              __func__, mVendor_id, mSubcmd);
+              __FUNCTION__, mVendor_id, mSubcmd);
+#endif
 
         if (tb[NL80211_ATTR_VENDOR_DATA]) {
             mVendorData = (char *)nla_data(tb[NL80211_ATTR_VENDOR_DATA]);
             mDataLen = nla_len(tb[NL80211_ATTR_VENDOR_DATA]);
-            ALOGD("%s: Vendor data len received:%d", __func__, mDataLen);
+#ifdef QC_HAL_DEBUG
+            ALOGD("%s: Vendor data len received:%d", __FUNCTION__, mDataLen);
+#endif
             hexdump(mVendorData, mDataLen);
         }
     }
@@ -838,7 +848,7 @@ int WifiVendorCommand::create() {
 
     //insert the iface id to be "wlan0"
     ifindex = if_nametoindex("wlan0");
-    ALOGE("%s ifindex obtained:%d",__func__,ifindex);
+    ALOGE("%s ifindex obtained:%d",__FUNCTION__,ifindex);
     mMsg.set_iface_id(ifindex);
 out:
     return ret;
@@ -847,7 +857,7 @@ out:
 
 int WifiVendorCommand::requestResponse()
 {
-    ALOGD("%s: request a response", __func__);
+    ALOGD("%s: request a response", __FUNCTION__);
     return WifiCommand::requestResponse(mMsg);
 }
 
@@ -960,7 +970,7 @@ void WifiVendorCommand::attr_end(struct nlattr *attribute)
 int WifiVendorCommand::set_iface_id(const char* name)
 {
     unsigned ifindex = if_nametoindex(name);
-    ALOGE("%s ifindex obtained:%d",__func__,ifindex);
+    ALOGE("%s ifindex obtained:%d", __FUNCTION__,ifindex);
     return mMsg.set_iface_id(ifindex);
 }
 

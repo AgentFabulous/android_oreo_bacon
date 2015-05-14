@@ -43,7 +43,10 @@ LOCAL_SRC_FILES := \
 	nan_req.cpp \
 	nan_rsp.cpp \
 	wificonfig.cpp \
-	wifilogger.cpp
+	wifilogger.cpp \
+	wifilogger_diag.cpp \
+	ring_buffer.cpp \
+	rb_wrapper.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
@@ -89,7 +92,10 @@ LOCAL_SRC_FILES := \
 	nan_req.cpp \
 	nan_rsp.cpp \
 	wificonfig.cpp \
-	wifilogger.cpp
+	wifilogger.cpp \
+	wifilogger_diag.cpp \
+	ring_buffer.cpp \
+	rb_wrapper.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog

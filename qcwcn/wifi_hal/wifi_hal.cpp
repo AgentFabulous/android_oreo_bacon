@@ -36,6 +36,7 @@
 
 #include <dirent.h>
 #include <net/if.h>
+#include <netinet/in.h>
 
 #include "sync.h"
 
@@ -47,6 +48,7 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include "ifaceeventhandler.h"
+#include "wifiloggercmd.h"
 
 /*
  BUGBUG: normally, libnl allocates ports for all connections it makes; but
@@ -60,8 +62,10 @@
 #define WIFI_HAL_CMD_SOCK_PORT       644
 #define WIFI_HAL_EVENT_SOCK_PORT     645
 
-static void internal_event_handler(wifi_handle handle, int events);
+static void internal_event_handler(wifi_handle handle, int events,
+                                   struct nl_sock *sock);
 static int internal_valid_message_handler(nl_msg *msg, void *arg);
+static int user_sock_message_handler(nl_msg *msg, void *arg);
 static int wifi_get_multicast_id(wifi_handle handle, const char *name,
         const char *group);
 static int wifi_add_membership(wifi_handle handle, const char *group);
@@ -95,12 +99,12 @@ void wifi_socket_set_local_port(struct nl_sock *sock, uint32_t port)
     sock->s_local.nl_pid = pid + (port << 22);
 }
 
-static nl_sock * wifi_create_nl_socket(int port)
+static nl_sock * wifi_create_nl_socket(int port, int protocol)
 {
     // ALOGI("Creating socket");
     struct nl_sock *sock = nl_socket_alloc();
     if (sock == NULL) {
-        ALOGE("Could not create handle");
+        ALOGE("Failed to create NL socket");
         return NULL;
     }
 
@@ -116,7 +120,7 @@ static nl_sock * wifi_create_nl_socket(int port)
     // sizeof(*addr_nl));
 
     // ALOGI("Connecting socket");
-    if (nl_connect(sock, NETLINK_GENERIC)) {
+    if (nl_connect(sock, protocol)) {
         ALOGE("Could not connect handle");
         nl_socket_free(sock);
         return NULL;
@@ -227,28 +231,132 @@ cleanup:
     return (wifi_error)ret;
 }
 
+static wifi_error wifi_init_user_sock(hal_info *info)
+{
+    struct nl_sock *user_sock =
+        wifi_create_nl_socket(WIFI_HAL_USER_SOCK_PORT, NETLINK_USERSOCK);
+    if (user_sock == NULL) {
+        ALOGE("Could not create diag sock");
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    struct nl_cb *cb = nl_socket_get_cb(user_sock);
+    if (cb == NULL) {
+        ALOGE("Could not get cb");
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    info->user_sock_arg = 1;
+    nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, no_seq_check, NULL);
+    nl_cb_err(cb, NL_CB_CUSTOM, error_handler, &info->user_sock_arg);
+    nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &info->user_sock_arg);
+    nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_handler, &info->user_sock_arg);
+
+    nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, user_sock_message_handler, info);
+    nl_cb_put(cb);
+
+    int ret = nl_socket_add_membership(user_sock, 1);
+    if (ret < 0) {
+        ALOGE("Could not add membership");
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    info->user_sock = user_sock;
+    ALOGI("Initiialized diag sock successfully");
+    return WIFI_SUCCESS;
+}
+
+static wifi_error wifi_register_for_debug_events(hal_info *info)
+{
+    u8 buf[sizeof(tAniNlHdr) + sizeof(tAniNlAppRegReq)];
+    int sock_fd = info->user_sock->s_fd;
+    tAniNlHdr *wnl;
+    tAniNlAppRegReq *regReq;
+    struct nlmsghdr *nlh;
+
+    memset(buf, 0, sizeof(buf));
+
+    nlh = (struct nlmsghdr *)buf;
+
+    nlh->nlmsg_len = sizeof(tAniNlHdr) + sizeof(tAniNlAppRegReq);
+    nlh->nlmsg_pid = getpid();
+    nlh->nlmsg_type = ANI_NL_MSG_PUMAC;
+    nlh->nlmsg_flags = NLM_F_REQUEST;
+    nlh->nlmsg_seq++;
+    wnl = (tAniNlHdr *)nlh;
+    wnl->radio = 0;
+    wnl->wmsg.length =  sizeof(tAniNlAppRegReq);
+    wnl->wmsg.type = htons(ANI_NL_MSG_LOG_REG_TYPE);
+    regReq = (tAniNlAppRegReq *)(wnl + 1);
+    regReq->pid = getpid();
+    if (sendto(sock_fd, (char*)wnl, nlh->nlmsg_len,0,NULL, 0) < 0) {
+        ALOGI("Failed to send registration msg");
+        return WIFI_ERROR_UNKNOWN;
+    }
+    return WIFI_SUCCESS;
+}
+
+/*initialize function pointer table with Qualcomm HAL API*/
+wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
+    if (fn == NULL) {
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    fn->wifi_initialize = wifi_initialize;
+    fn->wifi_cleanup = wifi_cleanup;
+    fn->wifi_event_loop = wifi_event_loop;
+    fn->wifi_get_supported_feature_set = wifi_get_supported_feature_set;
+    fn->wifi_get_concurrency_matrix = wifi_get_concurrency_matrix;
+    fn->wifi_set_scanning_mac_oui =  wifi_set_scanning_mac_oui;
+    fn->wifi_get_ifaces = wifi_get_ifaces;
+    fn->wifi_get_iface_name = wifi_get_iface_name;
+    fn->wifi_start_gscan = wifi_start_gscan;
+    fn->wifi_stop_gscan = wifi_stop_gscan;
+    fn->wifi_get_cached_gscan_results = wifi_get_cached_gscan_results;
+    fn->wifi_set_bssid_hotlist = wifi_set_bssid_hotlist;
+    fn->wifi_reset_bssid_hotlist = wifi_reset_bssid_hotlist;
+    fn->wifi_set_significant_change_handler = wifi_set_significant_change_handler;
+    fn->wifi_reset_significant_change_handler = wifi_reset_significant_change_handler;
+    fn->wifi_get_gscan_capabilities = wifi_get_gscan_capabilities;
+    fn->wifi_get_link_stats = wifi_get_link_stats;
+    fn->wifi_get_valid_channels = wifi_get_valid_channels;
+    fn->wifi_rtt_range_request = wifi_rtt_range_request;
+    fn->wifi_rtt_range_cancel = wifi_rtt_range_cancel;
+    fn->wifi_get_rtt_capabilities = wifi_get_rtt_capabilities;
+    fn->wifi_set_nodfs_flag = wifi_set_nodfs_flag;
+    fn->wifi_set_epno_list = wifi_set_epno_list;
+    fn->wifi_set_country_code = wifi_set_country_code;
+
+    return WIFI_SUCCESS;
+}
+
 wifi_error wifi_initialize(wifi_handle *handle)
 {
     int err = 0;
     bool driver_loaded = false;
     wifi_error ret = WIFI_SUCCESS;
     wifi_interface_handle iface_handle;
+    struct nl_sock *cmd_sock = NULL;
+    struct nl_sock *event_sock = NULL;
+    struct nl_cb *cb = NULL;
     srand(getpid());
 
     ALOGI("Initializing wifi");
     hal_info *info = (hal_info *)malloc(sizeof(hal_info));
     if (info == NULL) {
         ALOGE("Could not allocate hal_info");
-        return WIFI_ERROR_UNKNOWN;
+        return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
     memset(info, 0, sizeof(*info));
 
     ALOGI("Creating socket");
-    struct nl_sock *cmd_sock = wifi_create_nl_socket(WIFI_HAL_CMD_SOCK_PORT);
+    cmd_sock = wifi_create_nl_socket(WIFI_HAL_CMD_SOCK_PORT,
+                                                     NETLINK_GENERIC);
     if (cmd_sock == NULL) {
-        ALOGE("Could not create handle");
-        return WIFI_ERROR_UNKNOWN;
+        ALOGE("Failed to create command socket port");
+        ret = WIFI_ERROR_UNKNOWN;
+        goto unload;
     }
 
     /* Set the socket buffer size */
@@ -261,18 +369,19 @@ wifi_error wifi_initialize(wifi_handle *handle)
         ALOGI("nl_socket_set_buffer_size successful");
     }
 
-    struct nl_sock *event_sock =
-        wifi_create_nl_socket(WIFI_HAL_EVENT_SOCK_PORT);
+    event_sock =
+        wifi_create_nl_socket(WIFI_HAL_EVENT_SOCK_PORT, NETLINK_GENERIC);
     if (event_sock == NULL) {
-        ALOGE("Could not create handle");
-        nl_socket_free(cmd_sock);
-        return WIFI_ERROR_UNKNOWN;
+        ALOGE("Failed to create event socket port");
+        ret = WIFI_ERROR_UNKNOWN;
+        goto unload;
     }
 
-    struct nl_cb *cb = nl_socket_get_cb(event_sock);
+    cb = nl_socket_get_cb(event_sock);
     if (cb == NULL) {
-        ALOGE("Could not create handle");
-        return WIFI_ERROR_UNKNOWN;
+        ALOGE("Failed to get NL control block for event socket port");
+        ret = WIFI_ERROR_UNKNOWN;
+        goto unload;
     }
 
     err = 1;
@@ -291,20 +400,28 @@ wifi_error wifi_initialize(wifi_handle *handle)
     info->in_event_loop = false;
 
     info->event_cb = (cb_info *)malloc(sizeof(cb_info) * DEFAULT_EVENT_CB_SIZE);
+    if (info->event_cb == NULL) {
+        ALOGE("Could not allocate event_cb");
+        ret = WIFI_ERROR_OUT_OF_MEMORY;
+        goto unload;
+    }
     info->alloc_event_cb = DEFAULT_EVENT_CB_SIZE;
     info->num_event_cb = 0;
 
     info->cmd = (cmd_info *)malloc(sizeof(cmd_info) * DEFAULT_CMD_SIZE);
+    if (info->cmd == NULL) {
+        ALOGE("Could not allocate cmd info");
+        ret = WIFI_ERROR_OUT_OF_MEMORY;
+        goto unload;
+    }
     info->alloc_cmd = DEFAULT_CMD_SIZE;
     info->num_cmd = 0;
 
     info->nl80211_family_id = genl_ctrl_resolve(cmd_sock, "nl80211");
     if (info->nl80211_family_id < 0) {
         ALOGE("Could not resolve nl80211 familty id");
-        nl_socket_free(cmd_sock);
-        nl_socket_free(event_sock);
-        free(info);
-        return WIFI_ERROR_UNKNOWN;
+        ret = WIFI_ERROR_UNKNOWN;
+        goto unload;
     }
     ALOGI("%s: family_id:%d", __func__, info->nl80211_family_id);
 
@@ -317,11 +434,17 @@ wifi_error wifi_initialize(wifi_handle *handle)
     wifi_add_membership(*handle, "regulatory");
     wifi_add_membership(*handle, "vendor");
 
+    ret = wifi_init_user_sock(info);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to alloc user socket");
+        return ret;
+    }
+
     if (!is_wifi_driver_loaded()) {
         ret = (wifi_error)wifi_load_driver();
         if(ret != WIFI_SUCCESS) {
-            ALOGE("%s Failed to load driver : %d\n", __func__, ret);
-            return WIFI_ERROR_UNKNOWN;
+            ALOGE("%s Failed to load wifi driver : %d\n", __func__, ret);
+            goto unload;
         }
         driver_loaded = true;
     }
@@ -347,8 +470,9 @@ wifi_error wifi_initialize(wifi_handle *handle)
             free(info->interfaces[i]);
         }
         ALOGE("%s no iface with %s\n", __func__, info->interfaces[0]->name);
-        return WIFI_ERROR_UNKNOWN;
+        goto unload;
     }
+
     ret = acquire_supported_features(iface_handle,
             &info->supported_feature_set);
     if (ret != WIFI_SUCCESS) {
@@ -359,10 +483,29 @@ wifi_error wifi_initialize(wifi_handle *handle)
         ret = WIFI_SUCCESS;
     }
 
+    ALOGI("Initializing Wifi Logger Rings");
+    ret = wifi_logger_ring_buffers_init(info);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Wifi Logger Ring Initialization Failed");
+        goto unload;
+    }
+
     ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d Supported"
             " features : %x", NL80211_CMD_VENDOR, info->supported_feature_set);
 
 unload:
+    if (ret != WIFI_SUCCESS) {
+        if (cmd_sock)
+            nl_socket_free(cmd_sock);
+        if (event_sock)
+            nl_socket_free(event_sock);
+        if (info) {
+            if (info->cmd) free(info->cmd);
+            if (info->event_cb) free(info->event_cb);
+            free(info);
+        }
+    }
+
     if (driver_loaded)
         wifi_unload_driver();
     return ret;
@@ -383,7 +526,6 @@ static int wifi_add_membership(wifi_handle handle, const char *group)
         ALOGE("Could not add membership to group %s", group);
     }
 
-    // ALOGI("Successfully added membership for group %s", group);
     return ret;
 }
 
@@ -398,6 +540,13 @@ static void internal_cleaned_up_handler(wifi_handle handle)
         info->cmd_sock = NULL;
         info->event_sock = NULL;
     }
+
+    if (info->user_sock != 0) {
+        nl_socket_free(info->user_sock);
+        info->user_sock = NULL;
+    }
+
+    wifi_logger_ring_buffers_deinit(info);
 
     (*cleaned_up_handler)(handle);
     pthread_mutex_destroy(&info->cb_lock);
@@ -415,27 +564,28 @@ void wifi_cleanup(wifi_handle handle, wifi_cleaned_up_handler handler)
     ALOGI("Wifi cleanup completed");
 }
 
-static int internal_pollin_handler(wifi_handle handle)
+static int internal_pollin_handler(wifi_handle handle, struct nl_sock *sock)
 {
-    hal_info *info = getHalInfo(handle);
-    struct nl_cb *cb = nl_socket_get_cb(info->event_sock);
-    int res = nl_recvmsgs(info->event_sock, cb);
+    struct nl_cb *cb = nl_socket_get_cb(sock);
+
+    int res = nl_recvmsgs(sock, cb);
     if(res)
         ALOGE("Error :%d while reading nl msg", res);
     nl_cb_put(cb);
     return res;
 }
 
-static void internal_event_handler(wifi_handle handle, int events)
+static void internal_event_handler(wifi_handle handle, int events,
+                                   struct nl_sock *sock)
 {
     if (events & POLLERR) {
         ALOGE("Error reading from socket");
-        internal_pollin_handler(handle);
+        internal_pollin_handler(handle, sock);
     } else if (events & POLLHUP) {
         ALOGE("Remote side hung up");
     } else if (events & POLLIN) {
-        ALOGI("Found some events!!!");
-        internal_pollin_handler(handle);
+        //ALOGI("Found some events!!!");
+        internal_pollin_handler(handle, sock);
     } else {
         ALOGE("Unknown event - %0x", events);
     }
@@ -451,25 +601,38 @@ void wifi_event_loop(wifi_handle handle)
         info->in_event_loop = true;
     }
 
-    pollfd pfd;
-    memset(&pfd, 0, sizeof(pfd));
+    if (wifi_register_for_debug_events(info)) {
+        ALOGE("Failed to register for diag events");
+    }
 
-    pfd.fd = nl_socket_get_fd(info->event_sock);
-    pfd.events = POLLIN;
+    pollfd pfd[2];
+    memset(&pfd, 0, 2*sizeof(pfd[0]));
+
+    pfd[0].fd = nl_socket_get_fd(info->event_sock);
+    pfd[0].events = POLLIN;
+
+    pfd[1].fd = nl_socket_get_fd(info->user_sock);
+    pfd[1].events = POLLIN;
 
     /* TODO: Add support for timeouts */
 
     do {
         int timeout = -1;                   /* Infinite timeout */
-        pfd.revents = 0;
-        //ALOGI("Polling socket");
-        int result = poll(&pfd, 1, -1);
-        ALOGI("Poll result = %0x", result);
+        pfd[0].revents = 0;
+        pfd[1].revents = 0;
+        //ALOGI("Polling sockets");
+        int result = poll(pfd, 2, -1);
         if (result < 0) {
             ALOGE("Error polling socket");
-        } else if (pfd.revents & (POLLIN | POLLHUP | POLLERR)) {
-            internal_event_handler(handle, pfd.revents);
+        } else {
+            if (pfd[0].revents & (POLLIN | POLLHUP | POLLERR)) {
+                internal_event_handler(handle, pfd[0].revents, info->event_sock);
+            }
+            if (pfd[1].revents & (POLLIN | POLLHUP | POLLERR)) {
+                internal_event_handler(handle, pfd[1].revents, info->user_sock);
+            }
         }
+        rb_timerhandler(info);
     } while (!info->clean_up);
 
 
@@ -477,7 +640,16 @@ void wifi_event_loop(wifi_handle handle)
     internal_cleaned_up_handler(handle);
 }
 
-////////////////////////////////////////////////////////////////////////////////
+static int user_sock_message_handler(nl_msg *msg, void *arg)
+{
+    wifi_handle handle = (wifi_handle)arg;
+    hal_info *info = getHalInfo(handle);
+
+    //ALOGI("Event triggered");
+    diag_message_handler(info, msg);
+
+    return NL_OK;
+}
 
 static int internal_valid_message_handler(nl_msg *msg, void *arg)
 {
@@ -504,8 +676,6 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
         ALOGI("event received %s", event.get_cmdString());
     }
 
-    ALOGI("event received %s, vendor_id = 0x%0x", event.get_cmdString(),
-            vendor_id);
     // event.log();
 
     bool dispatched = false;

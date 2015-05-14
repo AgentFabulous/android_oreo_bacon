@@ -33,6 +33,7 @@
 #include "cpp_bindings.h"
 #include "qca-vendor.h"
 #include "wifi_logger.h"
+#include "wifilogger_diag.h"
 #include "vendor_definitions.h"
 
 #ifdef __cplusplus
@@ -40,29 +41,39 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+#define POWER_EVENTS_RB_BUF_SIZE 2048
+#define POWER_EVENTS_NUM_BUFS    4
+
+#define CONNECTIVITY_EVENTS_RB_BUF_SIZE 4096
+#define CONNECTIVITY_EVENTS_NUM_BUFS    4
+
+#define PKT_STATS_RB_BUF_SIZE 4096
+#define PKT_STATS_NUM_BUFS    32
+
+enum rb_info_indices {
+    POWER_EVENTS_RB_ID = 0,
+    CONNECTIVITY_EVENTS_RB_ID = 1,
+    PKT_STATS_RB_ID = 2
+};
 
 typedef struct {
-  void (*on_ring_buffer_data) (wifi_request_id id,
-                               wifi_ring_buffer_id ring_id,
-                               char *buffer, int buffer_size,
-                               wifi_ring_buffer_status *status);
+  void (*on_firmware_memory_dump) (char *buffer,
+                                   int buffer_size);
+
 } WifiLoggerCallbackHandler;
 
 
 class WifiLoggerCommand : public WifiVendorCommand
 {
 private:
-    static WifiLoggerCommand *mWifiLoggerCommandInstance;
     WifiLoggerCallbackHandler mHandler;
     char                      **mVersion;
     int                       *mVersionLen;
+    u32                       *mSupportedSet;
+    int                       mRequestId;
     bool                      mWaitforRsp;
+    bool                      mMoreData;
 public:
-    u8      *mTailMemoryDumBuffer;
-    u8      *mMemoryDumBuffer;
-    u8      mNumMemoryDumBufferRecv;
-    u32     mMemoryDumBufferLen;
-    bool    mMoreData;
 
     WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
 
@@ -83,7 +94,11 @@ public:
     virtual int timed_wait(u16 wait_time);
     virtual void waitForRsp(bool wait);
     virtual void setVersionInfo(char **buffer, int *buffer_size);
+    virtual void setFeatureSet(u32 *support);
 };
+void rb_timerhandler(hal_info *info);
+wifi_error wifi_logger_ring_buffers_init(hal_info *info);
+void wifi_logger_ring_buffers_deinit(hal_info *info);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
