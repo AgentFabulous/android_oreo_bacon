@@ -185,6 +185,23 @@ wifi_error wifi_get_ring_buffers_status(wifi_interface_handle iface,
     return (wifi_error)ret;
 }
 
+void push_out_all_ring_buffers(hal_info *info)
+{
+    int rb_id;
+
+    for (rb_id = 0; rb_id < NUM_RING_BUFS; rb_id++) {
+        push_out_rb_data(&info->rb_infos[rb_id]);
+    }
+}
+
+void send_alert(hal_info *info, int reason_code)
+{
+    //TODO check locking
+    if (info->on_alert) {
+        info->on_alert(0, NULL, 0, reason_code);
+    }
+}
+
 void WifiLoggerCommand::setFeatureSet(u32 *support) {
     mSupportedSet = support;
 }

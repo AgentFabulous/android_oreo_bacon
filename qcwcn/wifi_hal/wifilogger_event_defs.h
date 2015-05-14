@@ -61,6 +61,7 @@ typedef enum {
     EVENT_WLAN_EAPOL = 0xA8D, /* 96 bytes payload */
     EVENT_WLAN_EXTSCAN_FEATURE_STOP = 0xAA3,
     EVENT_WLAN_EXTSCAN_RESULTS_AVAILABLE = 0xAA4,
+    EVENT_WLAN_LOG_COMPLETE = 0xAA7,
 
     EVENT_MAX_ID = 0x0FFF
 } event_id_enum_type;

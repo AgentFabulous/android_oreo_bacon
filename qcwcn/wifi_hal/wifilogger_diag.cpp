@@ -936,6 +936,23 @@ static wifi_error process_wakelock_event(hal_info *info, u8* buf, int length)
     return status;
 }
 
+static void process_wlan_log_complete_event(hal_info *info,
+                                                  u8* buf,
+                                                  int length)
+{
+    wlan_log_complete_event_t *lfd_event;
+
+    ALOGV("Received log completion event from driver");
+    lfd_event = (wlan_log_complete_event_t *)buf;
+
+    push_out_all_ring_buffers(info);
+
+    if (lfd_event->is_fatal == WLAN_LOG_TYPE_FATAL) {
+        ALOGE("Received fatal event, sending alert");
+        send_alert(info, lfd_event->reason_code);
+    }
+}
+
 static wifi_error update_stats_to_ring_buf(hal_info *info,
                       u8 *rb_entry, u32 size)
 {
@@ -1368,6 +1385,9 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                     break;
                 case EVENT_WLAN_EAPOL:
                     process_wlan_eapol_event(info, buf, event_hdr->length);
+                    break;
+                case EVENT_WLAN_LOG_COMPLETE:
+                    process_wlan_log_complete_event(info, buf, event_hdr->length);
                     break;
                 default:
                     return WIFI_SUCCESS;

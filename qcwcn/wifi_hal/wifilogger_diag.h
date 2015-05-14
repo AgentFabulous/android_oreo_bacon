@@ -172,6 +172,43 @@ typedef struct wlan_wake_lock_event {
     char name[];
 } wlan_wake_lock_event_t;
 
+enum log_event_type {
+    WLAN_LOG_TYPE_NON_FATAL,
+    WLAN_LOG_TYPE_FATAL,
+};
+
+enum log_event_indicator {
+    WLAN_LOG_INDICATOR_UNUSED,
+    WLAN_LOG_INDICATOR_FRAMEWORK,
+    WLAN_LOG_INDICATOR_HOST_DRIVER,
+    WLAN_LOG_INDICATOR_FIRMWARE,
+};
+
+enum log_event_host_reason_code {
+    WLAN_LOG_REASON_CODE_UNUSED,
+    WLAN_LOG_REASON_COMMAND_UNSUCCESSFUL,
+    WLAN_LOG_REASON_ROAM_FAIL,
+    WLAN_LOG_REASON_THREAD_STUCK,
+    WLAN_LOG_REASON_DATA_STALL,
+    WLAN_LOG_REASON_SME_COMMAND_STUCK,
+    WLAN_LOG_REASON_ZERO_SCAN_RESULTS,
+    WLAN_LOG_REASON_QUEUE_FULL,
+    WLAN_LOG_REASON_POWER_COLLAPSE_FAIL,
+    WLAN_LOG_REASON_SSR_FAIL,
+    WLAN_LOG_REASON_DISCONNECT_FAIL,
+    WLAN_LOG_REASON_CLEAN_UP_FAIL,
+    WLAN_LOG_REASON_MALLOC_FAIL,
+    WLAN_LOG_REASON_VOS_MSG_UNDER_RUN,
+    WLAN_LOG_REASON_MSG_POST_FAIL,
+};
+
+typedef struct {
+    u32 is_fatal;
+    u32 indicator;
+    u32 reason_code;
+    u32 reserved;
+} wlan_log_complete_event_t;
+
 wifi_error diag_message_handler(hal_info *info, nl_msg *msg);
 
 #endif /* __WIFI_HAL_WIFILOGGER_DIAG_H__ */

@@ -99,6 +99,8 @@ public:
 void rb_timerhandler(hal_info *info);
 wifi_error wifi_logger_ring_buffers_init(hal_info *info);
 void wifi_logger_ring_buffers_deinit(hal_info *info);
+void push_out_all_ring_buffers(hal_info *info);
+void send_alert(hal_info *info, int reason_code);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
