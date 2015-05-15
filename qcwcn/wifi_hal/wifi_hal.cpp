@@ -648,7 +648,6 @@ static int user_sock_message_handler(nl_msg *msg, void *arg)
     wifi_handle handle = (wifi_handle)arg;
     hal_info *info = getHalInfo(handle);
 
-    //ALOGI("Event triggered");
     diag_message_handler(info, msg);
 
     return NL_OK;

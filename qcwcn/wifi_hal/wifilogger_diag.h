@@ -31,6 +31,7 @@
 
 #include "common.h"
 #include "wifi_hal.h"
+#include "wifilogger_event_defs.h"
 
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
@@ -44,8 +45,6 @@
 #define ANI_NL_MSG_LOG_HOST_EVENT_LOG_TYPE 0x5050
 
 #define WLAN_PKT_LOG_STATS            0x18E0
-
-#define EVENT_WLAN_WAKE_LOCK 0xAA2 /* 96 bytes payload */
 
 /*
  *  - verbose_level 0 corresponds to no collection
@@ -68,6 +67,7 @@ enum wifilogger_fw_diag_type {
    DIAG_TYPE_FW_EVENT,     /* send fw event- to diag*/
    DIAG_TYPE_FW_LOG,       /* send log event- to diag*/
    DIAG_TYPE_FW_DEBUG_MSG, /* send dbg message- to diag*/
+   DIAG_TYPE_FW_MSG = 4,   /* send fw message- to diag*/
 };
 
 enum wifilogger_host_diag_type {
@@ -75,14 +75,32 @@ enum wifilogger_host_diag_type {
    DIAG_TYPE_HOST_EVENTS=2,
 };
 
-struct dbglog_slot {
-    unsigned int diag_type;
-    unsigned int timestamp;
-    unsigned int length;
-    unsigned int dropped;
+enum wlan_diag_frame_type {
+     WLAN_DIAG_TYPE_CONFIG,
+     WLAN_DIAG_TYPE_EVENT,
+     WLAN_DIAG_TYPE_LOG,
+     WLAN_DIAG_TYPE_MSG,
+     WLAN_DIAG_TYPE_LEGACY_MSG,
+};
+
+static uint32_t get_le32(const uint8_t *pos)
+{
+    return pos[0] | (pos[1] << 8) | (pos[2] << 16) | (pos[3] << 24);
+}
+
+typedef struct event_remap {
+    int q_event;
+    int g_event;
+} event_remap_t;
+
+typedef struct {
+    u32 diag_type;
+    u32 timestamp;
+    u32 length;
+    u32 dropped;
     /* max ATH6KL_FWLOG_PAYLOAD_SIZE bytes */
     u_int8_t payload[0];
-}__packed;
+}__attribute__((packed)) dbglog_slot;
 
 typedef enum eAniNlModuleTypes {
     ANI_NL_MSG_NETSIM = ANI_NL_MSG_BASE,// NetSim Messages (to the server)
@@ -131,6 +149,21 @@ typedef struct host_event_hdr_s
     u16 length;
 } host_event_hdr_t;
 
+typedef struct fw_event_hdr_s
+{
+    u16 diag_type;
+    u16 length;
+} fw_event_hdr_t;
+
+typedef struct
+{
+    u32 timestamp:24;
+    u32 diag_event_type:8;
+    u16 payload_len;
+    u16 diag_id;
+    u8  payload[0];
+}__attribute__((packed)) fw_diag_msg_hdr_t;
+
 typedef struct wlan_wake_lock_event {
     u32 status;
     u32 reason;
@@ -140,4 +173,5 @@ typedef struct wlan_wake_lock_event {
 } wlan_wake_lock_event_t;
 
 wifi_error diag_message_handler(hal_info *info, nl_msg *msg);
+
 #endif /* __WIFI_HAL_WIFILOGGER_DIAG_H__ */
