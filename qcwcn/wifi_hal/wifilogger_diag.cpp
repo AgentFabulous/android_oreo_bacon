@@ -869,81 +869,71 @@ static wifi_error process_wlan_eapol_event(hal_info *info, u8* buf, int length)
     return status;
 }
 
-static int process_wakelock_event(hal_info *info, u8* buf, int length)
+static wifi_error process_wakelock_event(hal_info *info, u8* buf, int length)
 {
     wlan_wake_lock_event_t *pWlanWakeLockEvent;
-    wake_lock_event *pWakeLockEvent = NULL;
-    wifi_power_event *pPowerEvent = NULL;
-    wifi_ring_buffer_entry *pRingBufferEntry = NULL;
-    int len_wakelock_event = 0, len_power_event = 0;
-    int len_ring_buffer_entry = 0, num_records = 0;
+    wake_lock_event *pWakeLockEvent;
+    wifi_power_event *pPowerEvent;
     tlv_log *pTlv;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    u16 len_ring_buffer_entry;
     struct timeval time;
-    wifi_error ret = WIFI_SUCCESS;
+    wifi_error status;
+    u8 wl_ring_buffer[RING_BUF_ENTRY_SIZE];
+    u16 entry_size;
 
     pWlanWakeLockEvent = (wlan_wake_lock_event_t *)(buf);
-    len_wakelock_event = sizeof(wake_lock_event) +
-                            pWlanWakeLockEvent->name_len + 1;
+    entry_size = sizeof(wifi_power_event) +
+                 sizeof(tlv_log) +
+                 sizeof(wake_lock_event) +
+                 pWlanWakeLockEvent->name_len + 1;
+    len_ring_buffer_entry = sizeof(wifi_ring_buffer_entry) + entry_size;
 
-    pWakeLockEvent = (wake_lock_event *)malloc(len_wakelock_event);
-    if (pWakeLockEvent == NULL) {
-        ALOGE("%s: Failed to allocate memory", __func__);
-        goto cleanup;
+    if (len_ring_buffer_entry > RING_BUF_ENTRY_SIZE) {
+        pRingBufferEntry = (wifi_ring_buffer_entry *)malloc(
+                len_ring_buffer_entry);
+        if (pRingBufferEntry == NULL) {
+            ALOGE("%s: Failed to allocate memory", __FUNCTION__);
+            return WIFI_ERROR_OUT_OF_MEMORY;
+        }
+    } else {
+        pRingBufferEntry = (wifi_ring_buffer_entry *)wl_ring_buffer;
     }
 
-    memset(pWakeLockEvent, 0, len_wakelock_event);
+    pPowerEvent = (wifi_power_event *)(pRingBufferEntry + 1);
+    pPowerEvent->event = WIFI_TAG_WAKE_LOCK_EVENT;
 
+    pTlv = &pPowerEvent->tlvs[0];
+    pTlv->tag = WIFI_TAG_WAKE_LOCK_EVENT;
+    pTlv->length = sizeof(wake_lock_event) +
+                   pWlanWakeLockEvent->name_len + 1;
+
+    pWakeLockEvent = (wake_lock_event *)pTlv->value;
     pWakeLockEvent->status = pWlanWakeLockEvent->status;
     pWakeLockEvent->reason = pWlanWakeLockEvent->reason;
     memcpy(pWakeLockEvent->name, pWlanWakeLockEvent->name,
            pWlanWakeLockEvent->name_len);
 
-    len_power_event = sizeof(wifi_power_event) +
-                          sizeof(tlv_log) + len_wakelock_event;
-    pPowerEvent = (wifi_power_event *)malloc(len_power_event);
-    if (pPowerEvent == NULL) {
-        ALOGE("%s: Failed to allocate memory", __func__);
-        goto cleanup;
-    }
-
-    memset(pPowerEvent, 0, len_power_event);
-    pPowerEvent->event = WIFI_TAG_WAKE_LOCK_EVENT;
-
-    pTlv = &pPowerEvent->tlvs[0];
-    addLoggerTlv(WIFI_TAG_WAKE_LOCK_EVENT, len_wakelock_event,
-                 (u8*)pWakeLockEvent, pTlv);
-    len_ring_buffer_entry = sizeof(wifi_ring_buffer_entry) + len_power_event;
-    pRingBufferEntry = (wifi_ring_buffer_entry *)malloc(
-                                     len_ring_buffer_entry);
-    if (pRingBufferEntry == NULL) {
-        ALOGE("%s: Failed to allocate memory", __func__);
-        goto cleanup;
-    }
-    memset(pRingBufferEntry, 0, len_ring_buffer_entry);
-
-    pRingBufferEntry->entry_size = len_power_event;
+    pRingBufferEntry->entry_size = entry_size;
     pRingBufferEntry->flags = RING_BUFFER_ENTRY_FLAGS_HAS_BINARY |
                               RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
     pRingBufferEntry->type = ENTRY_TYPE_POWER_EVENT;
-    gettimeofday(&time,NULL);
+    gettimeofday(&time, NULL);
     pRingBufferEntry->timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
 
-    memcpy(pRingBufferEntry + 1, pPowerEvent, len_power_event);
-    // Write if verbose and handler is set
-    num_records = 1;
+    /* Write if verbose and handler is set */
     if (info->rb_infos[POWER_EVENTS_RB_ID].verbose_level >= 1 &&
         info->on_ring_buffer_data)
-        ring_buffer_write(&info->rb_infos[POWER_EVENTS_RB_ID],
-                      (u8*)pRingBufferEntry,
-                      len_ring_buffer_entry, num_records);
-cleanup:
-    if (pWakeLockEvent)
-        free(pWakeLockEvent);
-    if (pPowerEvent)
-        free(pPowerEvent);
-    if (pRingBufferEntry)
+        status = ring_buffer_write(&info->rb_infos[POWER_EVENTS_RB_ID],
+                                   (u8*)pRingBufferEntry,
+                                   len_ring_buffer_entry, 1);
+
+    if ((u8 *)pRingBufferEntry != wl_ring_buffer) {
+        ALOGI("Message with more than RING_BUF_ENTRY_SIZE");
         free(pRingBufferEntry);
-    return ret;
+    }
+
+    return status;
 }
 
 static wifi_error update_stats_to_ring_buf(hal_info *info,
