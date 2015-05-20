@@ -333,7 +333,7 @@ wifi_error wifi_enable_tdls(wifi_interface_handle iface,
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nl_data)
         goto cleanup;
-    ALOGD("%s: MAC_ADDR: "MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
+    ALOGD("%s: MAC_ADDR: " MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
     ret = pTdlsCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MAC_ADDR,
                                   (char *)addr, 6);
     if (ret < 0)
@@ -410,7 +410,7 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
     if (ret < 0)
         goto cleanup;
     ALOGD("%s: ifindex obtained:%d", __FUNCTION__, ret);
-    ALOGD("%s: MAC_ADDR: "MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
+    ALOGD("%s: MAC_ADDR: " MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
 
     /* Add the attributes */
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
