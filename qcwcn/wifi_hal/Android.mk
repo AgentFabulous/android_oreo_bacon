@@ -50,7 +50,8 @@ LOCAL_SRC_FILES := \
 	wifilogger.cpp \
 	wifilogger_diag.cpp \
 	ring_buffer.cpp \
-	rb_wrapper.cpp
+	rb_wrapper.cpp \
+	rssi_monitor.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
@@ -100,7 +101,8 @@ LOCAL_SRC_FILES := \
 	wifilogger.cpp \
 	wifilogger_diag.cpp \
 	ring_buffer.cpp \
-	rb_wrapper.cpp
+	rb_wrapper.cpp \
+	rssi_monitor.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog

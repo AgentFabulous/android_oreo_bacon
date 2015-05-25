@@ -288,6 +288,11 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_bssid_preference = wifi_set_bssid_preference;
     fn->wifi_set_gscan_roam_params = wifi_set_gscan_roam_params;
     fn->wifi_set_ssid_white_list = wifi_set_ssid_white_list;
+    fn->wifi_start_sending_offloaded_packet =
+            wifi_start_sending_offloaded_packet;
+    fn->wifi_stop_sending_offloaded_packet = wifi_stop_sending_offloaded_packet;
+    fn->wifi_start_rssi_monitoring = wifi_start_rssi_monitoring;
+    fn->wifi_stop_rssi_monitoring = wifi_stop_rssi_monitoring;
 
     return WIFI_SUCCESS;
 }
@@ -994,6 +999,112 @@ wifi_error wifi_set_nodfs_flag(wifi_interface_handle handle, u32 nodfs)
 
     ret = vCommand->requestResponse();
     /* Don't check response since we aren't expecting one */
+
+cleanup:
+    delete vCommand;
+    return (wifi_error)ret;
+}
+
+wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
+                                               wifi_interface_handle iface,
+                                               u8 *ip_packet,
+                                               u16 ip_packet_len,
+                                               u8 *src_mac_addr,
+                                               u8 *dst_mac_addr,
+                                               u32 period_msec)
+{
+    int ret = WIFI_SUCCESS;
+    struct nlattr *nlData;
+    WifiVendorCommand *vCommand = NULL;
+
+    ret = initialize_vendor_cmd(iface,
+                                QCA_NL80211_VENDOR_SUBCMD_OFFLOADED_PACKETS,
+                                &vCommand);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __func__);
+        return (wifi_error)ret;
+    }
+
+    ALOGI("ip packet length : %u\nIP Packet:", ip_packet_len);
+    hexdump(ip_packet, ip_packet_len);
+    ALOGI("Src Mac Address: "MAC_ADDR_STR"\nDst Mac Address: "MAC_ADDR_STR
+          "\nPeriod in msec : %u", MAC_ADDR_ARRAY(src_mac_addr),
+          MAC_ADDR_ARRAY(dst_mac_addr), period_msec);
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (vCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_SENDING_CONTROL,
+            QCA_WLAN_OFFLOADED_PACKETS_SENDING_START) ||
+        vCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_REQUEST_ID,
+            id) ||
+        vCommand->put_bytes(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_IP_PACKET,
+            (const char *)ip_packet, ip_packet_len) ||
+        vCommand->put_addr(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_SRC_MAC_ADDR,
+            src_mac_addr) ||
+        vCommand->put_addr(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_DST_MAC_ADDR,
+            dst_mac_addr) ||
+        vCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_PERIOD,
+            period_msec))
+    {
+        goto cleanup;
+    }
+
+    vCommand->attr_end(nlData);
+
+    ret = vCommand->requestResponse();
+    if (ret < 0)
+        goto cleanup;
+
+cleanup:
+    delete vCommand;
+    return (wifi_error)ret;
+}
+
+wifi_error wifi_stop_sending_offloaded_packet(wifi_request_id id,
+                                              wifi_interface_handle iface)
+{
+    int ret = WIFI_SUCCESS;
+    struct nlattr *nlData;
+    WifiVendorCommand *vCommand = NULL;
+
+    ret = initialize_vendor_cmd(iface,
+                                QCA_NL80211_VENDOR_SUBCMD_OFFLOADED_PACKETS,
+                                &vCommand);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __func__);
+        return (wifi_error)ret;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (vCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_SENDING_CONTROL,
+            QCA_WLAN_OFFLOADED_PACKETS_SENDING_STOP) ||
+        vCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_REQUEST_ID,
+            id))
+    {
+        goto cleanup;
+    }
+
+
+    vCommand->attr_end(nlData);
+
+    ret = vCommand->requestResponse();
+    if (ret < 0)
+        goto cleanup;
 
 cleanup:
     delete vCommand;

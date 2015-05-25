@@ -38,6 +38,7 @@
 #include "wifi_hal.h"
 #include "common.h"
 #include "cpp_bindings.h"
+#include "qca-vendor.h"
 
 void appendFmt(char *buf, size_t buf_len, int &offset, const char *fmt, ...)
 {
@@ -977,4 +978,59 @@ int WifiVendorCommand::set_iface_id(const char* name)
 int WifiVendorCommand::put_bytes(int attribute, const char *data, int len)
 {
     return mMsg.put_bytes(attribute, data, len);
+}
+
+wifi_error WifiVendorCommand::get_mac_addr(struct nlattr **tb_vendor,
+                                       int attribute,
+                                       mac_addr addr)
+{
+    if (!tb_vendor[attribute]) {
+        ALOGE("Failed to get attribute : %d", attribute);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+    if (!addr) {
+        ALOGE("addr is NULL");
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    memcpy(addr, (u8 *)nla_data(tb_vendor[attribute]),
+                  nla_len(tb_vendor[attribute]));
+    return WIFI_SUCCESS;
+}
+
+wifi_error initialize_vendor_cmd(wifi_interface_handle iface,
+                                 u32 subcmd,
+                                 WifiVendorCommand **vCommand)
+{
+    int ret = 0;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+
+    if (vCommand == NULL) {
+        ALOGE("%s: Error vCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    *vCommand = new WifiVendorCommand(wifiHandle, 0,
+                                      OUI_QCA,
+                                      subcmd);
+    if (*vCommand == NULL) {
+        ALOGE("%s: Object creation failed", __FUNCTION__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    /* Create the message */
+    ret = (*vCommand)->create();
+    if (ret < 0)
+        goto cleanup;
+
+    ret = (*vCommand)->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    return WIFI_SUCCESS;
+
+cleanup:
+    delete *vCommand;
+    return (wifi_error)ret;
 }

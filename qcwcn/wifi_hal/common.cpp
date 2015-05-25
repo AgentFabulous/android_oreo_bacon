@@ -240,9 +240,10 @@ extern "C"
 {
 #endif /* __cplusplus */
 
-void hexdump(char *bytes, u16 len)
+void hexdump(void *buf, u16 len)
 {
     int i=0;
+    char *bytes = (char *)buf;
     ALOGI("******HexDump len:%d*********", len);
     for (i = 0; ((i + 7) < len); i+=8) {
         ALOGI("%02x %02x %02x %02x   %02x %02x %02x %02x",
