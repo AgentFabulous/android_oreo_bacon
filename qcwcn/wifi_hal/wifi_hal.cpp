@@ -236,36 +236,6 @@ static wifi_error wifi_init_user_sock(hal_info *info)
     return WIFI_SUCCESS;
 }
 
-static wifi_error wifi_register_for_debug_events(hal_info *info)
-{
-    u8 buf[sizeof(tAniNlHdr) + sizeof(tAniNlAppRegReq)];
-    int sock_fd = info->user_sock->s_fd;
-    tAniNlHdr *wnl;
-    tAniNlAppRegReq *regReq;
-    struct nlmsghdr *nlh;
-
-    memset(buf, 0, sizeof(buf));
-
-    nlh = (struct nlmsghdr *)buf;
-
-    nlh->nlmsg_len = sizeof(tAniNlHdr) + sizeof(tAniNlAppRegReq);
-    nlh->nlmsg_pid = getpid();
-    nlh->nlmsg_type = ANI_NL_MSG_PUMAC;
-    nlh->nlmsg_flags = NLM_F_REQUEST;
-    nlh->nlmsg_seq++;
-    wnl = (tAniNlHdr *)nlh;
-    wnl->radio = 0;
-    wnl->wmsg.length =  sizeof(tAniNlAppRegReq);
-    wnl->wmsg.type = htons(ANI_NL_MSG_LOG_REG_TYPE);
-    regReq = (tAniNlAppRegReq *)(wnl + 1);
-    regReq->pid = getpid();
-    if (sendto(sock_fd, (char*)wnl, nlh->nlmsg_len,0,NULL, 0) < 0) {
-        ALOGI("Failed to send registration msg");
-        return WIFI_ERROR_UNKNOWN;
-    }
-    return WIFI_SUCCESS;
-}
-
 /*initialize function pointer table with Qualcomm HAL API*/
 wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     if (fn == NULL) {
@@ -602,10 +572,6 @@ void wifi_event_loop(wifi_handle handle)
         return;
     } else {
         info->in_event_loop = true;
-    }
-
-    if (wifi_register_for_debug_events(info)) {
-        ALOGE("Failed to register for diag events");
     }
 
     pollfd pfd[2];

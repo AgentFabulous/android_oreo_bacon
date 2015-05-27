@@ -38,7 +38,6 @@
 #include <netlink/genl/ctrl.h>
 #include <linux/rtnetlink.h>
 
-#define ANI_NL_MSG_LOG_REG_TYPE  0x0001
 #define ANI_NL_MSG_BASE     0x10    /* Some arbitrary base */
 #define WIFI_HAL_USER_SOCK_PORT    646
 #define WLAN_NL_MSG_CNSS_HOST_EVENT_LOG    17
