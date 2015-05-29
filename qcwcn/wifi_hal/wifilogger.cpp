@@ -42,6 +42,8 @@
 char power_events_ring_name[] = "power_events_rb";
 char connectivity_events_ring_name[] = "connectivity_events_rb";
 char pkt_stats_ring_name[] = "pkt_stats_rb";
+char driver_prints_ring_name[] = "driver_prints_rb";
+char firmware_prints_ring_name[] = "firmware_prints_rb";
 
 static int get_ring_id(hal_info *info, char *ring_name)
 {
@@ -674,6 +676,26 @@ wifi_error wifi_logger_ring_buffers_init(hal_info *info)
                   pkt_stats_ring_name);
     if (ret != WIFI_SUCCESS) {
         ALOGE("Failed to initialize per packet stats ring buffer");
+        goto cleanup;
+    }
+
+    ret = rb_init(info, &info->rb_infos[DRIVER_PRINTS_RB_ID],
+                  DRIVER_PRINTS_RB_ID,
+                  DRIVER_PRINTS_RB_BUF_SIZE,
+                  DRIVER_PRINTS_NUM_BUFS,
+                  driver_prints_ring_name);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to initialize driver prints ring buffer");
+        goto cleanup;
+    }
+
+    ret = rb_init(info, &info->rb_infos[FIRMWARE_PRINTS_RB_ID],
+                  FIRMWARE_PRINTS_RB_ID,
+                  FIRMWARE_PRINTS_RB_BUF_SIZE,
+                  FIRMWARE_PRINTS_NUM_BUFS,
+                  firmware_prints_ring_name);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to initialize firmware prints ring buffer");
         goto cleanup;
     }
 

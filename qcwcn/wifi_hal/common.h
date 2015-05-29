@@ -50,7 +50,7 @@
 #define RECV_BUF_SIZE           (4096)
 #define DEFAULT_EVENT_CB_SIZE   (64)
 #define DEFAULT_CMD_SIZE        (64)
-#define NUM_RING_BUFS           3
+#define NUM_RING_BUFS           5
 
 #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MAC_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"

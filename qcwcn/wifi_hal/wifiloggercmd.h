@@ -50,10 +50,18 @@ extern "C"
 #define PKT_STATS_RB_BUF_SIZE 4096
 #define PKT_STATS_NUM_BUFS    32
 
+#define DRIVER_PRINTS_RB_BUF_SIZE 4096
+#define DRIVER_PRINTS_NUM_BUFS    128
+
+#define FIRMWARE_PRINTS_RB_BUF_SIZE 4096
+#define FIRMWARE_PRINTS_NUM_BUFS    128
+
 enum rb_info_indices {
     POWER_EVENTS_RB_ID = 0,
     CONNECTIVITY_EVENTS_RB_ID = 1,
-    PKT_STATS_RB_ID = 2
+    PKT_STATS_RB_ID = 2,
+    DRIVER_PRINTS_RB_ID = 3,
+    FIRMWARE_PRINTS_RB_ID = 4,
 };
 
 typedef struct {

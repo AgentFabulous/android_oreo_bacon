@@ -655,6 +655,43 @@ static wifi_error process_roam_event(hal_info *info, u32 id,
     return status;
 }
 
+wifi_error process_firmware_prints(hal_info *info, u8 *buf, u16 length)
+{
+    wifi_ring_buffer_entry rb_entry_hdr;
+    struct timeval time;
+    wifi_error status;
+
+    rb_entry_hdr.entry_size = length;
+    rb_entry_hdr.flags = RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
+    rb_entry_hdr.type = ENTRY_TYPE_DATA;
+    gettimeofday(&time, NULL);
+    rb_entry_hdr.timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+
+    /* Write if verbose and handler is set */
+    if (info->rb_infos[FIRMWARE_PRINTS_RB_ID].verbose_level >= 1 &&
+        info->on_ring_buffer_data) {
+        /* Write header and payload separately to avoid
+         * complete payload memcpy */
+        status = ring_buffer_write(&info->rb_infos[FIRMWARE_PRINTS_RB_ID],
+                                   (u8*)&rb_entry_hdr,
+                                   sizeof(wifi_ring_buffer_entry), 0);
+        if (status != WIFI_SUCCESS) {
+            ALOGE("Failed to write firmware prints rb header %d", status);
+            return status;
+        }
+        status = ring_buffer_write(&info->rb_infos[FIRMWARE_PRINTS_RB_ID],
+                                   buf, length, 1);
+        if (status != WIFI_SUCCESS) {
+            ALOGE("Failed to write firmware prints rb payload %d", status);
+            return status;
+        }
+    } else {
+        return WIFI_ERROR_NOT_AVAILABLE;
+    }
+
+    return WIFI_SUCCESS;
+}
+
 static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
 {
     u16 count = 0, id, payloadlen;
@@ -753,6 +790,8 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
             {
                 /* Length field is only one byte for WLAN_DIAG_TYPE_MSG */
                 payloadlen = diag_msg_hdr->u.msg_hdr.payload_len;
+                process_firmware_prints(info, diag_msg_hdr->payload,
+                                        payloadlen);
             }
             break;
             default:
@@ -1373,6 +1412,43 @@ static wifi_error parse_stats(hal_info *info, u8 *data, u32 buflen)
     return status;
 }
 
+wifi_error process_driver_prints(hal_info *info, u8 *buf, u16 length)
+{
+    wifi_ring_buffer_entry rb_entry_hdr;
+    struct timeval time;
+    wifi_error status;
+
+    rb_entry_hdr.entry_size = length;
+    rb_entry_hdr.flags = RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
+    rb_entry_hdr.type = ENTRY_TYPE_DATA;
+    gettimeofday(&time, NULL);
+    rb_entry_hdr.timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+
+    /* Write if verbose and handler is set */
+    if (info->rb_infos[DRIVER_PRINTS_RB_ID].verbose_level >= 1 &&
+        info->on_ring_buffer_data) {
+        /* Write header and payload separately to avoid
+         * complete payload memcpy */
+        status = ring_buffer_write(&info->rb_infos[DRIVER_PRINTS_RB_ID],
+                                   (u8*)&rb_entry_hdr,
+                                   sizeof(wifi_ring_buffer_entry), 0);
+        if (status != WIFI_SUCCESS) {
+            ALOGE("Failed to write kernel prints rb header %d", status);
+            return status;
+        }
+        status = ring_buffer_write(&info->rb_infos[DRIVER_PRINTS_RB_ID],
+                                   buf, length, 1);
+        if (status != WIFI_SUCCESS) {
+            ALOGE("Failed to write kernel prints rb payload %d", status);
+            return status;
+        }
+    } else {
+        return WIFI_ERROR_NOT_AVAILABLE;
+    }
+
+    return WIFI_SUCCESS;
+}
+
 wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
 {
     tAniNlHdr *wnl = (tAniNlHdr *)nlmsg_hdr(msg);
@@ -1443,6 +1519,10 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                     }
                 }
             }
+        }
+    } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_LOG) {
+        if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_PRINT_TYPE) {
+            process_driver_prints(info, (u8 *)(wnl + 1), wnl->wmsg.length);
         }
     } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_CNSS_DIAG) {
         uint16_t diag_fw_type;
