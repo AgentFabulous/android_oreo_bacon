@@ -53,4 +53,5 @@ wifi_error rb_start_logging(struct rb_info *rb_info, u32 verbose_level,
 int is_rb_name_match(struct rb_info *rb_info, char *name);
 wifi_error ring_buffer_write(struct rb_info *rb_info, u8 *buf, size_t length,
                              int no_of_records);
+void push_out_rb_data(void *cb_ctx);
 #endif /* __RB_WRAPPER_H */

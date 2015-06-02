@@ -134,7 +134,6 @@ int ack_handler(struct nl_msg *msg, void *arg)
 {
     int *err = (int *)arg;
     *err = 0;
-    ALOGD("%s invoked",__func__);
     return NL_STOP;
 }
 
@@ -142,7 +141,6 @@ int finish_handler(struct nl_msg *msg, void *arg)
 {
     int *ret = (int *)arg;
     *ret = 0;
-    ALOGD("%s called",__func__);
     return NL_SKIP;
 }
 
@@ -157,7 +155,6 @@ int error_handler(struct sockaddr_nl *nla,
 }
 static int no_seq_check(struct nl_msg *msg, void *arg)
 {
-    ALOGD("no_seq_check received");
     return NL_OK;
 }
 
@@ -203,6 +200,16 @@ static wifi_error wifi_init_user_sock(hal_info *info)
         return WIFI_ERROR_UNKNOWN;
     }
 
+    /* Set the socket buffer size */
+    if (nl_socket_set_buffer_size(user_sock, (256*1024), 0) < 0) {
+        ALOGE("Could not set size for user_sock: %s",
+                   strerror(errno));
+        /* continue anyway with the default (smaller) buffer */
+    }
+    else {
+        ALOGI("nl_socket_set_buffer_size successful for user_sock");
+    }
+
     struct nl_cb *cb = nl_socket_get_cb(user_sock);
     if (cb == NULL) {
         ALOGE("Could not get cb");
@@ -229,36 +236,6 @@ static wifi_error wifi_init_user_sock(hal_info *info)
     return WIFI_SUCCESS;
 }
 
-static wifi_error wifi_register_for_debug_events(hal_info *info)
-{
-    u8 buf[sizeof(tAniNlHdr) + sizeof(tAniNlAppRegReq)];
-    int sock_fd = info->user_sock->s_fd;
-    tAniNlHdr *wnl;
-    tAniNlAppRegReq *regReq;
-    struct nlmsghdr *nlh;
-
-    memset(buf, 0, sizeof(buf));
-
-    nlh = (struct nlmsghdr *)buf;
-
-    nlh->nlmsg_len = sizeof(tAniNlHdr) + sizeof(tAniNlAppRegReq);
-    nlh->nlmsg_pid = getpid();
-    nlh->nlmsg_type = ANI_NL_MSG_PUMAC;
-    nlh->nlmsg_flags = NLM_F_REQUEST;
-    nlh->nlmsg_seq++;
-    wnl = (tAniNlHdr *)nlh;
-    wnl->radio = 0;
-    wnl->wmsg.length =  sizeof(tAniNlAppRegReq);
-    wnl->wmsg.type = htons(ANI_NL_MSG_LOG_REG_TYPE);
-    regReq = (tAniNlAppRegReq *)(wnl + 1);
-    regReq->pid = getpid();
-    if (sendto(sock_fd, (char*)wnl, nlh->nlmsg_len,0,NULL, 0) < 0) {
-        ALOGI("Failed to send registration msg");
-        return WIFI_ERROR_UNKNOWN;
-    }
-    return WIFI_SUCCESS;
-}
-
 /*initialize function pointer table with Qualcomm HAL API*/
 wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     if (fn == NULL) {
@@ -281,14 +258,36 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_significant_change_handler = wifi_set_significant_change_handler;
     fn->wifi_reset_significant_change_handler = wifi_reset_significant_change_handler;
     fn->wifi_get_gscan_capabilities = wifi_get_gscan_capabilities;
+    fn->wifi_set_link_stats = wifi_set_link_stats;
     fn->wifi_get_link_stats = wifi_get_link_stats;
+    fn->wifi_clear_link_stats = wifi_clear_link_stats;
     fn->wifi_get_valid_channels = wifi_get_valid_channels;
     fn->wifi_rtt_range_request = wifi_rtt_range_request;
     fn->wifi_rtt_range_cancel = wifi_rtt_range_cancel;
     fn->wifi_get_rtt_capabilities = wifi_get_rtt_capabilities;
     fn->wifi_set_nodfs_flag = wifi_set_nodfs_flag;
+    fn->wifi_start_logging = wifi_start_logging;
     fn->wifi_set_epno_list = wifi_set_epno_list;
     fn->wifi_set_country_code = wifi_set_country_code;
+    fn->wifi_enable_tdls = wifi_enable_tdls;
+    fn->wifi_disable_tdls = wifi_disable_tdls;
+    fn->wifi_get_tdls_status = wifi_get_tdls_status;
+    fn->wifi_get_tdls_capabilities = wifi_get_tdls_capabilities;
+    fn->wifi_get_firmware_memory_dump = wifi_get_firmware_memory_dump;
+    fn->wifi_set_log_handler = wifi_set_log_handler;
+    fn->wifi_set_alert_handler = wifi_set_alert_handler;
+    fn->wifi_get_firmware_version = wifi_get_firmware_version;
+    fn->wifi_get_ring_buffers_status = wifi_get_ring_buffers_status;
+    fn->wifi_get_logger_supported_feature_set = wifi_get_logger_supported_feature_set;
+    fn->wifi_get_ring_data = wifi_get_ring_data;
+    fn->wifi_get_driver_version = wifi_get_driver_version;
+    fn->wifi_set_passpoint_list = wifi_set_passpoint_list;
+    fn->wifi_reset_passpoint_list = wifi_reset_passpoint_list;
+    fn->wifi_set_bssid_blacklist = wifi_set_bssid_blacklist;
+    fn->wifi_enable_lazy_roam = wifi_enable_lazy_roam;
+    fn->wifi_set_bssid_preference = wifi_set_bssid_preference;
+    fn->wifi_set_gscan_roam_params = wifi_set_gscan_roam_params;
+    fn->wifi_set_ssid_white_list = wifi_set_ssid_white_list;
 
     return WIFI_SUCCESS;
 }
@@ -400,7 +399,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
     ret = wifi_init_user_sock(info);
     if (ret != WIFI_SUCCESS) {
         ALOGE("Failed to alloc user socket");
-        return ret;
+        goto unload;
     }
 
     if (!is_wifi_driver_loaded()) {
@@ -453,6 +452,15 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
+    info->pkt_stats = (struct pkt_stats_s *)malloc(sizeof(struct pkt_stats_s));
+    if (!info->pkt_stats) {
+        ALOGE("%s: malloc Failed for size: %d",
+                __FUNCTION__, sizeof(struct pkt_stats_s));
+        ret = WIFI_ERROR_OUT_OF_MEMORY;
+        goto unload;
+    }
+
+
     ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d Supported"
             " features : %x", NL80211_CMD_VENDOR, info->supported_feature_set);
 
@@ -465,6 +473,7 @@ unload:
         if (info) {
             if (info->cmd) free(info->cmd);
             if (info->event_cb) free(info->event_cb);
+            if (info->user_sock) nl_socket_free(info->user_sock);
             free(info);
         }
     }
@@ -509,6 +518,7 @@ static void internal_cleaned_up_handler(wifi_handle handle)
         info->user_sock = NULL;
     }
 
+    free(info->pkt_stats);
     wifi_logger_ring_buffers_deinit(info);
 
     (*cleaned_up_handler)(handle);
@@ -564,10 +574,6 @@ void wifi_event_loop(wifi_handle handle)
         info->in_event_loop = true;
     }
 
-    if (wifi_register_for_debug_events(info)) {
-        ALOGE("Failed to register for diag events");
-    }
-
     pollfd pfd[2];
     memset(&pfd, 0, 2*sizeof(pfd[0]));
 
@@ -608,7 +614,6 @@ static int user_sock_message_handler(nl_msg *msg, void *arg)
     wifi_handle handle = (wifi_handle)arg;
     hal_info *info = getHalInfo(handle);
 
-    //ALOGI("Event triggered");
     diag_message_handler(info, msg);
 
     return NL_OK;

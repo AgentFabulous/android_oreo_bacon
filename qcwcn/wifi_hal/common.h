@@ -43,8 +43,8 @@
 #include "nl80211_copy.h"
 
 #include <utils/Log.h>
-#include "wifi_logger.h"
 #include "rb_wrapper.h"
+#include "pkt_stats.h"
 
 #define SOCKET_BUFFER_SIZE      (32768U)
 #define RECV_BUF_SIZE           (4096)
@@ -54,6 +54,7 @@
 
 #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MAC_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
+#define BIT(x) (1 << (x))
 
 typedef int16_t s16;
 typedef int32_t s32;
@@ -114,6 +115,7 @@ typedef struct hal_info_s {
     void (*on_ring_buffer_data) (char *ring_name, char *buffer, int buffer_size,
           wifi_ring_buffer_status *status);
     void (*on_alert) (wifi_request_id id, char *buffer, int buffer_size, int err_code);
+    struct pkt_stats_s *pkt_stats;
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);

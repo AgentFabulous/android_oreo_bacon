@@ -67,8 +67,8 @@ class WifiLoggerCommand : public WifiVendorCommand
 {
 private:
     WifiLoggerCallbackHandler mHandler;
-    char                      **mVersion;
-    int                       *mVersionLen;
+    char                      *mVersion;
+    int                       mVersionLen;
     u32                       *mSupportedSet;
     int                       mRequestId;
     bool                      mWaitforRsp;
@@ -93,12 +93,14 @@ public:
     /* Takes wait time in seconds. */
     virtual int timed_wait(u16 wait_time);
     virtual void waitForRsp(bool wait);
-    virtual void setVersionInfo(char **buffer, int *buffer_size);
+    virtual void setVersionInfo(char *buffer, int buffer_size);
     virtual void setFeatureSet(u32 *support);
 };
 void rb_timerhandler(hal_info *info);
 wifi_error wifi_logger_ring_buffers_init(hal_info *info);
 void wifi_logger_ring_buffers_deinit(hal_info *info);
+void push_out_all_ring_buffers(hal_info *info);
+void send_alert(hal_info *info, int reason_code);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
