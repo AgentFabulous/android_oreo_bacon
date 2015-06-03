@@ -84,8 +84,10 @@ LLStatsCommand* LLStatsCommand::instance(wifi_handle handle)
     {
         if (handle != getWifiHandle(mLLStatsCommandInstance->mInfo))
         {
-            ALOGE("Handle different");
-            return NULL;
+            /* upper layer must have cleaned up the handle and reinitialized,
+               so we need to update the same */
+            ALOGE("Handle different, update the handle");
+            mLLStatsCommandInstance->mInfo = (hal_info *)handle;
         }
     }
     ALOGV("LLStatsCommand %p created already", mLLStatsCommandInstance);

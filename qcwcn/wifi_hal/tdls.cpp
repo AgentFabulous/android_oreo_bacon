@@ -73,8 +73,10 @@ TdlsCommand* TdlsCommand::instance(wifi_handle handle)
     {
         if (handle != getWifiHandle(mTdlsCommandInstance->mInfo))
         {
-            ALOGE("Handle different");
-            return NULL;
+            /* upper layer must have cleaned up the handle and reinitialized,
+               so we need to update the same */
+            ALOGI("Handle different, update the handle");
+            mTdlsCommandInstance->mInfo = (hal_info *)handle;
         }
     }
     ALOGV("TdlsCommand %p created already", mTdlsCommandInstance);
