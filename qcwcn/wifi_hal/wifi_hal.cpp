@@ -465,6 +465,14 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
+    info->exit_sockets[0] = -1;
+    info->exit_sockets[1] = -1;
+
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, info->exit_sockets) == -1) {
+        ALOGE("Failed to create exit socket pair");
+        ret = WIFI_ERROR_UNKNOWN;
+        goto unload;
+    }
 
     ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d Supported"
             " features : %x", NL80211_CMD_VENDOR, info->supported_feature_set);
@@ -526,6 +534,16 @@ static void internal_cleaned_up_handler(wifi_handle handle)
     free(info->pkt_stats);
     wifi_logger_ring_buffers_deinit(info);
 
+    if (info->exit_sockets[0] >= 0) {
+        close(info->exit_sockets[0]);
+        info->exit_sockets[0] = -1;
+    }
+
+    if (info->exit_sockets[1] >= 0) {
+        close(info->exit_sockets[1]);
+        info->exit_sockets[1] = -1;
+    }
+
     (*cleaned_up_handler)(handle);
     pthread_mutex_destroy(&info->cb_lock);
     free(info);
@@ -535,11 +553,17 @@ static void internal_cleaned_up_handler(wifi_handle handle)
 
 void wifi_cleanup(wifi_handle handle, wifi_cleaned_up_handler handler)
 {
+    if (!handle) {
+        ALOGE("Handle is null");
+        return;
+    }
+
     hal_info *info = getHalInfo(handle);
     info->cleaned_up_handler = handler;
     info->clean_up = true;
 
-    ALOGI("Wifi cleanup completed");
+    TEMP_FAILURE_RETRY(write(info->exit_sockets[0], "E", 1));
+    ALOGI("Sent msg on exit sock to unblock poll()");
 }
 
 static int internal_pollin_handler(wifi_handle handle, struct nl_sock *sock)
@@ -579,8 +603,8 @@ void wifi_event_loop(wifi_handle handle)
         info->in_event_loop = true;
     }
 
-    pollfd pfd[2];
-    memset(&pfd, 0, 2*sizeof(pfd[0]));
+    pollfd pfd[3];
+    memset(&pfd, 0, 3*sizeof(pfd[0]));
 
     pfd[0].fd = nl_socket_get_fd(info->event_sock);
     pfd[0].events = POLLIN;
@@ -588,14 +612,18 @@ void wifi_event_loop(wifi_handle handle)
     pfd[1].fd = nl_socket_get_fd(info->user_sock);
     pfd[1].events = POLLIN;
 
+    pfd[2].fd = info->exit_sockets[1];
+    pfd[2].events = POLLIN;
+
     /* TODO: Add support for timeouts */
 
     do {
         int timeout = -1;                   /* Infinite timeout */
         pfd[0].revents = 0;
         pfd[1].revents = 0;
+        pfd[2].revents = 0;
         //ALOGI("Polling sockets");
-        int result = poll(pfd, 2, -1);
+        int result = poll(pfd, 3, -1);
         if (result < 0) {
             ALOGE("Error polling socket");
         } else {

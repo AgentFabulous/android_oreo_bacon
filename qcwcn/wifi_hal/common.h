@@ -116,6 +116,9 @@ typedef struct hal_info_s {
           wifi_ring_buffer_status *status);
     void (*on_alert) (wifi_request_id id, char *buffer, int buffer_size, int err_code);
     struct pkt_stats_s *pkt_stats;
+
+    /* socket pair used to exit from blocking poll*/
+    int exit_sockets[2];
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);
