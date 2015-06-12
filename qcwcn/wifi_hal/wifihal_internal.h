@@ -37,7 +37,7 @@
 #include "wifi_hal.h"
 
 #define WIFIHAL_LOWI_MAJOR_VERSION      1
-#define WIFIHAL_LOWI_MINOR_VERSION      0
+#define WIFIHAL_LOWI_MINOR_VERSION      1
 #define WIFIHAL_LOWI_MICRO_VERSION      0
 
 /* LOWI supported capabilities bit masks */
@@ -117,6 +117,16 @@ typedef struct
 
   wifi_error (*reset_ssid_hotlist)(wifi_request_id id,
                                    wifi_interface_handle iface);
+
+  // API to configure the LCI. Used in RTT Responder mode only
+  wifi_error (*rtt_set_lci)(wifi_request_id id,
+                            wifi_interface_handle iface,
+                            wifi_lci_information *lci);
+
+  // API to configure the LCR. Used in RTT Responder mode only.
+  wifi_error (*rtt_set_lcr)(wifi_request_id id,
+                            wifi_interface_handle iface,
+                            wifi_lcr_information *lcr);
 
 } lowi_cb_table_t;
 
