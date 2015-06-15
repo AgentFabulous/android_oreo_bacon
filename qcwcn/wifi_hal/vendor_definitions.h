@@ -594,6 +594,8 @@ enum qca_wlan_vendor_attr_gscan_config_params
     QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM_RSSI_LOW,
     /* Signed 32-bit value */
     QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM_RSSI_HIGH,
+    /* Unsigned 32-bit value; a bitmask w/additional gscan config flag. */
+    QCA_WLAN_VENDOR_ATTR_GSCAN_CONFIGURATION_FLAGS,
 
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_AFTER_LAST,
