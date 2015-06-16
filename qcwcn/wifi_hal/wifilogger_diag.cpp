@@ -486,6 +486,7 @@ static wifi_error process_addba_failed_event(hal_info *info,
     pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
                      (pRingBufferEntry + 1);
 
+    pAddBAFailed = (wlan_add_block_ack_failed_payload_type *)buf;
     addBAFailedVenData.ucBaTid = pAddBAFailed->ucBaTid;
     addBAFailedVenData.fInitiator = pAddBAFailed->fInitiator;
 
