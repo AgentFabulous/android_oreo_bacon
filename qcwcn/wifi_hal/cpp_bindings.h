@@ -276,6 +276,7 @@ public:
     int put_bytes(int attribute, const char *data, int len) {
         return nla_put(mMsg, attribute, len, data);
     }
+
 private:
     WifiRequest(const WifiRequest&);        // hide copy constructor to prevent copies
 
@@ -452,6 +453,10 @@ public:
 
     virtual int put_bytes(int attribute, const char *data, int len);
 
+    virtual wifi_error get_mac_addr(struct nlattr **tb_vendor,
+                                int attribute,
+                                mac_addr addr);
+
 protected:
 
     /* Override this method to parse reply and dig out data; save it in the corresponding
@@ -469,4 +474,7 @@ protected:
         nla_ok(pos, rem); \
         pos = (nlattr *)nla_next(pos, &(rem)))
 
+wifi_error initialize_vendor_cmd(wifi_interface_handle iface,
+                                 u32 subcmd,
+                                 WifiVendorCommand **vCommand);
 #endif

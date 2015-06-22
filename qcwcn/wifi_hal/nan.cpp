@@ -428,10 +428,12 @@ NanCommand* NanCommand::instance(wifi_handle handle)
         return mNanCommandInstance;
     }
     else
-        {
+    {
         if (handle != getWifiHandle(mNanCommandInstance->mInfo)) {
-            ALOGE("Handle different");
-            return NULL;
+            /* upper layer must have cleaned up the handle and reinitialized,
+               so we need to update the same */
+            ALOGI("Handle different, update the handle");
+            mNanCommandInstance->mInfo = (hal_info *)handle;
         }
     }
     ALOGV("NanCommand %p created already", mNanCommandInstance);

@@ -288,6 +288,11 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_bssid_preference = wifi_set_bssid_preference;
     fn->wifi_set_gscan_roam_params = wifi_set_gscan_roam_params;
     fn->wifi_set_ssid_white_list = wifi_set_ssid_white_list;
+    fn->wifi_start_sending_offloaded_packet =
+            wifi_start_sending_offloaded_packet;
+    fn->wifi_stop_sending_offloaded_packet = wifi_stop_sending_offloaded_packet;
+    fn->wifi_start_rssi_monitoring = wifi_start_rssi_monitoring;
+    fn->wifi_stop_rssi_monitoring = wifi_stop_rssi_monitoring;
 
     return WIFI_SUCCESS;
 }
@@ -460,6 +465,14 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
+    info->exit_sockets[0] = -1;
+    info->exit_sockets[1] = -1;
+
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, info->exit_sockets) == -1) {
+        ALOGE("Failed to create exit socket pair");
+        ret = WIFI_ERROR_UNKNOWN;
+        goto unload;
+    }
 
     ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d Supported"
             " features : %x", NL80211_CMD_VENDOR, info->supported_feature_set);
@@ -521,6 +534,16 @@ static void internal_cleaned_up_handler(wifi_handle handle)
     free(info->pkt_stats);
     wifi_logger_ring_buffers_deinit(info);
 
+    if (info->exit_sockets[0] >= 0) {
+        close(info->exit_sockets[0]);
+        info->exit_sockets[0] = -1;
+    }
+
+    if (info->exit_sockets[1] >= 0) {
+        close(info->exit_sockets[1]);
+        info->exit_sockets[1] = -1;
+    }
+
     (*cleaned_up_handler)(handle);
     pthread_mutex_destroy(&info->cb_lock);
     free(info);
@@ -530,11 +553,17 @@ static void internal_cleaned_up_handler(wifi_handle handle)
 
 void wifi_cleanup(wifi_handle handle, wifi_cleaned_up_handler handler)
 {
+    if (!handle) {
+        ALOGE("Handle is null");
+        return;
+    }
+
     hal_info *info = getHalInfo(handle);
     info->cleaned_up_handler = handler;
     info->clean_up = true;
 
-    ALOGI("Wifi cleanup completed");
+    TEMP_FAILURE_RETRY(write(info->exit_sockets[0], "E", 1));
+    ALOGI("Sent msg on exit sock to unblock poll()");
 }
 
 static int internal_pollin_handler(wifi_handle handle, struct nl_sock *sock)
@@ -574,8 +603,8 @@ void wifi_event_loop(wifi_handle handle)
         info->in_event_loop = true;
     }
 
-    pollfd pfd[2];
-    memset(&pfd, 0, 2*sizeof(pfd[0]));
+    pollfd pfd[3];
+    memset(&pfd, 0, 3*sizeof(pfd[0]));
 
     pfd[0].fd = nl_socket_get_fd(info->event_sock);
     pfd[0].events = POLLIN;
@@ -583,14 +612,18 @@ void wifi_event_loop(wifi_handle handle)
     pfd[1].fd = nl_socket_get_fd(info->user_sock);
     pfd[1].events = POLLIN;
 
+    pfd[2].fd = info->exit_sockets[1];
+    pfd[2].events = POLLIN;
+
     /* TODO: Add support for timeouts */
 
     do {
         int timeout = -1;                   /* Infinite timeout */
         pfd[0].revents = 0;
         pfd[1].revents = 0;
+        pfd[2].revents = 0;
         //ALOGI("Polling sockets");
-        int result = poll(pfd, 2, -1);
+        int result = poll(pfd, 3, -1);
         if (result < 0) {
             ALOGE("Error polling socket");
         } else {
@@ -994,6 +1027,112 @@ wifi_error wifi_set_nodfs_flag(wifi_interface_handle handle, u32 nodfs)
 
     ret = vCommand->requestResponse();
     /* Don't check response since we aren't expecting one */
+
+cleanup:
+    delete vCommand;
+    return (wifi_error)ret;
+}
+
+wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
+                                               wifi_interface_handle iface,
+                                               u8 *ip_packet,
+                                               u16 ip_packet_len,
+                                               u8 *src_mac_addr,
+                                               u8 *dst_mac_addr,
+                                               u32 period_msec)
+{
+    int ret = WIFI_SUCCESS;
+    struct nlattr *nlData;
+    WifiVendorCommand *vCommand = NULL;
+
+    ret = initialize_vendor_cmd(iface,
+                                QCA_NL80211_VENDOR_SUBCMD_OFFLOADED_PACKETS,
+                                &vCommand);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __func__);
+        return (wifi_error)ret;
+    }
+
+    ALOGI("ip packet length : %u\nIP Packet:", ip_packet_len);
+    hexdump(ip_packet, ip_packet_len);
+    ALOGI("Src Mac Address: "MAC_ADDR_STR"\nDst Mac Address: "MAC_ADDR_STR
+          "\nPeriod in msec : %u", MAC_ADDR_ARRAY(src_mac_addr),
+          MAC_ADDR_ARRAY(dst_mac_addr), period_msec);
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (vCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_SENDING_CONTROL,
+            QCA_WLAN_OFFLOADED_PACKETS_SENDING_START) ||
+        vCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_REQUEST_ID,
+            id) ||
+        vCommand->put_bytes(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_IP_PACKET,
+            (const char *)ip_packet, ip_packet_len) ||
+        vCommand->put_addr(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_SRC_MAC_ADDR,
+            src_mac_addr) ||
+        vCommand->put_addr(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_DST_MAC_ADDR,
+            dst_mac_addr) ||
+        vCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_PERIOD,
+            period_msec))
+    {
+        goto cleanup;
+    }
+
+    vCommand->attr_end(nlData);
+
+    ret = vCommand->requestResponse();
+    if (ret < 0)
+        goto cleanup;
+
+cleanup:
+    delete vCommand;
+    return (wifi_error)ret;
+}
+
+wifi_error wifi_stop_sending_offloaded_packet(wifi_request_id id,
+                                              wifi_interface_handle iface)
+{
+    int ret = WIFI_SUCCESS;
+    struct nlattr *nlData;
+    WifiVendorCommand *vCommand = NULL;
+
+    ret = initialize_vendor_cmd(iface,
+                                QCA_NL80211_VENDOR_SUBCMD_OFFLOADED_PACKETS,
+                                &vCommand);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __func__);
+        return (wifi_error)ret;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (vCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_SENDING_CONTROL,
+            QCA_WLAN_OFFLOADED_PACKETS_SENDING_STOP) ||
+        vCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_REQUEST_ID,
+            id))
+    {
+        goto cleanup;
+    }
+
+
+    vCommand->attr_end(nlData);
+
+    ret = vCommand->requestResponse();
+    if (ret < 0)
+        goto cleanup;
 
 cleanup:
     delete vCommand;

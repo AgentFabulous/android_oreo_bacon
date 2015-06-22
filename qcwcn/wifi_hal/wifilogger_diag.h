@@ -42,6 +42,7 @@
 #define WIFI_HAL_USER_SOCK_PORT    646
 #define WLAN_NL_MSG_CNSS_HOST_EVENT_LOG    17
 #define ANI_NL_MSG_LOG_HOST_EVENT_LOG_TYPE 0x5050
+#define ANI_NL_MSG_LOG_HOST_PRINT_TYPE 89
 
 #define WLAN_PKT_LOG_STATS            0x18E0
 
@@ -76,9 +77,9 @@ enum wifilogger_host_diag_type {
 
 enum wlan_diag_frame_type {
      WLAN_DIAG_TYPE_CONFIG,
-     WLAN_DIAG_TYPE_EVENT,
-     WLAN_DIAG_TYPE_LOG,
-     WLAN_DIAG_TYPE_MSG,
+     WLAN_DIAG_TYPE_EVENT, /* Diag Events */
+     WLAN_DIAG_TYPE_LOG, /* Diag Logs */
+     WLAN_DIAG_TYPE_MSG, /* F3 messages */
      WLAN_DIAG_TYPE_LEGACY_MSG,
 };
 
@@ -102,17 +103,9 @@ typedef struct {
 }__attribute__((packed)) dbglog_slot;
 
 typedef enum eAniNlModuleTypes {
-    ANI_NL_MSG_NETSIM = ANI_NL_MSG_BASE,// NetSim Messages (to the server)
-    ANI_NL_MSG_PUMAC,       // Messages for/from the Upper MAC driver
-    ANI_NL_MSG_WNS,         // Messages for the Wireless Networking
-                            //  Services module(s)
-    ANI_NL_MSG_MACSW,       // Messages from MAC
-    ANI_NL_MSG_ES,          // Messages from ES
-    ANI_NL_MSG_WSM,         // Message from the WSM in user space
-    ANI_NL_MSG_DVT,         // Message from the DVT application
-    ANI_NL_MSG_PTT,         // Message from the PTT application
-    ANI_NL_MSG_MAC_CLONE,     //Message from the Mac clone App
-    ANI_NL_MSG_LOG = ANI_NL_MSG_BASE + 0x0C, // Message for WLAN logging
+    ANI_NL_MSG_PUMAC = ANI_NL_MSG_BASE + 0x01,
+    ANI_NL_MSG_CNSS_DIAG = ANI_NL_MSG_BASE + 0x0B,
+    ANI_NL_MSG_LOG,
     ANI_NL_MSG_MAX
 } tAniNlModTypes;
 
@@ -158,7 +151,15 @@ typedef struct
 {
     u32 timestamp:24;
     u32 diag_event_type:8;
-    u16 payload_len;
+    /* Below 16-bit field has different formats based on event type */
+    union {
+        u16 payload_len;
+        struct {
+            u8 payload_len;
+            u8 vdev_level:3;
+            u8 vdev_id:5;
+        }__attribute__((packed)) msg_hdr;
+    }__attribute__((packed)) u;
     u16 diag_id;
     u8  payload[0];
 }__attribute__((packed)) fw_diag_msg_hdr_t;

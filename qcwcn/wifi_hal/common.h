@@ -50,7 +50,7 @@
 #define RECV_BUF_SIZE           (4096)
 #define DEFAULT_EVENT_CB_SIZE   (64)
 #define DEFAULT_CMD_SIZE        (64)
-#define NUM_RING_BUFS           3
+#define NUM_RING_BUFS           5
 
 #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MAC_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
@@ -116,6 +116,9 @@ typedef struct hal_info_s {
           wifi_ring_buffer_status *status);
     void (*on_alert) (wifi_request_id id, char *buffer, int buffer_size, int err_code);
     struct pkt_stats_s *pkt_stats;
+
+    /* socket pair used to exit from blocking poll*/
+    int exit_sockets[2];
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);
@@ -137,6 +140,14 @@ wifi_handle getWifiHandle(hal_info *info);
 wifi_interface_handle getIfaceHandle(interface_info *info);
 
 
+wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
+        wifi_interface_handle iface, u8 *ip_packet, u16 ip_packet_len,
+        u8 *src_mac_addr, u8 *dst_mac_addr, u32 period_msec);
+wifi_error wifi_stop_sending_offloaded_packet(wifi_request_id id,
+        wifi_interface_handle iface);
+wifi_error wifi_start_rssi_monitoring(wifi_request_id id, wifi_interface_handle
+        iface, s8 max_rssi, s8 min_rssi, wifi_rssi_event_handler eh);
+wifi_error wifi_stop_rssi_monitoring(wifi_request_id id, wifi_interface_handle iface);
 // some common macros
 
 #define min(x, y)       ((x) < (y) ? (x) : (y))
@@ -146,7 +157,7 @@ wifi_interface_handle getIfaceHandle(interface_info *info);
 extern "C"
 {
 #endif /* __cplusplus */
-void hexdump(char *bytes, u16 len);
+void hexdump(void *bytes, u16 len);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

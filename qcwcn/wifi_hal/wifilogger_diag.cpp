@@ -99,9 +99,12 @@ static wifi_error update_connectivity_ring_buf(hal_info *info,
 
     /* Write if verbose level and handler are set */
     if (info->rb_infos[CONNECTIVITY_EVENTS_RB_ID].verbose_level >= 1 &&
-        info->on_ring_buffer_data)
+        info->on_ring_buffer_data) {
         return ring_buffer_write(&info->rb_infos[CONNECTIVITY_EVENTS_RB_ID],
                       (u8*)rbe, total_length, 1);
+    } else {
+        return WIFI_ERROR_NOT_AVAILABLE;
+    }
 
     return WIFI_SUCCESS;
 }
@@ -209,7 +212,7 @@ static wifi_error process_bt_coex_event(hal_info *info, u32 id,
             pConnectEvent->event = WIFI_EVENT_BT_COEX_BT_SCO_STOP;
         }
         break;
-        case EVENT_WIFI_BT_COEX_BT_HID_START:
+        case EVENT_WLAN_BT_COEX_BT_HID_START:
         {
             wlan_bt_coex_bt_hid_start_payload_type *pBtCoexHidStartPL;
             pBtCoexHidStartPL = (wlan_bt_coex_bt_hid_start_payload_type *)buf;
@@ -223,7 +226,7 @@ static wifi_error process_bt_coex_event(hal_info *info, u32 id,
             pConnectEvent->event = WIFI_EVENT_BT_COEX_BT_HID_START;
         }
         break;
-        case EVENT_WIFI_BT_COEX_BT_HID_STOP:
+        case EVENT_WLAN_BT_COEX_BT_HID_STOP:
         {
             wlan_bt_coex_bt_hid_stop_payload_type *pBtCoexHidStopPL;
             pBtCoexHidStopPL = (wlan_bt_coex_bt_hid_stop_payload_type *)buf;
@@ -264,8 +267,8 @@ static wifi_error process_bt_coex_event(hal_info *info, u32 id,
 
         pTlv = addLoggerTlv(WIFI_TAG_RSCO, sizeof(Rsco), &Rsco, pTlv);
         tot_len += sizeof(tlv_log) + sizeof(Rsco);
-    } else if ((pConnectEvent->event == EVENT_WLAN_BT_COEX_BT_SCO_START) ||
-               (pConnectEvent->event == EVENT_WLAN_BT_COEX_BT_SCO_STOP)) {
+    } else if ((pConnectEvent->event == EVENT_WLAN_BT_COEX_BT_HID_START) ||
+               (pConnectEvent->event == EVENT_WLAN_BT_COEX_BT_HID_STOP)) {
         pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
                             sizeof(bt_coex_hid_vendor_data_t),
                             (u8 *)&btCoexHidVenData, pTlv);
@@ -636,10 +639,10 @@ static wifi_error process_roam_event(hal_info *info, u32 id,
                    sizeof(roamScanConfigVenData.roam_scan_config));
 
             pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
-                                sizeof(wlan_roam_scan_config_payload_type),
-                                (u8 *)pRoamScanConfig, pTlv);
+                                sizeof(roam_scan_config_vendor_data_t),
+                                (u8 *)&roamScanConfigVenData, pTlv);
             tot_len += sizeof(tlv_log) +
-                       sizeof(wlan_roam_scan_config_payload_type);
+                       sizeof(roam_scan_config_vendor_data_t);
         }
         break;
     }
@@ -652,30 +655,68 @@ static wifi_error process_roam_event(hal_info *info, u32 id,
     return status;
 }
 
+wifi_error process_firmware_prints(hal_info *info, u8 *buf, u16 length)
+{
+    wifi_ring_buffer_entry rb_entry_hdr;
+    struct timeval time;
+    wifi_error status;
+
+    rb_entry_hdr.entry_size = length;
+    rb_entry_hdr.flags = RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
+    rb_entry_hdr.type = ENTRY_TYPE_DATA;
+    gettimeofday(&time, NULL);
+    rb_entry_hdr.timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+
+    /* Write if verbose and handler is set */
+    if (info->rb_infos[FIRMWARE_PRINTS_RB_ID].verbose_level >= 1 &&
+        info->on_ring_buffer_data) {
+        /* Write header and payload separately to avoid
+         * complete payload memcpy */
+        status = ring_buffer_write(&info->rb_infos[FIRMWARE_PRINTS_RB_ID],
+                                   (u8*)&rb_entry_hdr,
+                                   sizeof(wifi_ring_buffer_entry), 0);
+        if (status != WIFI_SUCCESS) {
+            ALOGE("Failed to write firmware prints rb header %d", status);
+            return status;
+        }
+        status = ring_buffer_write(&info->rb_infos[FIRMWARE_PRINTS_RB_ID],
+                                   buf, length, 1);
+        if (status != WIFI_SUCCESS) {
+            ALOGE("Failed to write firmware prints rb payload %d", status);
+            return status;
+        }
+    } else {
+        return WIFI_ERROR_NOT_AVAILABLE;
+    }
+
+    return WIFI_SUCCESS;
+}
+
 static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
 {
     u16 count = 0, id, payloadlen;
     wifi_error status;
-    fw_diag_msg_hdr_t *dmh;
+    fw_diag_msg_hdr_t *diag_msg_hdr;
 
     buf += 4;
     length -= 4;
 
     while (length > (count + sizeof(fw_diag_msg_hdr_t))) {
-        dmh = (fw_diag_msg_hdr_t *)(buf + count);
+        diag_msg_hdr = (fw_diag_msg_hdr_t *)(buf + count);
 
-        id = dmh->diag_id;
-        payloadlen = dmh->payload_len;
+        id = diag_msg_hdr->diag_id;
+        payloadlen = diag_msg_hdr->u.payload_len;
 
-        switch (dmh->diag_event_type) {
+        switch (diag_msg_hdr->diag_event_type) {
             case WLAN_DIAG_TYPE_EVENT:
             {
                 switch (id) {
                     case EVENT_WLAN_BT_COEX_BT_SCO_START:
                     case EVENT_WLAN_BT_COEX_BT_SCO_STOP:
-                    case EVENT_WIFI_BT_COEX_BT_HID_START:
-                    case EVENT_WIFI_BT_COEX_BT_HID_STOP:
-                        status = process_bt_coex_event(info, id, dmh->payload,
+                    case EVENT_WLAN_BT_COEX_BT_HID_START:
+                    case EVENT_WLAN_BT_COEX_BT_HID_STOP:
+                        status = process_bt_coex_event(info, id,
+                                                       diag_msg_hdr->payload,
                                                        payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process bt_coex event");
@@ -685,8 +726,8 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                     case EVENT_WLAN_BT_COEX_BT_SCAN_START:
                     case EVENT_WLAN_BT_COEX_BT_SCAN_STOP:
                         status = process_bt_coex_scan_event(info, id,
-                                                            dmh->payload,
-                                                            payloadlen);
+                                                       diag_msg_hdr->payload,
+                                                       payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process bt_coex_scan event");
                             return status;
@@ -698,7 +739,8 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                    case EVENT_WLAN_EXTSCAN_BUCKET_COMPLETED:
                    case EVENT_WLAN_EXTSCAN_FEATURE_STOP:
                    case EVENT_WLAN_EXTSCAN_RESULTS_AVAILABLE:
-                        status = process_extscan_event(info, id, dmh->payload,
+                        status = process_extscan_event(info, id,
+                                                       diag_msg_hdr->payload,
                                                        payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process extscan event");
@@ -709,7 +751,8 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                    case EVENT_WLAN_ROAM_SCAN_COMPLETE:
                    case EVENT_WLAN_ROAM_CANDIDATE_FOUND:
                    case EVENT_WLAN_ROAM_SCAN_CONFIG:
-                        status = process_roam_event(info, id, dmh->payload,
+                        status = process_roam_event(info, id,
+                                                    diag_msg_hdr->payload,
                                                     payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process roam event");
@@ -717,16 +760,18 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                         }
                         break;
                    case EVENT_WLAN_ADD_BLOCK_ACK_SUCCESS:
-                        status = process_addba_success_event(info, dmh->payload,
-                                                             payloadlen);
+                        status = process_addba_success_event(info,
+                                                       diag_msg_hdr->payload,
+                                                       payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process addba success event");
                             return status;
                         }
                         break;
                    case EVENT_WLAN_ADD_BLOCK_ACK_FAILED:
-                        status = process_addba_failed_event(info, dmh->payload,
-                                                            payloadlen);
+                        status = process_addba_failed_event(info,
+                                                      diag_msg_hdr->payload,
+                                                      payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process addba failed event");
                             return status;
@@ -743,6 +788,10 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
             break;
             case WLAN_DIAG_TYPE_MSG:
             {
+                /* Length field is only one byte for WLAN_DIAG_TYPE_MSG */
+                payloadlen = diag_msg_hdr->u.msg_hdr.payload_len;
+                process_firmware_prints(info, diag_msg_hdr->payload,
+                                        payloadlen);
             }
             break;
             default:
@@ -923,10 +972,13 @@ static wifi_error process_wakelock_event(hal_info *info, u8* buf, int length)
 
     /* Write if verbose and handler is set */
     if (info->rb_infos[POWER_EVENTS_RB_ID].verbose_level >= 1 &&
-        info->on_ring_buffer_data)
+        info->on_ring_buffer_data) {
         status = ring_buffer_write(&info->rb_infos[POWER_EVENTS_RB_ID],
                                    (u8*)pRingBufferEntry,
                                    len_ring_buffer_entry, 1);
+    } else {
+        status = WIFI_ERROR_NOT_AVAILABLE;
+    }
 
     if ((u8 *)pRingBufferEntry != wl_ring_buffer) {
         ALOGI("Message with more than RING_BUF_ENTRY_SIZE");
@@ -970,11 +1022,14 @@ static wifi_error update_stats_to_ring_buf(hal_info *info,
 
     // Write if verbose and handler is set
     if ((info->rb_infos[PKT_STATS_RB_ID].verbose_level >= VERBOSE_DEBUG_PROBLEM)
-        && info->on_ring_buffer_data)
+        && info->on_ring_buffer_data) {
         ring_buffer_write(&info->rb_infos[PKT_STATS_RB_ID],
                           (u8*)pRingBufferEntry,
                           size,
                           num_records);
+    } else {
+        return WIFI_ERROR_NOT_AVAILABLE;
+    }
 
     return WIFI_SUCCESS;
 }
@@ -1357,74 +1412,119 @@ static wifi_error parse_stats(hal_info *info, u8 *data, u32 buflen)
     return status;
 }
 
+wifi_error process_driver_prints(hal_info *info, u8 *buf, u16 length)
+{
+    wifi_ring_buffer_entry rb_entry_hdr;
+    struct timeval time;
+    wifi_error status;
+
+    rb_entry_hdr.entry_size = length;
+    rb_entry_hdr.flags = RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
+    rb_entry_hdr.type = ENTRY_TYPE_DATA;
+    gettimeofday(&time, NULL);
+    rb_entry_hdr.timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+
+    /* Write if verbose and handler is set */
+    if (info->rb_infos[DRIVER_PRINTS_RB_ID].verbose_level >= 1 &&
+        info->on_ring_buffer_data) {
+        /* Write header and payload separately to avoid
+         * complete payload memcpy */
+        status = ring_buffer_write(&info->rb_infos[DRIVER_PRINTS_RB_ID],
+                                   (u8*)&rb_entry_hdr,
+                                   sizeof(wifi_ring_buffer_entry), 0);
+        if (status != WIFI_SUCCESS) {
+            ALOGE("Failed to write kernel prints rb header %d", status);
+            return status;
+        }
+        status = ring_buffer_write(&info->rb_infos[DRIVER_PRINTS_RB_ID],
+                                   buf, length, 1);
+        if (status != WIFI_SUCCESS) {
+            ALOGE("Failed to write kernel prints rb payload %d", status);
+            return status;
+        }
+    } else {
+        return WIFI_ERROR_NOT_AVAILABLE;
+    }
+
+    return WIFI_SUCCESS;
+}
+
 wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
 {
     tAniNlHdr *wnl = (tAniNlHdr *)nlmsg_hdr(msg);
     u8 *buf;
     wifi_error status;
-    if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_EVENT_LOG_TYPE) {
-        uint32_t diag_host_type;
 
-        buf = (uint8_t *)(wnl + 1);
-        diag_host_type = *(uint32_t *)(buf);
-        ALOGV("diag type = %d", diag_host_type);
+    /* Check nlmsg_type also to avoid processing unintended msgs */
+    if (wnl->nlh.nlmsg_type == ANI_NL_MSG_PUMAC) {
+        if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_EVENT_LOG_TYPE) {
+            uint32_t diag_host_type;
 
-        buf +=  sizeof(uint32_t); //diag_type
-        if (diag_host_type == DIAG_TYPE_HOST_EVENTS) {
-            host_event_hdr_t *event_hdr =
-                          (host_event_hdr_t *)(buf);
-            ALOGV("diag event_id = %d length %d",
-                  event_hdr->event_id, event_hdr->length);
-            buf += sizeof(host_event_hdr_t);
-            switch (event_hdr->event_id) {
-                case EVENT_WLAN_WAKE_LOCK:
-                    process_wakelock_event(info, buf, event_hdr->length);
-                    break;
-                case EVENT_WLAN_PE:
-                    process_wlan_pe_event(info, buf, event_hdr->length);
-                    break;
-                case EVENT_WLAN_EAPOL:
-                    process_wlan_eapol_event(info, buf, event_hdr->length);
-                    break;
-                case EVENT_WLAN_LOG_COMPLETE:
-                    process_wlan_log_complete_event(info, buf, event_hdr->length);
-                    break;
-                default:
-                    return WIFI_SUCCESS;
-            }
-        } else if (diag_host_type == DIAG_TYPE_HOST_LOG_MSGS) {
-            drv_msg_t *drv_msg = (drv_msg_t *) (buf);
-            ALOGV("diag event_type = %0x length = %d",
-                  drv_msg->event_type, drv_msg->length);
-            if (drv_msg->event_type == WLAN_PKT_LOG_STATS) {
-                if ((info->pkt_stats->prev_seq_no + 1) !=
-                        drv_msg->u.pkt_stats_event.msg_seq_no) {
-                    ALOGE("Few pkt stats messages missed: rcvd = %d, prev = %d",
-                            drv_msg->u.pkt_stats_event.msg_seq_no,
-                            info->pkt_stats->prev_seq_no);
-                    if (info->pkt_stats->tx_stats_events) {
-                        info->pkt_stats->tx_stats_events = 0;
-                        memset(&info->pkt_stats->tx_stats, 0,
-                                sizeof(wifi_ring_per_packet_status_entry));
-                    }
+            buf = (uint8_t *)(wnl + 1);
+            diag_host_type = *(uint32_t *)(buf);
+            ALOGV("diag type = %d", diag_host_type);
+
+            buf +=  sizeof(uint32_t); //diag_type
+            if (diag_host_type == DIAG_TYPE_HOST_EVENTS) {
+                host_event_hdr_t *event_hdr =
+                              (host_event_hdr_t *)(buf);
+                ALOGV("diag event_id = %x length %d",
+                      event_hdr->event_id, event_hdr->length);
+                buf += sizeof(host_event_hdr_t);
+                switch (event_hdr->event_id) {
+                    case EVENT_WLAN_WAKE_LOCK:
+                        process_wakelock_event(info, buf, event_hdr->length);
+                        break;
+                    case EVENT_WLAN_PE:
+                        process_wlan_pe_event(info, buf, event_hdr->length);
+                        break;
+                    case EVENT_WLAN_EAPOL:
+                        process_wlan_eapol_event(info, buf, event_hdr->length);
+                        break;
+                    case EVENT_WLAN_LOG_COMPLETE:
+                        process_wlan_log_complete_event(info, buf, event_hdr->length);
+                        break;
+                    default:
+                        return WIFI_SUCCESS;
                 }
+            } else if (diag_host_type == DIAG_TYPE_HOST_LOG_MSGS) {
+                drv_msg_t *drv_msg = (drv_msg_t *) (buf);
+                ALOGV("diag event_type = %0x length = %d",
+                      drv_msg->event_type, drv_msg->length);
+                if (drv_msg->event_type == WLAN_PKT_LOG_STATS) {
+                    if ((info->pkt_stats->prev_seq_no + 1) !=
+                            drv_msg->u.pkt_stats_event.msg_seq_no) {
+                        ALOGE("Few pkt stats messages missed: rcvd = %d, prev = %d",
+                                drv_msg->u.pkt_stats_event.msg_seq_no,
+                                info->pkt_stats->prev_seq_no);
+                        if (info->pkt_stats->tx_stats_events) {
+                            info->pkt_stats->tx_stats_events = 0;
+                            memset(&info->pkt_stats->tx_stats, 0,
+                                    sizeof(wifi_ring_per_packet_status_entry));
+                        }
+                    }
 
-                info->pkt_stats->prev_seq_no =
-                    drv_msg->u.pkt_stats_event.msg_seq_no;
-                status = parse_stats(info,
-                        drv_msg->u.pkt_stats_event.payload,
-                        drv_msg->u.pkt_stats_event.payload_len);
-                if (status != WIFI_SUCCESS) {
-                    ALOGE("%s: Failed to parse Tx-Rx stats", __FUNCTION__);
-                    ALOGE("Received msg Seq_num : %d",
-                            drv_msg->u.pkt_stats_event.msg_seq_no);
-                    hexdump((char *)drv_msg->u.pkt_stats_event.payload,
+                    info->pkt_stats->prev_seq_no =
+                        drv_msg->u.pkt_stats_event.msg_seq_no;
+                    status = parse_stats(info,
+                            drv_msg->u.pkt_stats_event.payload,
                             drv_msg->u.pkt_stats_event.payload_len);
-                    return status;
+                    if (status != WIFI_SUCCESS) {
+                        ALOGE("%s: Failed to parse Tx-Rx stats", __FUNCTION__);
+                        ALOGE("Received msg Seq_num : %d",
+                                drv_msg->u.pkt_stats_event.msg_seq_no);
+                        hexdump((char *)drv_msg->u.pkt_stats_event.payload,
+                                drv_msg->u.pkt_stats_event.payload_len);
+                        return status;
+                    }
                 }
             }
         }
-    } else {
+    } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_LOG) {
+        if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_PRINT_TYPE) {
+            process_driver_prints(info, (u8 *)(wnl + 1), wnl->wmsg.length);
+        }
+    } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_CNSS_DIAG) {
         uint16_t diag_fw_type;
         uint32_t event_id;
         buf = (uint8_t *)NLMSG_DATA(wnl);

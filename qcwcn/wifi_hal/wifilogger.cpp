@@ -42,6 +42,8 @@
 char power_events_ring_name[] = "power_events_rb";
 char connectivity_events_ring_name[] = "connectivity_events_rb";
 char pkt_stats_ring_name[] = "pkt_stats_rb";
+char driver_prints_ring_name[] = "driver_prints_rb";
+char firmware_prints_ring_name[] = "firmware_prints_rb";
 
 static int get_ring_id(hal_info *info, char *ring_name)
 {
@@ -652,24 +654,51 @@ wifi_error wifi_logger_ring_buffers_init(hal_info *info)
                   POWER_EVENTS_RB_BUF_SIZE,
                   POWER_EVENTS_NUM_BUFS,
                   power_events_ring_name);
-    if (ret != WIFI_SUCCESS)
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to initialize power events ring buffer");
         goto cleanup;
+    }
 
     ret = rb_init(info, &info->rb_infos[CONNECTIVITY_EVENTS_RB_ID],
                   CONNECTIVITY_EVENTS_RB_ID,
                   CONNECTIVITY_EVENTS_RB_BUF_SIZE,
                   CONNECTIVITY_EVENTS_NUM_BUFS,
                   connectivity_events_ring_name);
-    if (ret != WIFI_SUCCESS)
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to initialize connectivity events ring buffer");
         goto cleanup;
+    }
 
     ret = rb_init(info, &info->rb_infos[PKT_STATS_RB_ID],
                   PKT_STATS_RB_ID,
                   PKT_STATS_RB_BUF_SIZE,
                   PKT_STATS_NUM_BUFS,
                   pkt_stats_ring_name);
-    if (ret != WIFI_SUCCESS)
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to initialize per packet stats ring buffer");
         goto cleanup;
+    }
+
+    ret = rb_init(info, &info->rb_infos[DRIVER_PRINTS_RB_ID],
+                  DRIVER_PRINTS_RB_ID,
+                  DRIVER_PRINTS_RB_BUF_SIZE,
+                  DRIVER_PRINTS_NUM_BUFS,
+                  driver_prints_ring_name);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to initialize driver prints ring buffer");
+        goto cleanup;
+    }
+
+    ret = rb_init(info, &info->rb_infos[FIRMWARE_PRINTS_RB_ID],
+                  FIRMWARE_PRINTS_RB_ID,
+                  FIRMWARE_PRINTS_RB_BUF_SIZE,
+                  FIRMWARE_PRINTS_NUM_BUFS,
+                  firmware_prints_ring_name);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to initialize firmware prints ring buffer");
+        goto cleanup;
+    }
+
     return ret;
 
 cleanup:

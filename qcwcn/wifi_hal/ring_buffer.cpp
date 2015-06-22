@@ -406,7 +406,7 @@ u8 *rb_get_read_buf(void *ctx, size_t *length)
         /* Move to the next buffer */
         rbc->rd_buf_no++;
         if (rbc->rd_buf_no == rbc->max_num_bufs) {
-            ALOGD("Write rolling over to the start of ring buffer");
+            ALOGD("Read rolling over to the start of ring buffer");
             rbc->rd_buf_no = 0;
         }
     } else {
