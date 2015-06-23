@@ -1055,7 +1055,7 @@ wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
 
     ALOGI("ip packet length : %u\nIP Packet:", ip_packet_len);
     hexdump(ip_packet, ip_packet_len);
-    ALOGI("Src Mac Address: "MAC_ADDR_STR"\nDst Mac Address: "MAC_ADDR_STR
+    ALOGI("Src Mac Address: " MAC_ADDR_STR "\nDst Mac Address: " MAC_ADDR_STR
           "\nPeriod in msec : %u", MAC_ADDR_ARRAY(src_mac_addr),
           MAC_ADDR_ARRAY(dst_mac_addr), period_msec);
 
