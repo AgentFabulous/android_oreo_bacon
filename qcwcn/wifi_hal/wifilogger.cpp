@@ -548,7 +548,7 @@ wifi_error wifi_set_log_handler(wifi_request_id id,
 
     info->on_ring_buffer_data = handler.on_ring_buffer_data;
     if (handler.on_ring_buffer_data == NULL) {
-        ALOGE("Input handler is NULL");
+        ALOGE("Set log handler is NULL");
         return WIFI_ERROR_UNKNOWN;
     }
     return WIFI_SUCCESS;
@@ -572,8 +572,8 @@ wifi_error wifi_set_alert_handler(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    if (handler.on_alert) {
-        ALOGE("Input handler is NULL");
+    if (handler.on_alert == NULL) {
+        ALOGE("Set alert handler is NULL");
         return WIFI_ERROR_UNKNOWN;
     }
     //TODO check locking
