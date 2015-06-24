@@ -1045,7 +1045,7 @@ wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
     struct nlattr *nlData;
     WifiVendorCommand *vCommand = NULL;
 
-    ret = initialize_vendor_cmd(iface,
+    ret = initialize_vendor_cmd(iface, id,
                                 QCA_NL80211_VENDOR_SUBCMD_OFFLOADED_PACKETS,
                                 &vCommand);
     if (ret != WIFI_SUCCESS) {
@@ -1104,7 +1104,7 @@ wifi_error wifi_stop_sending_offloaded_packet(wifi_request_id id,
     struct nlattr *nlData;
     WifiVendorCommand *vCommand = NULL;
 
-    ret = initialize_vendor_cmd(iface,
+    ret = initialize_vendor_cmd(iface, id,
                                 QCA_NL80211_VENDOR_SUBCMD_OFFLOADED_PACKETS,
                                 &vCommand);
     if (ret != WIFI_SUCCESS) {

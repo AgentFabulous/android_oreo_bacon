@@ -475,6 +475,7 @@ protected:
         pos = (nlattr *)nla_next(pos, &(rem)))
 
 wifi_error initialize_vendor_cmd(wifi_interface_handle iface,
+                                 wifi_request_id id,
                                  u32 subcmd,
                                  WifiVendorCommand **vCommand);
 #endif

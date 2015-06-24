@@ -55,6 +55,11 @@ RSSIMonitorCommand::~RSSIMonitorCommand()
     mRSSIMonitorCommandInstance = NULL;
 }
 
+void RSSIMonitorCommand::setReqId(wifi_request_id reqid)
+{
+    mId = reqid;
+}
+
 RSSIMonitorCommand* RSSIMonitorCommand::instance(wifi_handle handle,
                                                  wifi_request_id id)
 {
@@ -78,6 +83,7 @@ RSSIMonitorCommand* RSSIMonitorCommand::instance(wifi_handle handle,
             ALOGI("Handle different, update the handle");
             mRSSIMonitorCommandInstance->mInfo = (hal_info *)handle;
         }
+        mRSSIMonitorCommandInstance->setReqId(id);
     }
     ALOGV("RSSIMonitorCommand %p created already", mRSSIMonitorCommandInstance);
     return mRSSIMonitorCommandInstance;
@@ -123,10 +129,10 @@ int RSSIMonitorCommand::handleEvent(WifiEvent &event)
             /* If event has a different request_id, ignore that and use the
              *  request_id value which we're maintaining.
              */
-            if (reqId != wifi_request_id()) {
+            if (reqId != id()) {
                 ALOGE("%s: Event has Req. ID:%d <> Ours:%d, continue...",
-                    __FUNCTION__, reqId, wifi_request_id());
-                reqId = wifi_request_id();
+                    __FUNCTION__, reqId, id());
+                reqId = id();
             }
             ret = get_mac_addr(tb_vendor,
                     QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_CUR_BSSID,
@@ -175,9 +181,9 @@ int RSSIMonitorCommand::setCallbackHandler(wifi_rssi_event_handler nHandler,
     return ret;
 }
 
-wifi_error RSSIMonitorCommand::unregisterHandler(u32 subCmd, wifi_request_id id)
+wifi_error RSSIMonitorCommand::unregisterHandler(u32 subCmd, wifi_request_id reqid)
 {
-    if (id != (wifi_request_id)mVendor_id)
+    if (reqid != id())
         return WIFI_ERROR_INVALID_REQUEST_ID;
     unregisterVendorHandler(mVendor_id, subCmd);
     return WIFI_SUCCESS;
@@ -195,7 +201,7 @@ wifi_error wifi_start_rssi_monitoring(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     RSSIMonitorCommand *rssiCommand;
 
-    ret = initialize_vendor_cmd(iface,
+    ret = initialize_vendor_cmd(iface, id,
                                 QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI,
                                 &vCommand);
     if (ret != WIFI_SUCCESS) {
@@ -256,7 +262,7 @@ wifi_error wifi_stop_rssi_monitoring(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     RSSIMonitorCommand *rssiCommand;
 
-    ret = initialize_vendor_cmd(iface,
+    ret = initialize_vendor_cmd(iface, id,
                                 QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI,
                                 &vCommand);
     if (ret != WIFI_SUCCESS) {

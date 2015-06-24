@@ -999,6 +999,7 @@ wifi_error WifiVendorCommand::get_mac_addr(struct nlattr **tb_vendor,
 }
 
 wifi_error initialize_vendor_cmd(wifi_interface_handle iface,
+                                 wifi_request_id id,
                                  u32 subcmd,
                                  WifiVendorCommand **vCommand)
 {
@@ -1011,7 +1012,7 @@ wifi_error initialize_vendor_cmd(wifi_interface_handle iface,
         return WIFI_ERROR_INVALID_ARGS;
     }
 
-    *vCommand = new WifiVendorCommand(wifiHandle, 0,
+    *vCommand = new WifiVendorCommand(wifiHandle, id,
                                       OUI_QCA,
                                       subcmd);
     if (*vCommand == NULL) {
