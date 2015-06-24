@@ -120,6 +120,10 @@ typedef struct hal_info_s {
 
     /* socket pair used to exit from blocking poll*/
     int exit_sockets[2];
+    u32 rx_buf_size_allocated;
+    u32 rx_buf_size_occupied;
+    wifi_ring_buffer_entry *rx_aggr_pkts;
+    rx_aggr_stats aggr_stats;
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);

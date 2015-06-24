@@ -55,6 +55,11 @@ typedef struct {
 } __attribute__((packed)) wh_pktlog_hdr_t;
 
 /*Rx stats specific structures. */
+struct rx_attention {
+    u32 first_mpdu                      :  1; //[0]
+    u32 last_mpdu                       :  1; //[1]
+    u32 reserved2                       :  30; //[30:2]
+} __attribute__((packed));
 
 struct rx_mpdu_start {
     u32 reserved1                       : 13; //[12:0]
@@ -83,6 +88,13 @@ struct rx_msdu_start {
     u32 reserved3                       : 22; //[31:10]
 } __attribute__((packed));
 
+struct rx_msdu_end {
+    u32 reserved1[4];
+    u32 reserved2                       : 15;
+    u32 last_msdu                       :  1; //[15]
+    u32 reserved3                       : 16; //[31:16]
+} __attribute__((packed));
+
 struct rx_mpdu_end {
     u32 reserved1                       : 29; //[28:0]
     u32 tkip_mic_err                    :  1; //[29]
@@ -92,6 +104,12 @@ struct rx_mpdu_end {
 #define PREAMBLE_L_SIG_RATE     0x04
 #define PREAMBLE_VHT_SIG_A_1    0x08
 #define PREAMBLE_VHT_SIG_A_2    0x0c
+
+/* Wifi Logger preamble */
+#define WL_PREAMBLE_CCK  0
+#define WL_PREAMBLE_OFDM 1
+#define WL_PREAMBLE_HT   2
+#define WL_PREAMBLE_VHT  3
 
 #define BITMASK(x) ((1<<(x)) - 1 )
 /* Contains MCS related stats */
@@ -116,12 +134,15 @@ struct rx_ppdu_end {
     u32 reserved2[4];
 } __attribute__((packed));
 
+#define MAX_MSDUS_PER_MPDU 3
+#define MAX_RXMPDUS_PER_AMPDU 64
 #define RX_HTT_HDR_STATUS_LEN 64
 typedef struct {
-    u32 reserved1[2];
+    struct rx_attention attention;
+    u32 reserved1;
     struct rx_mpdu_start mpdu_start;
     struct rx_msdu_start msdu_start;
-    u32 reserved2[5];
+    struct rx_msdu_end   msdu_end;
     struct rx_mpdu_end   mpdu_end;
     struct rx_ppdu_start ppdu_start;
     struct rx_ppdu_end   ppdu_end;
@@ -246,6 +267,14 @@ typedef union {
     } mcs_s;
     u16 mcs;
 } MCS;
+
+typedef struct {
+    MCS RxMCS;
+    u16 last_transmit_rate;
+    u16 rssi;
+    u32 wb_timestamp;
+} rx_aggr_stats;
+
 
 typedef struct drv_msg_s
 {

@@ -39,7 +39,6 @@
 #include "wifilogger_vendor_tag_defs.h"
 #include "pkt_stats.h"
 
-#define RING_BUF_ENTRY_SIZE 512
 #define MAX_CONNECTIVITY_EVENTS 16 // should match the value in wifi_logger.h
 static event_remap_t events[MAX_CONNECTIVITY_EVENTS] = {
     {WLAN_PE_DIAG_ASSOC_REQ_EVENT, WIFI_EVENT_ASSOCIATION_REQUESTED},
@@ -1065,11 +1064,11 @@ static u16 get_rate(u16 mcs_r, u8 short_gi)
                                    {  0,   0, 720, 800,1560,1733, 3120, 3467}};
 
     mcs.mcs = mcs_r;
-    if ((mcs.mcs_s.preamble < 4) && (mcs.mcs_s.rate < 10)) {
+    if ((mcs.mcs_s.preamble <= WL_PREAMBLE_VHT) && (mcs.mcs_s.rate < 10)) {
         switch(mcs.mcs_s.preamble)
         {
-            case 0:
-            case 1:
+            case WL_PREAMBLE_CCK:
+            case WL_PREAMBLE_OFDM:
                 if(mcs.mcs_s.rate<8) {
                     tx_rate = rate_lookup [mcs.mcs_s.preamble][mcs.mcs_s.rate];
                     if (mcs.mcs_s.nss)
@@ -1078,7 +1077,7 @@ static u16 get_rate(u16 mcs_r, u8 short_gi)
                     ALOGE("Unexpected rate value");
                 }
             break;
-            case 2:
+            case WL_PREAMBLE_HT:
                 if(mcs.mcs_s.rate<8) {
                     if (!mcs.mcs_s.nss)
                         tx_rate = MCS_rate_lookup_ht[mcs.mcs_s.rate]
@@ -1090,7 +1089,7 @@ static u16 get_rate(u16 mcs_r, u8 short_gi)
                     ALOGE("Unexpected HT mcs.mcs_s index");
                 }
             break;
-            case 3:
+            case WL_PREAMBLE_VHT:
                 if (!mcs.mcs_s.nss)
                     tx_rate = MCS_rate_lookup_ht[mcs.mcs_s.rate]
                                                       [2*mcs.mcs_s.bw+short_gi];
@@ -1111,11 +1110,47 @@ static u16 get_rx_rate(u16 mcs)
     return get_rate(mcs, 0);
 }
 
+static wifi_error populate_rx_aggr_stats(hal_info *info)
+{
+    wifi_error status;
+    wifi_ring_buffer_entry *pRingBufferEntry = info->rx_aggr_pkts;
+    wifi_ring_per_packet_status_entry *pps_entry;
+    u32 index = 0;
+
+    while (index < info->rx_buf_size_occupied) {
+        pps_entry = (wifi_ring_per_packet_status_entry *)(pRingBufferEntry + 1);
+
+        pps_entry->MCS = info->aggr_stats.RxMCS.mcs;
+        pps_entry->last_transmit_rate = info->aggr_stats.last_transmit_rate;
+        pps_entry->rssi = info->aggr_stats.rssi;
+        pps_entry->firmware_entry_timestamp = info->aggr_stats.wb_timestamp;
+
+        index += pRingBufferEntry->entry_size;
+        status = update_stats_to_ring_buf(info, (u8 *)pRingBufferEntry,
+                pRingBufferEntry->entry_size);
+
+        if (status != WIFI_SUCCESS) {
+            ALOGE("Failed to write Rx stats into the ring buffer");
+            return status;
+        }
+        /* update_stats_to_ring_buf() modifies the size. Update the same again
+         * here by adding sizeof(wifi_ring_buffer_entry) to continue parsing
+         */
+        pRingBufferEntry = (wifi_ring_buffer_entry *)((u8 *)pRingBufferEntry
+                            + sizeof(wifi_ring_buffer_entry)
+                            + pRingBufferEntry->entry_size);
+    }
+    memset(info->rx_aggr_pkts, 0, info->rx_buf_size_occupied);
+    memset(&info->aggr_stats, 0, sizeof(rx_aggr_stats));
+    info->rx_buf_size_occupied = 0;
+
+    return WIFI_SUCCESS;
+}
+
 static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
 {
     wifi_error status;
     rb_pkt_stats_t *rx_stats_rcvd = (rb_pkt_stats_t *)buf;
-    u8 rb_pkt_entry_buf[RING_BUF_ENTRY_SIZE];
     wifi_ring_buffer_entry *pRingBufferEntry;
     u32 len_ring_buffer_entry = 0;
 
@@ -1123,17 +1158,35 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
                             + sizeof(wifi_ring_per_packet_status_entry)
                             + RX_HTT_HDR_STATUS_LEN;
 
-    if (len_ring_buffer_entry > RING_BUF_ENTRY_SIZE) {
-        pRingBufferEntry = (wifi_ring_buffer_entry *)malloc(
-                len_ring_buffer_entry);
-        if (pRingBufferEntry == NULL) {
-            ALOGE("%s: Failed to allocate memory", __FUNCTION__);
+    if (len_ring_buffer_entry + info->rx_buf_size_occupied
+            > info->rx_buf_size_allocated) {
+        wifi_ring_buffer_entry *temp;
+        temp = (wifi_ring_buffer_entry *)realloc(info->rx_aggr_pkts,
+                len_ring_buffer_entry + info->rx_buf_size_occupied);
+        if (temp == NULL) {
+            ALOGE("%s: Failed to reallocate memory", __FUNCTION__);
+            free(info->rx_aggr_pkts);
+            info->rx_aggr_pkts = NULL;
             return WIFI_ERROR_OUT_OF_MEMORY;
         }
-    } else {
-        pRingBufferEntry = (wifi_ring_buffer_entry *)rb_pkt_entry_buf;
+        info->rx_aggr_pkts = temp;
+        memset((u8 *)info->rx_aggr_pkts + info->rx_buf_size_allocated, 0,
+                len_ring_buffer_entry + info->rx_buf_size_occupied
+                - info->rx_buf_size_allocated);
+        info->rx_buf_size_allocated =
+            len_ring_buffer_entry + info->rx_buf_size_occupied;
     }
 
+    pRingBufferEntry = (wifi_ring_buffer_entry *)((u8 *)info->rx_aggr_pkts
+            + info->rx_buf_size_occupied);
+
+    info->rx_buf_size_occupied += len_ring_buffer_entry;
+
+    /* Fill size of the entry in rb entry which can be used while populating
+     * the data. Actual size that needs to be sent to ring buffer is only pps
+     * entry size
+     */
+    pRingBufferEntry->entry_size = len_ring_buffer_entry;
     wifi_ring_per_packet_status_entry *rb_pkt_stats =
         (wifi_ring_per_packet_status_entry *)(pRingBufferEntry + 1);
 
@@ -1157,48 +1210,47 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
 
     rb_pkt_stats->tid = rx_stats_rcvd->mpdu_start.tid;
 
-    if (rx_stats_rcvd->ppdu_start.preamble_type == PREAMBLE_L_SIG_RATE) {
-        if (!rx_stats_rcvd->ppdu_start.l_sig_rate_select)
-            rb_pkt_stats->MCS |= 1 << 6;
-        rb_pkt_stats->MCS |= rx_stats_rcvd->ppdu_start.l_sig_rate % 8;
-        /*BW is 0 for legacy cases*/
-    } else if (rx_stats_rcvd->ppdu_start.preamble_type ==
-               PREAMBLE_VHT_SIG_A_1) {
-        rb_pkt_stats->MCS |= 2 << 6;
-        rb_pkt_stats->MCS |=
-            (rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_1 & BITMASK(7)) %8;
-        rb_pkt_stats->MCS |=
-            ((rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_1 >> 7) & 1) << 8;
-    } else if (rx_stats_rcvd->ppdu_start.preamble_type ==
-               PREAMBLE_VHT_SIG_A_2) {
-        rb_pkt_stats->MCS |= 3 << 6;
-        rb_pkt_stats->MCS |=
-            (rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_2 >> 4) & BITMASK(4);
-        rb_pkt_stats->MCS |=
-            (rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_1 & 3) << 8;
-    }
-    rb_pkt_stats->last_transmit_rate = get_rx_rate(rb_pkt_stats->MCS);
+    if (rx_stats_rcvd->attention.first_mpdu) {
+        MCS *mcs = &info->aggr_stats.RxMCS;
+        u32 ht_vht_sig;
+        if (rx_stats_rcvd->ppdu_start.preamble_type == PREAMBLE_L_SIG_RATE) {
+            if (!rx_stats_rcvd->ppdu_start.l_sig_rate_select)
+                mcs->mcs_s.preamble = WL_PREAMBLE_OFDM;
+            mcs->mcs_s.rate = rx_stats_rcvd->ppdu_start.l_sig_rate >> 3;
+            /*BW is 0 for legacy cases*/
+        } else if (rx_stats_rcvd->ppdu_start.preamble_type ==
+                   PREAMBLE_VHT_SIG_A_1) {
+            ht_vht_sig = rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_1;
+            mcs->mcs_s.nss = ((ht_vht_sig >> 3) & 0x3);
+            mcs->mcs_s.preamble = WL_PREAMBLE_HT;
+            mcs->mcs_s.rate = (ht_vht_sig & BITMASK(7)) >> 3;
+            mcs->mcs_s.bw = ((ht_vht_sig >> 7) & 1);
+        } else if (rx_stats_rcvd->ppdu_start.preamble_type ==
+                   PREAMBLE_VHT_SIG_A_2) {
+            ht_vht_sig = rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_1;
+            mcs->mcs_s.nss = ((ht_vht_sig >> 10) & 0x3);
+            mcs->mcs_s.preamble = WL_PREAMBLE_VHT;
+            mcs->mcs_s.rate =
+                (rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_2 >> 4) & BITMASK(4);
+            mcs->mcs_s.bw = (ht_vht_sig & 3);
+        }
+        info->aggr_stats.last_transmit_rate
+            = get_rx_rate(info->aggr_stats.RxMCS.mcs);
 
-    rb_pkt_stats->rssi = rx_stats_rcvd->ppdu_start.rssi_comb;
+        info->aggr_stats.rssi = rx_stats_rcvd->ppdu_start.rssi_comb;
+    }
     rb_pkt_stats->link_layer_transmit_sequence
         = rx_stats_rcvd->mpdu_start.seq_num;
-
-    rb_pkt_stats->firmware_entry_timestamp
-        = rx_stats_rcvd->ppdu_end.wb_timestamp;
 
     memcpy(&rb_pkt_stats->data[0], &rx_stats_rcvd->rx_hdr_status[0],
         RX_HTT_HDR_STATUS_LEN);
 
-    status = update_stats_to_ring_buf(info, (u8 *)pRingBufferEntry,
-                                      len_ring_buffer_entry);
-
-    if (status != WIFI_SUCCESS) {
-        ALOGE("Failed to write Rx stats into the ring buffer");
-    }
-
-    if ((u8 *)pRingBufferEntry != rb_pkt_entry_buf) {
-        ALOGI("Message with more than RING_BUF_ENTRY_SIZE");
-        free (pRingBufferEntry);
+    if ((rx_stats_rcvd->attention.last_mpdu
+         && rx_stats_rcvd->msdu_end.last_msdu)
+        || (rx_stats_rcvd->attention.first_mpdu
+         && rx_stats_rcvd->attention.last_mpdu)) {
+        info->aggr_stats.wb_timestamp = rx_stats_rcvd->ppdu_end.wb_timestamp;
+        status = populate_rx_aggr_stats(info);
     }
 
     return status;

@@ -465,6 +465,20 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
+    info->rx_buf_size_allocated = MAX_RXMPDUS_PER_AMPDU * MAX_MSDUS_PER_MPDU
+                                  * RING_BUF_ENTRY_SIZE;
+
+    info->rx_aggr_pkts =
+        (wifi_ring_buffer_entry  *)malloc(info->rx_buf_size_allocated);
+    if (!info->rx_aggr_pkts) {
+        ALOGE("%s: malloc Failed for size: %d",
+                __FUNCTION__, info->rx_buf_size_allocated);
+        ret = WIFI_ERROR_OUT_OF_MEMORY;
+        info->rx_buf_size_allocated = 0;
+        goto unload;
+    }
+    memset(info->rx_aggr_pkts, 0, info->rx_buf_size_allocated);
+
     info->exit_sockets[0] = -1;
     info->exit_sockets[1] = -1;
 
@@ -487,6 +501,8 @@ unload:
             if (info->cmd) free(info->cmd);
             if (info->event_cb) free(info->event_cb);
             if (info->user_sock) nl_socket_free(info->user_sock);
+            if (info->pkt_stats) free(info->pkt_stats);
+            if (info->rx_aggr_pkts) free(info->rx_aggr_pkts);
             free(info);
         }
     }
@@ -531,7 +547,10 @@ static void internal_cleaned_up_handler(wifi_handle handle)
         info->user_sock = NULL;
     }
 
-    free(info->pkt_stats);
+    if (info->pkt_stats)
+        free(info->pkt_stats);
+    if (info->rx_aggr_pkts)
+        free(info->rx_aggr_pkts);
     wifi_logger_ring_buffers_deinit(info);
 
     if (info->exit_sockets[0] >= 0) {
