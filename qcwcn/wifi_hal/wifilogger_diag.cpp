@@ -378,8 +378,8 @@ static wifi_error process_extscan_event(hal_info *info, u32 id,
             pConnectEvent->event = WIFI_EVENT_G_SCAN_STOP;
             pExtScanStop = (wlan_ext_scan_feature_stop_payload_type *)buf;
             pTlv = addLoggerTlv(WIFI_TAG_REQUEST_ID,
-                                sizeof(wlan_ext_scan_feature_stop_payload_type),
-                                (u8 *)&pExtScanStop, pTlv);
+                                sizeof(pExtScanStop->request_id),
+                                (u8 *)&pExtScanStop->request_id, pTlv);
             tot_len += sizeof(tlv_log) +
                        sizeof(wlan_ext_scan_feature_stop_payload_type);
         }
@@ -502,7 +502,7 @@ static wifi_error process_addba_failed_event(hal_info *info,
 
     pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
                         sizeof(addba_failed_vendor_data_t),
-                        (u8 *)&pAddBAFailed, pTlv);
+                        (u8 *)&addBAFailedVenData, pTlv);
     tot_len += sizeof(tlv_log) + sizeof(addba_failed_vendor_data_t);
 
     status = update_connectivity_ring_buf(info, pRingBufferEntry, tot_len);
