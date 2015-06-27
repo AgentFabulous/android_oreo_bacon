@@ -1184,6 +1184,11 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
     wifi_ring_per_packet_status_entry *rb_pkt_stats =
         (wifi_ring_per_packet_status_entry *)(pRingBufferEntry + 1);
 
+    if (size == 64) {
+        // TODO Parse the event later
+        return WIFI_SUCCESS;
+    }
+
     if (size != sizeof(rb_pkt_stats_t)) {
         ALOGE("%s Unexpected rx stats event length: %d", __FUNCTION__, size);
         return WIFI_ERROR_UNKNOWN;
@@ -1310,10 +1315,65 @@ static void parse_tx_rate_and_mcs(struct tx_ppdu_start *ppdu_start,
     rb_pkt_stats->last_transmit_rate = get_rate(mcs.mcs, short_gi);
 }
 
+static void get_tx_aggr_stats(struct tx_ppdu_start *ppdu_start, hal_info *info)
+{
+    u32 baBitmap0 = 0;
+    u32 baBitmap1 = 0;
+
+    info->pkt_stats->tx_seqnum_bitmap_31_0 = ppdu_start->seqnum_bitmap_31_0;
+    info->pkt_stats->tx_seqnum_bitmap_63_32 = ppdu_start->seqnum_bitmap_63_32;
+
+    if (info->pkt_stats->isBlockAck) {
+        int baShift = ppdu_start->start_seq_num - info->pkt_stats->ba_seq_num;
+        //There are 4 scenarios in total:
+        //1.TxSeq No. >= BaSeq No. and no roll over.
+        //2.TxSeq No. >= BaSeq No. and TxSeq No. rolls over.
+        //3.TxSeq No. <= BaSeq No. and no roll over.
+        //4.TxSeq No. <= BaSeq No. and BaSeq No. rolls over.
+
+        baBitmap0 = info->pkt_stats->ba_bitmap_31_0;
+        baBitmap1 = info->pkt_stats->ba_bitmap_63_32;
+
+        if (((baShift >= 0) && (baShift < SEQ_NUM_RANGE/2)) ||
+            (baShift < -SEQ_NUM_RANGE/2)) {
+            //Scenario No.1 and No.2
+            baShift = baShift < -SEQ_NUM_RANGE/2 ? (SEQ_NUM_RANGE + baShift) :
+                                                   baShift;
+
+            if (baShift < BITMAP_VAR_SIZE) {
+                info->pkt_stats->shifted_bitmap_31_0 =
+                    ((baBitmap1 << (32 - baShift)) | (baBitmap0 >> baShift));
+                info->pkt_stats->shifted_bitmap_63_32 = baBitmap1 >> baShift;
+            } else {
+                info->pkt_stats->shifted_bitmap_31_0 =
+                                       baBitmap1 >> (baShift - BITMAP_VAR_SIZE);
+                info->pkt_stats->shifted_bitmap_63_32  = 0;
+            }
+        } else {
+            baShift = (baShift >= SEQ_NUM_RANGE/2) ? (SEQ_NUM_RANGE - baShift) :
+                                                      -baShift;
+            if (baShift < BITMAP_VAR_SIZE) {
+                info->pkt_stats->shifted_bitmap_31_0 = baBitmap0 << baShift;
+                info->pkt_stats->shifted_bitmap_63_32 =
+                                                ((baBitmap0 << (32 - baShift)) |
+                                                 (baBitmap1 >> baShift));
+            } else {
+                info->pkt_stats->shifted_bitmap_31_0 = 0;
+                info->pkt_stats->shifted_bitmap_63_32 =
+                                      baBitmap0 << (baShift - BITMAP_VAR_SIZE);
+            }
+        }
+    } else {
+        info->pkt_stats->shifted_bitmap_31_0 = 0;
+        info->pkt_stats->shifted_bitmap_63_32 = 0;
+    }
+}
+
 static wifi_error parse_tx_stats(hal_info *info, void *buf,
                                  u32 buflen, u8 logtype)
 {
-    wifi_error status;
+    wifi_error status = WIFI_SUCCESS;
+    int i;
     wifi_ring_buffer_entry *pRingBufferEntry =
         (wifi_ring_buffer_entry *)info->pkt_stats->tx_stats;
 
@@ -1339,8 +1399,12 @@ static wifi_error parse_tx_stats(hal_info *info, void *buf,
                     PER_PACKET_ENTRY_FLAGS_PROTECTED;
             rb_pkt_stats->link_layer_transmit_sequence
                 = ppdu_start->start_seq_num;
+            info->pkt_stats->start_seq_num = ppdu_start->start_seq_num;
             rb_pkt_stats->tid = ppdu_start->qos_ctl & 0xF;
             parse_tx_rate_and_mcs(ppdu_start, rb_pkt_stats);
+
+            if (ppdu_start->ampdu)
+                get_tx_aggr_stats(ppdu_start, info);
             info->pkt_stats->tx_stats_events |=  BIT(PKTLOG_TYPE_TX_CTRL);
         }
         break;
@@ -1361,20 +1425,31 @@ static wifi_error parse_tx_stats(hal_info *info, void *buf,
 
             struct tx_ppdu_end *tx_ppdu_end = (struct tx_ppdu_end*)(buf);
 
+            info->pkt_stats->ba_seq_num = tx_ppdu_end->stat.ba_start_seq_num;
+            info->pkt_stats->isBlockAck = tx_ppdu_end->stat.ba_status;
+
             if (tx_ppdu_end->stat.tx_ok)
-                rb_pkt_stats->flags |=
-                    PER_PACKET_ENTRY_FLAGS_TX_SUCCESS;
+                rb_pkt_stats->flags |= PER_PACKET_ENTRY_FLAGS_TX_SUCCESS;
+            info->pkt_stats->isBlockAck = tx_ppdu_end->stat.ba_status;
+
+            info->pkt_stats->ba_bitmap_31_0 =  tx_ppdu_end->stat.ba_bitmap_31_0;
+            info->pkt_stats->ba_bitmap_63_32 =
+                                              tx_ppdu_end->stat.ba_bitmap_63_32;
             rb_pkt_stats->transmit_success_timestamp =
                 tx_ppdu_end->try_list.try_00.timestamp;
             rb_pkt_stats->rssi = tx_ppdu_end->stat.ack_rssi_ave;
-            rb_pkt_stats->num_retries =
-                tx_ppdu_end->stat.total_tries;
+            rb_pkt_stats->num_retries = tx_ppdu_end->stat.total_tries;
 
-            info->pkt_stats->tx_stats_events =  BIT(PKTLOG_TYPE_TX_STAT);
+            info->pkt_stats->tx_stats_events |=  BIT(PKTLOG_TYPE_TX_STAT);
+        }
+        break;
+        case PKTLOG_TYPE_TX_MSDU_ID:
+        {
+            info->pkt_stats->num_msdu = *(u8 *)buf;
+            info->pkt_stats->tx_stats_events =  BIT(PKTLOG_TYPE_TX_MSDU_ID);
         }
         break;
         case PKTLOG_TYPE_RC_UPDATE:
-        case PKTLOG_TYPE_TX_MSDU_ID:
         case PKTLOG_TYPE_TX_FRM_HDR:
         case PKTLOG_TYPE_RC_FIND:
         case PKTLOG_TYPE_TX_VIRT_ADDR:
@@ -1389,15 +1464,68 @@ static wifi_error parse_tx_stats(hal_info *info, void *buf,
         }
     }
 
-    if ((info->pkt_stats->tx_stats_events &  BIT(PKTLOG_TYPE_TX_CTRL))&&
-        (info->pkt_stats->tx_stats_events &  BIT(PKTLOG_TYPE_TX_STAT))) {
+    if ((info->pkt_stats->tx_stats_events &  BIT(PKTLOG_TYPE_TX_CTRL)) &&
+        (info->pkt_stats->tx_stats_events &  BIT(PKTLOG_TYPE_TX_STAT)) &&
+        (info->pkt_stats->tx_stats_events &  BIT(PKTLOG_TYPE_TX_MSDU_ID))) {
         /* No tx payload as of now, add the length to parameter size(3rd)
          * if there is any payload
          */
-        status = update_stats_to_ring_buf(info,
-                                          (u8 *)pRingBufferEntry,
+
+        if (info->pkt_stats->num_msdu == 1) {
+            /* Handle non aggregated cases */
+            status = update_stats_to_ring_buf(info,
+                                     (u8 *)pRingBufferEntry,
                                      sizeof(wifi_ring_buffer_entry) +
                                      sizeof(wifi_ring_per_packet_status_entry));
+            if (status != WIFI_SUCCESS) {
+                ALOGE("Failed to write into the ring buffer : %d", logtype);
+            }
+        } else {
+            /* Handle aggregated cases */
+            for (i = 0; i < MAX_BA_WINDOW_SIZE; i++) {
+                if (i < BITMAP_VAR_SIZE) {
+                    if (info->pkt_stats->tx_seqnum_bitmap_31_0 & BIT(i)) {
+                        if (info->pkt_stats->shifted_bitmap_31_0 & BIT(i)) {
+                            rb_pkt_stats->flags |=
+                                       PER_PACKET_ENTRY_FLAGS_TX_SUCCESS;
+                        } else {
+                            rb_pkt_stats->flags &=
+                                       ~PER_PACKET_ENTRY_FLAGS_TX_SUCCESS;
+                        }
+                    } else {
+                        continue;
+                    }
+                } else {
+                    if (info->pkt_stats->tx_seqnum_bitmap_63_32
+                        & BIT(i - BITMAP_VAR_SIZE)) {
+                        if (info->pkt_stats->shifted_bitmap_63_32
+                            & BIT(i - BITMAP_VAR_SIZE)) {
+                            rb_pkt_stats->flags |=
+                                       PER_PACKET_ENTRY_FLAGS_TX_SUCCESS;
+                        } else {
+                            rb_pkt_stats->flags &=
+                                       ~PER_PACKET_ENTRY_FLAGS_TX_SUCCESS;
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+                rb_pkt_stats->link_layer_transmit_sequence =
+                                            info->pkt_stats->start_seq_num + i;
+
+                /* Take care of roll over SEQ_NUM_RANGE */
+                rb_pkt_stats->link_layer_transmit_sequence &= 0xFFF;
+
+                status = update_stats_to_ring_buf(info,
+                                     (u8 *)pRingBufferEntry,
+                                     sizeof(wifi_ring_buffer_entry) +
+                                     sizeof(wifi_ring_per_packet_status_entry));
+                if (status != WIFI_SUCCESS) {
+                    ALOGE("Failed to write into the ring buffer: %d", logtype);
+                    break;
+                }
+            }
+        }
 
         /* Flush the local copy after writing the stats to ring buffer
          * for tx-stats.
@@ -1406,13 +1534,9 @@ static wifi_error parse_tx_stats(hal_info *info, void *buf,
         memset(rb_pkt_stats, 0,
                 sizeof(wifi_ring_per_packet_status_entry));
 
-        if (status != WIFI_SUCCESS) {
-            ALOGE("Failed to write into the ring buffer: %d", logtype);
-            return status;
-        }
     }
 
-    return WIFI_SUCCESS;
+    return status;
 }
 
 static wifi_error parse_stats_record(hal_info *info, u8 *buf, u16 record_type,

@@ -112,6 +112,10 @@ struct rx_mpdu_end {
 #define WL_PREAMBLE_VHT  3
 
 #define BITMASK(x) ((1<<(x)) - 1 )
+#define MAX_BA_WINDOW_SIZE 64
+#define SEQ_NUM_RANGE 4096
+#define BITMAP_VAR_SIZE 32
+
 /* Contains MCS related stats */
 struct rx_ppdu_start {
     u32 reserved1[4];
@@ -151,14 +155,19 @@ typedef struct {
 
 /*Tx stats specific structures. */
 struct ppdu_status {
-    u32 reserved1                       : 31; //[30:0]
+    u32 ba_start_seq_num                : 12; //[11:0]
+    u32 reserved1                       :  3; //[14:12]
+    u32 ba_status                       :  1; //[15]
+    u32 reserved2                       : 15; //[30:16]
     u32 tx_ok                           :  1; //[31]
-    u32 reserved2[10];
+    u32 ba_bitmap_31_0                  : 32; //[31:0]
+    u32 ba_bitmap_63_32                 : 32; //[31:0]
+    u32 reserved3[8];
     u32 ack_rssi_ave                    :  8; //[7:0]
-    u32 reserved3                       : 16; //[23:8]
+    u32 reserved4                       : 16; //[23:8]
     u32 total_tries                     :  5; //[28:24]
-    u32 reserved4                       :  3; //[31:29]
-    u32 reserved5[4];
+    u32 reserved5                       :  3; //[31:29]
+    u32 reserved6[4];
 } __attribute__((packed));
 
 /*Contains tx timestamp*/
@@ -202,13 +211,19 @@ struct tx_ppdu_start {
     u32 reserved1[2];
     u32 start_seq_num                   : 12; //[11:0]
     u32 reserved2                       : 20; //[31:12]
-    u32 reserved3[11];
-    u32 reserved4                       : 16; //[15:0]
+    u32 seqnum_bitmap_31_0              : 32; //[31:0]
+    u32 seqnum_bitmap_63_32             : 32; //[31:0]
+    u32 reserved3[8];
+    u32 reserved4                       : 15; //[14:0]
+    u32 ampdu                           :  1; //[15]
+    u32 no_ack                          :  1; //[16]
+    u32 reserved5                       : 15; //[31:17]
+    u32 reserved6                       : 16; //[15:0]
     u32 frame_control                   : 16; //[31:16]
-    u32 reserved5                       : 16; //[23:21]
+    u32 reserved7                       : 16; //[23:21]
     u32 qos_ctl                         : 16; //[31:16]
-    u32 reserved6[4];
-    u32 reserved7                       : 24; //[23:21]
+    u32 reserved8[4];
+    u32 reserved9                       : 24; //[23:21]
     u32 valid_s0_bw20                   :  1; //[24]
     u32 valid_s0_bw40                   :  1; //[25]
     u32 valid_s0_bw80                   :  1; //[26]
@@ -225,7 +240,7 @@ struct tx_ppdu_start {
     struct series_bw s1_bw40;
     struct series_bw s1_bw80;
     struct series_bw s1_bw160;
-    u32 reserved8[3];
+    u32 reserved10[3];
 } __attribute__((packed));
 
 #define PKTLOG_MAX_TXCTL_WORDS 57 /* +2 words for bitmap */
@@ -256,6 +271,16 @@ struct pkt_stats_s {
      * size is 12 bytes.
      */
     u8 tx_stats[RING_BUF_ENTRY_SIZE];
+    u8 num_msdu;
+    u16 start_seq_num;
+    u16 ba_seq_num;
+    u32 ba_bitmap_31_0;
+    u32 ba_bitmap_63_32;
+    u32 tx_seqnum_bitmap_31_0;
+    u32 tx_seqnum_bitmap_63_32;
+    u32 shifted_bitmap_31_0;
+    u32 shifted_bitmap_63_32;
+    bool isBlockAck;
 };
 
 typedef union {
