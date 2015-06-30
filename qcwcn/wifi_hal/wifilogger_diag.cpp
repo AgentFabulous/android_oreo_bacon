@@ -1029,7 +1029,7 @@ static wifi_error update_stats_to_ring_buf(hal_info *info,
     return WIFI_SUCCESS;
 }
 
-static u16 get_rate(u16 mcs_r, u8 short_gi)
+static u16 get_rate(u16 mcs_r)
 {
     u16 tx_rate = 0;
     MCS mcs;
@@ -1075,10 +1075,10 @@ static u16 get_rate(u16 mcs_r, u8 short_gi)
                 if(mcs.mcs_s.rate<8) {
                     if (!mcs.mcs_s.nss)
                         tx_rate = MCS_rate_lookup_ht[mcs.mcs_s.rate]
-                                                      [2*mcs.mcs_s.bw+short_gi];
+                                        [2*mcs.mcs_s.bw+mcs.mcs_s.short_gi];
                     else
                         tx_rate = MCS_rate_lookup_ht[10+mcs.mcs_s.rate]
-                                                      [2*mcs.mcs_s.bw+short_gi];
+                                        [2*mcs.mcs_s.bw+mcs.mcs_s.short_gi];
                 } else {
                     ALOGE("Unexpected HT mcs.mcs_s index");
                 }
@@ -1086,22 +1086,16 @@ static u16 get_rate(u16 mcs_r, u8 short_gi)
             case WL_PREAMBLE_VHT:
                 if (!mcs.mcs_s.nss)
                     tx_rate = MCS_rate_lookup_ht[mcs.mcs_s.rate]
-                                                      [2*mcs.mcs_s.bw+short_gi];
+                                        [2*mcs.mcs_s.bw+mcs.mcs_s.short_gi];
                 else
                     tx_rate = MCS_rate_lookup_ht[10+mcs.mcs_s.rate]
-                                                      [2*mcs.mcs_s.bw+short_gi];
+                                        [2*mcs.mcs_s.bw+mcs.mcs_s.short_gi];
             break;
             default:
                 ALOGE("Unexpected preamble");
         }
     }
     return tx_rate;
-}
-
-static u16 get_rx_rate(u16 mcs)
-{
-    /* TODO: guard interval is not specified currently */
-    return get_rate(mcs, 0);
 }
 
 static wifi_error populate_rx_aggr_stats(hal_info *info)
@@ -1224,6 +1218,8 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
             mcs->mcs_s.preamble = WL_PREAMBLE_HT;
             mcs->mcs_s.rate = (ht_vht_sig & BITMASK(7)) >> 3;
             mcs->mcs_s.bw = ((ht_vht_sig >> 7) & 1);
+            mcs->mcs_s.short_gi =
+                    ((rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_2 >> 7) & 1);
         } else if (rx_stats_rcvd->ppdu_start.preamble_type ==
                    PREAMBLE_VHT_SIG_A_2) {
             ht_vht_sig = rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_1;
@@ -1232,9 +1228,12 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
             mcs->mcs_s.rate =
                 (rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_2 >> 4) & BITMASK(4);
             mcs->mcs_s.bw = (ht_vht_sig & 3);
+            mcs->mcs_s.short_gi =
+                             (rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_2 & 1);
         }
+
         info->aggr_stats.last_transmit_rate
-            = get_rx_rate(info->aggr_stats.RxMCS.mcs);
+            = get_rate(info->aggr_stats.RxMCS.mcs);
 
         info->aggr_stats.rssi = rx_stats_rcvd->ppdu_start.rssi_comb;
     }
@@ -1258,61 +1257,61 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
 static void parse_tx_rate_and_mcs(struct tx_ppdu_start *ppdu_start,
                                 wifi_ring_per_packet_status_entry *rb_pkt_stats)
 {
-    u16 tx_rate = 0, short_gi = 0;
+    u16 tx_rate = 0;
     MCS mcs;
 
     if (ppdu_start->valid_s0_bw20) {
-        short_gi = ppdu_start->s0_bw20.short_gi;
         mcs.mcs_s.rate      = ppdu_start->s0_bw20.rate;
         mcs.mcs_s.nss       = ppdu_start->s0_bw20.nss;
         mcs.mcs_s.preamble  = ppdu_start->s0_bw20.preamble_type;
         mcs.mcs_s.bw        = BW_20_MHZ;
+        mcs.mcs_s.short_gi  = ppdu_start->s0_bw20.short_gi;
     } else if (ppdu_start->valid_s0_bw40) {
-        short_gi = ppdu_start->s0_bw40.short_gi;
         mcs.mcs_s.rate      = ppdu_start->s0_bw40.rate;
         mcs.mcs_s.nss       = ppdu_start->s0_bw40.nss;
         mcs.mcs_s.preamble  = ppdu_start->s0_bw40.preamble_type;
         mcs.mcs_s.bw        = BW_40_MHZ;
+        mcs.mcs_s.short_gi = ppdu_start->s0_bw40.short_gi;
     } else if (ppdu_start->valid_s0_bw80) {
-        short_gi = ppdu_start->s0_bw80.short_gi;
         mcs.mcs_s.rate      = ppdu_start->s0_bw80.rate;
         mcs.mcs_s.nss       = ppdu_start->s0_bw80.nss;
         mcs.mcs_s.preamble  = ppdu_start->s0_bw80.preamble_type;
         mcs.mcs_s.bw        = BW_80_MHZ;
+        mcs.mcs_s.short_gi = ppdu_start->s0_bw80.short_gi;
     } else if (ppdu_start->valid_s0_bw160) {
-        short_gi = ppdu_start->s0_bw160.short_gi;
         mcs.mcs_s.rate      = ppdu_start->s0_bw160.rate;
         mcs.mcs_s.nss       = ppdu_start->s0_bw160.nss;
         mcs.mcs_s.preamble  = ppdu_start->s0_bw160.preamble_type;
         mcs.mcs_s.bw        = BW_160_MHZ;
+        mcs.mcs_s.short_gi = ppdu_start->s0_bw160.short_gi;
     } else if (ppdu_start->valid_s1_bw20) {
-        short_gi = ppdu_start->s1_bw20.short_gi;
         mcs.mcs_s.rate      = ppdu_start->s1_bw20.rate;
         mcs.mcs_s.nss       = ppdu_start->s1_bw20.nss;
         mcs.mcs_s.preamble  = ppdu_start->s1_bw20.preamble_type;
         mcs.mcs_s.bw        = BW_20_MHZ;
+        mcs.mcs_s.short_gi = ppdu_start->s1_bw20.short_gi;
     } else if (ppdu_start->valid_s1_bw40) {
-        short_gi = ppdu_start->s1_bw40.short_gi;
         mcs.mcs_s.rate      = ppdu_start->s1_bw40.rate;
         mcs.mcs_s.nss       = ppdu_start->s1_bw40.nss;
         mcs.mcs_s.preamble  = ppdu_start->s1_bw40.preamble_type;
         mcs.mcs_s.bw        = BW_40_MHZ;
+        mcs.mcs_s.short_gi = ppdu_start->s1_bw40.short_gi;
     } else if (ppdu_start->valid_s1_bw80) {
-        short_gi = ppdu_start->s1_bw80.short_gi;
         mcs.mcs_s.rate      = ppdu_start->s1_bw80.rate;
         mcs.mcs_s.nss       = ppdu_start->s1_bw80.nss;
         mcs.mcs_s.preamble  = ppdu_start->s1_bw80.preamble_type;
         mcs.mcs_s.bw        = BW_80_MHZ;
+        mcs.mcs_s.short_gi = ppdu_start->s1_bw80.short_gi;
     } else if (ppdu_start->valid_s1_bw160) {
-        short_gi = ppdu_start->s1_bw160.short_gi;
         mcs.mcs_s.rate      = ppdu_start->s1_bw160.rate;
         mcs.mcs_s.nss       = ppdu_start->s1_bw160.nss;
         mcs.mcs_s.preamble  = ppdu_start->s1_bw160.preamble_type;
         mcs.mcs_s.bw        = BW_160_MHZ;
+        mcs.mcs_s.short_gi = ppdu_start->s1_bw160.short_gi;
     }
 
     rb_pkt_stats->MCS = mcs.mcs;
-    rb_pkt_stats->last_transmit_rate = get_rate(mcs.mcs, short_gi);
+    rb_pkt_stats->last_transmit_rate = get_rate(mcs.mcs);
 }
 
 static void get_tx_aggr_stats(struct tx_ppdu_start *ppdu_start, hal_info *info)

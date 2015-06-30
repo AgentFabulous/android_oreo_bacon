@@ -288,7 +288,9 @@ typedef union {
         u16 rate                            :  4;
         u16 nss                             :  2;
         u16 preamble                        :  2;
-        u16 bw                              :  8;
+        u16 bw                              :  2;
+        u16 short_gi                        :  1;
+        u16 reserved                        :  5;
     } mcs_s;
     u16 mcs;
 } MCS;
