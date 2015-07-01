@@ -124,6 +124,7 @@ typedef struct hal_info_s {
     u32 rx_buf_size_occupied;
     wifi_ring_buffer_entry *rx_aggr_pkts;
     rx_aggr_stats aggr_stats;
+    u32 prev_seq_no;
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);

@@ -44,6 +44,9 @@
 #define PKTLOG_TYPE_RC_UPDATE       7
 #define PKTLOG_TYPE_TX_VIRT_ADDR    8
 #define PKTLOG_TYPE_MAX             9
+#define BW_OFFSET 8
+#define INVALID_RSSI 255
+#define EVENT_RX_PEERINFO_SIZE 64
 
 /* Format of the packet stats event*/
 typedef struct {
@@ -173,12 +176,13 @@ struct ppdu_status {
 /*Contains tx timestamp*/
 struct try_status {
     u32 timestamp                       : 23; //[22:0]
-    u32 reserved                        :  9; //[23]
+    u32 reserved1                       :  5; //[23]
+    u32 packet_bw                       :  2; //[29:28]
+    u32 reserved2                       :  2; //[31:30]
 } __attribute__((packed));
 
 struct try_list {
-    struct try_status try_00;
-    u32 reserved[15];
+    struct try_status try_st[16];
 } __attribute__((packed));
 
 
@@ -263,14 +267,14 @@ typedef struct {
  */
 
 #define RING_BUF_ENTRY_SIZE 512
+#define PKT_STATS_BUF_SIZE 128
 struct pkt_stats_s {
     u8 tx_stats_events;
-    u32 prev_seq_no;
     /* TODO: Need to handle the case if size of the stats are more
      * than 512 bytes. Currently, the tx size is 34 bytes and ring buffer entry
      * size is 12 bytes.
      */
-    u8 tx_stats[RING_BUF_ENTRY_SIZE];
+    u8 tx_stats[PKT_STATS_BUF_SIZE];
     u8 num_msdu;
     u16 start_seq_num;
     u16 ba_seq_num;
@@ -281,6 +285,7 @@ struct pkt_stats_s {
     u32 shifted_bitmap_31_0;
     u32 shifted_bitmap_63_32;
     bool isBlockAck;
+    u8 tx_bandwidth;
 };
 
 typedef union {

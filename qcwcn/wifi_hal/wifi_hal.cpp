@@ -466,7 +466,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
     }
 
     info->rx_buf_size_allocated = MAX_RXMPDUS_PER_AMPDU * MAX_MSDUS_PER_MPDU
-                                  * RING_BUF_ENTRY_SIZE;
+                                  * PKT_STATS_BUF_SIZE;
 
     info->rx_aggr_pkts =
         (wifi_ring_buffer_entry  *)malloc(info->rx_buf_size_allocated);
