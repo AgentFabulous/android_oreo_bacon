@@ -84,7 +84,20 @@ typedef struct {
 struct rx_attention {
     u32 first_mpdu                      :  1; //[0]
     u32 last_mpdu                       :  1; //[1]
-    u32 reserved2                       :  30; //[30:2]
+    u32 reserved1                       :  6; //[7:2]
+    u32 mgmt_type                       :  1; //[8]
+    u32 ctrl_type                       :  1; //[9]
+    u32 reserved2                       :  6; //[15:10]
+    u32 overflow_err                    :  1; //[16]
+    u32 msdu_length_err                 :  1; //[17]
+    u32 tcp_udp_chksum_fail             :  1; //[18]
+    u32 ip_chksum_fail                  :  1; //[19]
+    u32 reserved3                       :  7; //[26:20]
+    u32 mpdu_length_err                 :  1; //[27]
+    u32 tkip_mic_err                    :  1; //[28]
+    u32 decrypt_err                     :  1; //[29]
+    u32 fcs_err                         :  1; //[30]
+    u32 msdu_done                       :  1; //[31]
 } __attribute__((packed));
 
 struct rx_mpdu_start {
@@ -122,9 +135,15 @@ struct rx_msdu_end {
 } __attribute__((packed));
 
 struct rx_mpdu_end {
-    u32 reserved1                       : 29; //[28:0]
+    u32 reserved1                       : 13; //[12:0]
+    u32 overflow_err                    :  1; //[13]
+    u32 last_mpdu                       :  1; //[14]
+    u32 post_delim_err                  :  1; //[15]
+    u32 reserved2                       : 12; //[27:16]
+    u32 mpdu_length_err                 :  1; //[28]
     u32 tkip_mic_err                    :  1; //[29]
-    u32 reserved2                       :  2; //[31:30]
+    u32 decrypt_err                     :  1; //[30]
+    u32 fcs_err                         :  1; //[31]
 } __attribute__((packed));
 
 #define PREAMBLE_L_SIG_RATE     0x04
@@ -159,9 +178,9 @@ struct rx_ppdu_start {
 } __attribute__((packed));
 
 struct rx_ppdu_end {
-    u32 reserved1[17];
-    u32 wb_timestamp;
-    u32 reserved2[4];
+    u32 reserved1[16];
+    u32 tsf_timestamp;
+    u32 reserved2[5];
 } __attribute__((packed));
 
 #define MAX_MSDUS_PER_MPDU 3
@@ -201,7 +220,8 @@ struct try_status {
     u32 timestamp                       : 23; //[22:0]
     u32 reserved1                       :  5; //[23]
     u32 packet_bw                       :  2; //[29:28]
-    u32 reserved2                       :  2; //[31:30]
+    u32 reserved2                       :  1; //[30]
+    u32 tx_packet                       :  1; //[31]
 } __attribute__((packed));
 
 struct try_list {
@@ -327,7 +347,7 @@ typedef struct {
     MCS RxMCS;
     u16 last_transmit_rate;
     u16 rssi;
-    u32 wb_timestamp;
+    u32 timestamp;
 } rx_aggr_stats;
 
 

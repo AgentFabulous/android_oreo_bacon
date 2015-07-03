@@ -1111,7 +1111,7 @@ static wifi_error populate_rx_aggr_stats(hal_info *info)
         pps_entry->MCS = info->aggr_stats.RxMCS.mcs;
         pps_entry->last_transmit_rate = info->aggr_stats.last_transmit_rate;
         pps_entry->rssi = info->aggr_stats.rssi;
-        pps_entry->firmware_entry_timestamp = info->aggr_stats.wb_timestamp;
+        pps_entry->firmware_entry_timestamp = info->aggr_stats.timestamp;
 
         index += pRingBufferEntry->entry_size;
         status = update_stats_to_ring_buf(info, (u8 *)pRingBufferEntry,
@@ -1196,7 +1196,12 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
     /* Peer tx packet and it is an Rx packet for us */
     rb_pkt_stats->flags |= PER_PACKET_ENTRY_FLAGS_DIRECTION_TX;
 
-    if (!rx_stats_rcvd->mpdu_end.tkip_mic_err)
+    if (!((rx_stats_rcvd->mpdu_end.overflow_err) ||
+          (rx_stats_rcvd->attention.fcs_err) ||
+          (rx_stats_rcvd->attention.mpdu_length_err) ||
+          (rx_stats_rcvd->attention.msdu_length_err) ||
+          (rx_stats_rcvd->attention.tkip_mic_err) ||
+          (rx_stats_rcvd->attention.decrypt_err)))
         rb_pkt_stats->flags |= PER_PACKET_ENTRY_FLAGS_TX_SUCCESS;
 
     rb_pkt_stats->flags |= PER_PACKET_ENTRY_FLAGS_80211_HEADER;
@@ -1210,9 +1215,9 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
         MCS *mcs = &info->aggr_stats.RxMCS;
         u32 ht_vht_sig;
         if (rx_stats_rcvd->ppdu_start.preamble_type == PREAMBLE_L_SIG_RATE) {
-            if (!rx_stats_rcvd->ppdu_start.l_sig_rate_select)
+            if (rx_stats_rcvd->ppdu_start.l_sig_rate_select)
                 mcs->mcs_s.preamble = WL_PREAMBLE_OFDM;
-            mcs->mcs_s.rate = rx_stats_rcvd->ppdu_start.l_sig_rate >> 3;
+            mcs->mcs_s.rate = rx_stats_rcvd->ppdu_start.l_sig_rate - 8;
             /*BW is 0 for legacy cases*/
         } else if (rx_stats_rcvd->ppdu_start.preamble_type ==
                    PREAMBLE_VHT_SIG_A_1) {
@@ -1250,7 +1255,7 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
          && rx_stats_rcvd->msdu_end.last_msdu)
         || (rx_stats_rcvd->attention.first_mpdu
          && rx_stats_rcvd->attention.last_mpdu)) {
-        info->aggr_stats.wb_timestamp = rx_stats_rcvd->ppdu_end.wb_timestamp;
+        info->aggr_stats.timestamp = rx_stats_rcvd->ppdu_end.tsf_timestamp;
         status = populate_rx_aggr_stats(info);
     }
 
