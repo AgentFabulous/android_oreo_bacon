@@ -1552,14 +1552,23 @@ static wifi_error parse_tx_stats(hal_info *info, void *buf,
     return status;
 }
 
-static wifi_error parse_stats_record(hal_info *info, u8 *buf, u16 record_type,
-                              u16 record_len)
+static wifi_error parse_stats_record(hal_info *info,
+                                     wh_pktlog_hdr_t *pkt_stats_header)
 {
     wifi_error status;
-    if (record_type == PKTLOG_TYPE_RX_STAT) {
-        status = parse_rx_stats(info, buf, record_len);
+    if (pkt_stats_header->log_type == PKTLOG_TYPE_RX_STAT) {
+        /* Ignore the event if it doesn't carry RX descriptor */
+        if (pkt_stats_header->flags & PKT_INFO_FLG_RX_RXDESC_MASK)
+            status = parse_rx_stats(info,
+                                    (u8 *)(pkt_stats_header + 1),
+                                    pkt_stats_header->size);
+        else
+            status = WIFI_SUCCESS;
     } else {
-        status = parse_tx_stats(info, buf, record_len, record_type);
+        status = parse_tx_stats(info,
+                                (u8 *)(pkt_stats_header + 1),
+                                pkt_stats_header->size,
+                                pkt_stats_header->log_type);
     }
     return status;
 }
@@ -1581,10 +1590,7 @@ static wifi_error parse_stats(hal_info *info, u8 *data, u32 buflen)
             status = WIFI_ERROR_INVALID_ARGS;
             break;
         }
-        status = parse_stats_record(info,
-                                    (u8 *)(pkt_stats_header + 1),
-                                    pkt_stats_header->log_type,
-                                    pkt_stats_header->size);
+        status = parse_stats_record(info, pkt_stats_header);
         if (status != WIFI_SUCCESS) {
             ALOGE("Failed to parse the stats type : %d",
                   pkt_stats_header->log_type);

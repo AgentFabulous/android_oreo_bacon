@@ -48,6 +48,29 @@
 #define INVALID_RSSI 255
 #define EVENT_RX_PEERINFO_SIZE 64
 
+#define PKT_INFO_FLG_TX_LOCAL_S          0x1
+#define PKT_INFO_FLG_RX_HOST_RXD         0x2
+#define PKT_INFO_FLG_TX_REMOTE_S         0x4
+#define PKT_INFO_FLG_RX_LOCAL_S          0x8
+#define PKT_INFO_FLG_RX_REMOTE_S         0x10
+#define PKT_INFO_FLG_RX_LOCAL_DISCARD_S  0x20
+#define PKT_INFO_FLG_RX_REMOTE_DISCARD_S 0x40
+#define PKT_INFO_FLG_RX_REORDER_STORE_S  0x80
+#define PKT_INFO_FLG_RX_REORDER_DROP_S   0x100
+#define PKT_INFO_FLG_RX_PEER_INFO_S      0x200
+#define PKT_INFO_FLG_UNKNOWN_S           0x400
+
+/* MASK value of flags based on RX_STAT content.
+ * These are the events that carry Rx decriptor
+ */
+#define PKT_INFO_FLG_RX_RXDESC_MASK \
+        (PKT_INFO_FLG_RX_HOST_RXD | \
+         PKT_INFO_FLG_RX_LOCAL_S | \
+         PKT_INFO_FLG_RX_REMOTE_S | \
+         PKT_INFO_FLG_RX_LOCAL_DISCARD_S | \
+         PKT_INFO_FLG_RX_REMOTE_DISCARD_S | \
+         PKT_INFO_FLG_RX_REORDER_STORE_S)
+
 /* Format of the packet stats event*/
 typedef struct {
     u16 flags;
