@@ -820,8 +820,8 @@ int WifiVendorCommand::handleEvent(WifiEvent &event)
             mDataLen = nla_len(tb[NL80211_ATTR_VENDOR_DATA]);
 #ifdef QC_HAL_DEBUG
             ALOGD("%s: Vendor data len received:%d", __FUNCTION__, mDataLen);
-#endif
             hexdump(mVendorData, mDataLen);
+#endif
         }
     }
     return NL_SKIP;

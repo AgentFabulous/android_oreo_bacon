@@ -1077,8 +1077,6 @@ wifi_error GScanCommandEventHandler::gscan_parse_pno_network_results(
  */
 int GScanCommandEventHandler::handleEvent(WifiEvent &event)
 {
-    ALOGI("GScanCommandEventHandler::handleEvent: Got a GSCAN Event"
-        " message from the Driver.");
     unsigned i=0;
     int ret = WIFI_SUCCESS;
     u32 status;
@@ -1137,7 +1135,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 nla_get_u32(
                 tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH]);
-            ALOGI("%s: RESULTS_SCAN_RESULT_IE_LENGTH =%d",
+            ALOGD("%s: RESULTS_SCAN_RESULT_IE_LENGTH =%d",
                 __FUNCTION__, lengthOfInfoElements);
             resultsBufSize =
                 lengthOfInfoElements + sizeof(wifi_scan_result);

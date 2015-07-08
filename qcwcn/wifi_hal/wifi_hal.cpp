@@ -328,12 +328,12 @@ wifi_error wifi_initialize(wifi_handle *handle)
 
     /* Set the socket buffer size */
     if (nl_socket_set_buffer_size(cmd_sock, (256*1024), 0) < 0) {
-        ALOGE("Could not set nl_socket RX buffer size: %s",
+        ALOGE("Could not set nl_socket RX buffer size for cmd_sock: %s",
                    strerror(errno));
         /* continue anyway with the default (smaller) buffer */
     }
     else {
-        ALOGI("nl_socket_set_buffer_size successful");
+        ALOGI("nl_socket_set_buffer_size for cmd_sock successful");
     }
 
     event_sock =
@@ -342,6 +342,16 @@ wifi_error wifi_initialize(wifi_handle *handle)
         ALOGE("Failed to create event socket port");
         ret = WIFI_ERROR_UNKNOWN;
         goto unload;
+    }
+
+    /* Set the socket buffer size */
+    if (nl_socket_set_buffer_size(event_sock, (256*1024), 0) < 0) {
+        ALOGE("Could not set nl_socket RX buffer size for event_sock: %s",
+                   strerror(errno));
+        /* continue anyway with the default (smaller) buffer */
+    }
+    else {
+        ALOGI("nl_socket_set_buffer_size for event_sock successful");
     }
 
     cb = nl_socket_get_cb(event_sock);
