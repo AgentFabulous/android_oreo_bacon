@@ -1262,52 +1262,40 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
     return status;
 }
 
-static u16 get_tx_mcs(struct tx_ppdu_start *ppdu_start)
+static u16 get_tx_mcs(u8 series,
+                      struct tx_ppdu_start *ppdu_start)
 {
     u16 tx_rate = 0;
     MCS mcs;
+    struct series_bw *sbw = NULL;
 
     mcs.mcs = 0;
-    if (ppdu_start->valid_s0_bw20) {
-        mcs.mcs_s.rate      = ppdu_start->s0_bw20.rate;
-        mcs.mcs_s.nss       = ppdu_start->s0_bw20.nss;
-        mcs.mcs_s.preamble  = ppdu_start->s0_bw20.preamble_type;
-        mcs.mcs_s.short_gi  = ppdu_start->s0_bw20.short_gi;
-    } else if (ppdu_start->valid_s0_bw40) {
-        mcs.mcs_s.rate      = ppdu_start->s0_bw40.rate;
-        mcs.mcs_s.nss       = ppdu_start->s0_bw40.nss;
-        mcs.mcs_s.preamble  = ppdu_start->s0_bw40.preamble_type;
-        mcs.mcs_s.short_gi = ppdu_start->s0_bw40.short_gi;
-    } else if (ppdu_start->valid_s0_bw80) {
-        mcs.mcs_s.rate      = ppdu_start->s0_bw80.rate;
-        mcs.mcs_s.nss       = ppdu_start->s0_bw80.nss;
-        mcs.mcs_s.preamble  = ppdu_start->s0_bw80.preamble_type;
-        mcs.mcs_s.short_gi = ppdu_start->s0_bw80.short_gi;
-    } else if (ppdu_start->valid_s0_bw160) {
-        mcs.mcs_s.rate      = ppdu_start->s0_bw160.rate;
-        mcs.mcs_s.nss       = ppdu_start->s0_bw160.nss;
-        mcs.mcs_s.preamble  = ppdu_start->s0_bw160.preamble_type;
-        mcs.mcs_s.short_gi = ppdu_start->s0_bw160.short_gi;
-    } else if (ppdu_start->valid_s1_bw20) {
-        mcs.mcs_s.rate      = ppdu_start->s1_bw20.rate;
-        mcs.mcs_s.nss       = ppdu_start->s1_bw20.nss;
-        mcs.mcs_s.preamble  = ppdu_start->s1_bw20.preamble_type;
-        mcs.mcs_s.short_gi = ppdu_start->s1_bw20.short_gi;
-    } else if (ppdu_start->valid_s1_bw40) {
-        mcs.mcs_s.rate      = ppdu_start->s1_bw40.rate;
-        mcs.mcs_s.nss       = ppdu_start->s1_bw40.nss;
-        mcs.mcs_s.preamble  = ppdu_start->s1_bw40.preamble_type;
-        mcs.mcs_s.short_gi = ppdu_start->s1_bw40.short_gi;
-    } else if (ppdu_start->valid_s1_bw80) {
-        mcs.mcs_s.rate      = ppdu_start->s1_bw80.rate;
-        mcs.mcs_s.nss       = ppdu_start->s1_bw80.nss;
-        mcs.mcs_s.preamble  = ppdu_start->s1_bw80.preamble_type;
-        mcs.mcs_s.short_gi = ppdu_start->s1_bw80.short_gi;
-    } else if (ppdu_start->valid_s1_bw160) {
-        mcs.mcs_s.rate      = ppdu_start->s1_bw160.rate;
-        mcs.mcs_s.nss       = ppdu_start->s1_bw160.nss;
-        mcs.mcs_s.preamble  = ppdu_start->s1_bw160.preamble_type;
-        mcs.mcs_s.short_gi = ppdu_start->s1_bw160.short_gi;
+
+    if (series == 0) {
+        if (ppdu_start->valid_s0_bw20)
+            sbw = &ppdu_start->s0_bw20;
+        else if (ppdu_start->valid_s0_bw40)
+            sbw = &ppdu_start->s0_bw40;
+        else if (ppdu_start->valid_s0_bw80)
+            sbw = &ppdu_start->s0_bw80;
+        else if (ppdu_start->valid_s0_bw160)
+            sbw = &ppdu_start->s0_bw160;
+    } else {
+        if (ppdu_start->valid_s1_bw20)
+            sbw = &ppdu_start->s1_bw20;
+        else if (ppdu_start->valid_s1_bw40)
+            sbw = &ppdu_start->s1_bw40;
+        else if (ppdu_start->valid_s1_bw80)
+            sbw = &ppdu_start->s1_bw80;
+        else if (ppdu_start->valid_s1_bw160)
+            sbw = &ppdu_start->s1_bw160;
+    }
+
+    if (sbw) {
+        mcs.mcs_s.rate      = sbw->rate;
+        mcs.mcs_s.nss       = sbw->nss;
+        mcs.mcs_s.preamble  = sbw->preamble_type;
+        mcs.mcs_s.short_gi  = sbw->short_gi;
     }
 
     return mcs.mcs;
@@ -1367,7 +1355,8 @@ static void get_tx_aggr_stats(struct tx_ppdu_start *ppdu_start, hal_info *info)
     }
 }
 
-static u16 get_bw(struct tx_ppdu_end *tx_ppdu_end)
+static void get_try_status_params(hal_info *info,
+                                 struct tx_ppdu_end *tx_ppdu_end)
 {
     int try_list_index;
 
@@ -1376,7 +1365,10 @@ static u16 get_bw(struct tx_ppdu_end *tx_ppdu_end)
     else
         try_list_index = 0;
 
-    return tx_ppdu_end->try_list.try_st[try_list_index].packet_bw;
+    info->pkt_stats->tx_bandwidth =
+        tx_ppdu_end->try_list.try_st[try_list_index].packet_bw;
+    info->pkt_stats->series =
+        tx_ppdu_end->try_list.try_st[try_list_index].series;
 }
 
 static wifi_error parse_tx_stats(hal_info *info, void *buf,
@@ -1411,7 +1403,7 @@ static wifi_error parse_tx_stats(hal_info *info, void *buf,
                 = ppdu_start->start_seq_num;
             info->pkt_stats->start_seq_num = ppdu_start->start_seq_num;
             rb_pkt_stats->tid = ppdu_start->qos_ctl & 0xF;
-            rb_pkt_stats->MCS = get_tx_mcs(ppdu_start) |
+            rb_pkt_stats->MCS = get_tx_mcs(info->pkt_stats->series, ppdu_start) |
                                 (info->pkt_stats->tx_bandwidth << BW_OFFSET);
             rb_pkt_stats->last_transmit_rate = get_rate(rb_pkt_stats->MCS);
 
@@ -1451,7 +1443,7 @@ static wifi_error parse_tx_stats(hal_info *info, void *buf,
                 tx_ppdu_end->try_list.try_st[0].timestamp;
             rb_pkt_stats->rssi = tx_ppdu_end->stat.ack_rssi_ave;
             rb_pkt_stats->num_retries = tx_ppdu_end->stat.total_tries;
-            info->pkt_stats->tx_bandwidth = get_bw(tx_ppdu_end);
+            get_try_status_params(info, tx_ppdu_end);
 
             info->pkt_stats->tx_stats_events |=  BIT(PKTLOG_TYPE_TX_STAT);
         }

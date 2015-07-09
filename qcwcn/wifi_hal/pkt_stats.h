@@ -218,9 +218,11 @@ struct ppdu_status {
 /*Contains tx timestamp*/
 struct try_status {
     u32 timestamp                       : 23; //[22:0]
-    u32 reserved1                       :  5; //[23]
+    u32 reserved1                       :  1; //[23]
+    u32 series                          :  1; //[24]
+    u32 reserved2                       :  3; //[27:25]
     u32 packet_bw                       :  2; //[29:28]
-    u32 reserved2                       :  1; //[30]
+    u32 reserved3                       :  1; //[30]
     u32 tx_packet                       :  1; //[31]
 } __attribute__((packed));
 
@@ -329,6 +331,7 @@ struct pkt_stats_s {
     u32 shifted_bitmap_63_32;
     bool isBlockAck;
     u8 tx_bandwidth;
+    u8 series;
 };
 
 typedef union {
