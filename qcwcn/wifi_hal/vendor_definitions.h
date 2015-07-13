@@ -996,6 +996,14 @@ enum qca_wlan_vendor_attr_pno_config_params {
      */
     QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_TYPE = 13,
 
+    /* Nested attribute to send the channel list */
+    QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_CHANNEL_LIST = 14,
+
+    /* Unsigned 32-bit value; indicates the Interval between PNO scan
+     * cycles in msec
+     */
+    QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_SCAN_INTERVAL = 15,
+
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_PNO_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_PNO_MAX =
