@@ -107,6 +107,106 @@ static wifi_error update_connectivity_ring_buf(hal_info *info,
     return WIFI_SUCCESS;
 }
 
+#define SCAN_CAP_ENTRY_SIZE 1024
+static wifi_error process_log_extscan_capabilities(hal_info *info,
+                                                   u8* buf, int length)
+{
+    wifi_ring_buffer_driver_connectivity_event *pConnectEvent;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    wlan_ext_scan_capabilities_payload_type *pScanCapabilities;
+    wifi_gscan_capabilities gscan_cap;
+    gscan_capabilities_vendor_data_t cap_vendor_data;
+    tlv_log *pTlv;
+    int tot_len = sizeof(wifi_ring_buffer_driver_connectivity_event);
+    u8 out_buf[SCAN_CAP_ENTRY_SIZE];
+    wifi_error status;
+
+    pRingBufferEntry = (wifi_ring_buffer_entry *)&out_buf[0];
+    memset(pRingBufferEntry, 0, SCAN_CAP_ENTRY_SIZE);
+    pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
+                     (pRingBufferEntry + 1);
+
+    pConnectEvent->event = WIFI_EVENT_G_SCAN_CAPABILITIES;
+    pTlv = &pConnectEvent->tlvs[0];
+
+    pScanCapabilities = (wlan_ext_scan_capabilities_payload_type *)buf;
+    pTlv = addLoggerTlv(WIFI_TAG_REQUEST_ID,
+                        sizeof(pScanCapabilities->request_id),
+                        (u8 *)&pScanCapabilities->request_id, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(pScanCapabilities->request_id);
+
+    gscan_cap.max_scan_cache_size =
+        pScanCapabilities->extscan_cache_capabilities.scan_cache_entry_size;
+    gscan_cap.max_scan_buckets =
+        pScanCapabilities->extscan_cache_capabilities.max_buckets;
+    gscan_cap.max_ap_cache_per_scan =
+        pScanCapabilities->extscan_cache_capabilities.max_bssid_per_scan;
+    gscan_cap.max_rssi_sample_size = FEATURE_NOT_SUPPORTED;
+    gscan_cap.max_scan_reporting_threshold =
+        pScanCapabilities->extscan_cache_capabilities.max_table_usage_threshold;
+    gscan_cap.max_hotlist_bssids =
+        pScanCapabilities->extscan_hotlist_monitor_capabilities.max_hotlist_entries;
+    gscan_cap.max_hotlist_ssids =
+        pScanCapabilities->extscan_capabilities.num_extscan_hotlist_ssid;
+    gscan_cap.max_significant_wifi_change_aps = FEATURE_NOT_SUPPORTED;
+    gscan_cap.max_bssid_history_entries = FEATURE_NOT_SUPPORTED;
+    gscan_cap.max_number_epno_networks =
+        pScanCapabilities->extscan_capabilities.num_epno_networks;
+    gscan_cap.max_number_epno_networks_by_ssid =
+        pScanCapabilities->extscan_capabilities.num_epno_networks;
+    gscan_cap.max_number_of_white_listed_ssid =
+        pScanCapabilities->extscan_capabilities.num_roam_ssid_whitelist;
+
+    pTlv = addLoggerTlv(WIFI_TAG_GSCAN_CAPABILITIES,
+                        sizeof(wifi_gscan_capabilities),
+                        (u8 *)&gscan_cap, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(wifi_gscan_capabilities);
+
+    cap_vendor_data.hotlist_mon_table_id =
+        pScanCapabilities->extscan_hotlist_monitor_capabilities.table_id;
+    cap_vendor_data.wlan_hotlist_entry_size =
+        pScanCapabilities->extscan_hotlist_monitor_capabilities.wlan_hotlist_entry_size;
+    cap_vendor_data.cache_cap_table_id =
+        pScanCapabilities->extscan_cache_capabilities.table_id;
+    cap_vendor_data.requestor_id =
+        pScanCapabilities->extscan_capabilities.requestor_id;
+    cap_vendor_data.vdev_id =
+        pScanCapabilities->extscan_capabilities.vdev_id;
+    cap_vendor_data.num_extscan_cache_tables =
+        pScanCapabilities->extscan_capabilities.num_extscan_cache_tables;
+    cap_vendor_data.num_wlan_change_monitor_tables =
+        pScanCapabilities->extscan_capabilities.num_wlan_change_monitor_tables;
+    cap_vendor_data.num_hotlist_monitor_tables =
+        pScanCapabilities->extscan_capabilities.num_hotlist_monitor_tables;
+    cap_vendor_data.rtt_one_sided_supported =
+        pScanCapabilities->extscan_capabilities.rtt_one_sided_supported;
+    cap_vendor_data.rtt_11v_supported =
+        pScanCapabilities->extscan_capabilities.rtt_11v_supported;
+    cap_vendor_data.rtt_ftm_supported =
+        pScanCapabilities->extscan_capabilities.rtt_ftm_supported;
+    cap_vendor_data.num_extscan_cache_capabilities =
+        pScanCapabilities->extscan_capabilities.num_extscan_cache_capabilities;
+    cap_vendor_data.num_extscan_wlan_change_capabilities =
+        pScanCapabilities->extscan_capabilities.num_extscan_wlan_change_capabilities;
+    cap_vendor_data.num_extscan_hotlist_capabilities =
+        pScanCapabilities->extscan_capabilities.num_extscan_hotlist_capabilities;
+    cap_vendor_data.num_roam_bssid_blacklist =
+        pScanCapabilities->extscan_capabilities.num_roam_bssid_blacklist;
+    cap_vendor_data.num_roam_bssid_preferred_list =
+        pScanCapabilities->extscan_capabilities.num_roam_bssid_preferred_list;
+
+    pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                        sizeof(gscan_capabilities_vendor_data_t),
+                        (u8 *)&cap_vendor_data, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(gscan_capabilities_vendor_data_t);
+
+    status = update_connectivity_ring_buf(info, pRingBufferEntry, tot_len);
+    if (status != WIFI_SUCCESS) {
+        ALOGE("Failed to write ext scan capabilities event into ring buffer");
+    }
+    return status;
+}
+
 static wifi_error process_bt_coex_scan_event(hal_info *info,
                                              u32 id, u8* buf, int length)
 {
@@ -781,6 +881,22 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
             break;
             case WLAN_DIAG_TYPE_LOG:
             {
+                id = diag_msg_hdr->diag_id;
+                payloadlen = diag_msg_hdr->u.payload_len;
+
+                switch (id) {
+                case LOG_WLAN_EXTSCAN_CAPABILITIES:
+                    status = process_log_extscan_capabilities(info,
+                                                    diag_msg_hdr->payload,
+                                                    payloadlen);
+                    if (status != WIFI_SUCCESS) {
+                        ALOGE("Failed to process extscan capabilities");
+                        return status;
+                    }
+                    break;
+                default:
+                    return WIFI_SUCCESS;
+                }
             }
             break;
             case WLAN_DIAG_TYPE_MSG:

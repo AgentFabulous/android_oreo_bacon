@@ -45,6 +45,7 @@
 #define ANI_NL_MSG_LOG_HOST_PRINT_TYPE 89
 
 #define WLAN_PKT_LOG_STATS            0x18E0
+#define FEATURE_NOT_SUPPORTED         0xFF
 
 /*
  *  - verbose_level 0 corresponds to no collection
