@@ -48,12 +48,6 @@ wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
     hal_info *info = getHalInfo(wifiHandle);
     lowi_cb_table_t *lowiWifiHalApi = NULL;
 
-    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
-        ALOGE("%s: GSCAN is not supported by driver",
-            __FUNCTION__);
-        return WIFI_ERROR_NOT_SUPPORTED;
-    }
-
     /* Route GSCAN request through LOWI if supported */
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
