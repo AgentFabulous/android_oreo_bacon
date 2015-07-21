@@ -84,6 +84,8 @@ typedef struct {
     int  id;                                        // id to use when talking to driver
 } interface_info;
 
+struct gscan_event_handlers_s;
+
 typedef struct hal_info_s {
 
     struct nl_sock *cmd_sock;                       // command socket object
@@ -125,6 +127,8 @@ typedef struct hal_info_s {
     wifi_ring_buffer_entry *rx_aggr_pkts;
     rx_aggr_stats aggr_stats;
     u32 prev_seq_no;
+    // pointer to structure having various gscan_event_handlers
+    struct gscan_event_handlers_s *gscan_handlers;
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);
@@ -144,6 +148,8 @@ hal_info *getHalInfo(wifi_handle handle);
 hal_info *getHalInfo(wifi_interface_handle handle);
 wifi_handle getWifiHandle(hal_info *info);
 wifi_interface_handle getIfaceHandle(interface_info *info);
+wifi_error initializeGscanHandlers(hal_info *info);
+wifi_error cleanupGscanHandlers(hal_info *info);
 
 lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities);
 

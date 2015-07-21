@@ -499,6 +499,13 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
+    ALOGI("Initializing Gscan Event Handlers");
+    ret = initializeGscanHandlers(info);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Initializing Gscan Event Handlers Failed");
+        goto unload;
+    }
+
     ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d Supported"
             " features : %x", NL80211_CMD_VENDOR, info->supported_feature_set);
 
@@ -514,6 +521,7 @@ unload:
             if (info->user_sock) nl_socket_free(info->user_sock);
             if (info->pkt_stats) free(info->pkt_stats);
             if (info->rx_aggr_pkts) free(info->rx_aggr_pkts);
+            cleanupGscanHandlers(info);
             free(info);
         }
     }
@@ -563,6 +571,8 @@ static void internal_cleaned_up_handler(wifi_handle handle)
     if (info->rx_aggr_pkts)
         free(info->rx_aggr_pkts);
     wifi_logger_ring_buffers_deinit(info);
+    ALOGI("Cleanup Gscan Event Handlers");
+    cleanupGscanHandlers(info);
 
     if (info->exit_sockets[0] >= 0) {
         close(info->exit_sockets[0]);
