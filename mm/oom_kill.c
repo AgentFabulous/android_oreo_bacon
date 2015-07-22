@@ -17,7 +17,6 @@
  *  kernel subsystems and hints as to where to find out what things do.
  */
 
-#define REALLY_WANT_TRACEPOINTS
 #include <linux/oom.h>
 #include <linux/mm.h>
 #include <linux/err.h>
