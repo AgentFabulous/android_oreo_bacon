@@ -1091,16 +1091,6 @@ int32_t QCameraParameters::setPreviewSize(const QCameraParameters& params)
     params.getPreviewSize(&width, &height);
     ALOGV("Requested preview size %d x %d", width, height);
 
-    // Set preview size to video size for 4K
-    if (getRecordingHintValue()) {
-        int video_width, video_height;
-        params.getVideoSize(&video_width, &video_height);
-        if ((video_width > 1920) && (video_height > 1080)) {
-            width = video_width;
-            height = video_height;
-        }
-    }
-
     // Validate the preview size
     for (size_t i = 0; i < m_pCapability->preview_sizes_tbl_cnt; ++i) {
         if (width ==  m_pCapability->preview_sizes_tbl[i].width
