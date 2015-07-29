@@ -328,7 +328,6 @@ wifi_error wifi_get_ring_data(wifi_interface_handle iface,
     }
     wifiLoggerCommand->attr_end(nlData);
 
-    //TBD  Is there requestResponse here
     /* Send the msg and wait for a response. */
     ret = wifiLoggerCommand->requestResponse();
     if (ret) {
@@ -527,9 +526,8 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
     if (ret < 0)
         goto cleanup;
 
-    /* Send the msg and wait for the memory dump event */
-    wifiLoggerCommand->waitForRsp(true);
-    ret = wifiLoggerCommand->requestEvent();
+    /* Send the msg and wait for the memory dump response */
+    ret = wifiLoggerCommand->requestResponse();
     if (ret) {
         ALOGE("%s: Error %d happened. ", __FUNCTION__, ret);
     }
@@ -814,6 +812,8 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
     int i = 0;
     int len = 0, version;
     char version_type[20];
+    char* memBuffer = NULL;
+    FILE* memDumpFilePtr = NULL;
     WifiVendorCommand::handleResponse(reply);
 
     switch(mSubcmd)
@@ -866,36 +866,7 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
             }
         }
         break;
-        default :
-            ALOGE("%s: Wrong Wifi Logger subcmd response received %d",
-                __FUNCTION__, mSubcmd);
-    }
 
-    return NL_SKIP;
-}
-
-/* This function will be the main handler for incoming (from driver)
- * WIFI_LOGGER_SUBCMD.
- * Calls the appropriate callback handler after parsing the vendor data.
- */
-int WifiLoggerCommand::handleEvent(WifiEvent &event)
-{
-    unsigned i = 0;
-    u32 status;
-    int ret = WIFI_SUCCESS;
-    char* memBuffer = NULL;
-    FILE* memDumpFilePtr = NULL;
-
-    WifiVendorCommand::handleEvent(event);
-
-    struct nlattr *tbVendor[
-        QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MAX + 1];
-    nla_parse(tbVendor, QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MAX,
-            (struct nlattr *)mVendorData,
-            mDataLen, NULL);
-
-    switch(mSubcmd)
-    {
         case QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP:
         {
             int id = 0;
@@ -903,24 +874,17 @@ int WifiLoggerCommand::handleEvent(WifiEvent &event)
             int numRecordsRead = 0;
             u32 remaining = 0;
             char* buffer = NULL;
+            struct nlattr *tbVendor[
+                QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MAX + 1];
 
-            if (!tbVendor[
-                QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_REQUEST_ID]) {
-                ALOGE("%s: LOGGER_RESULTS_REQUEST_ID not"
-                    "found, continuing...", __func__);
-            }
-            else {
-                id = nla_get_u32(tbVendor[
-                          QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_REQUEST_ID]
-                      );
-                ALOGI("%s: Event has Req. ID:%d, ours:%d",
-                    __func__, id, mRequestId);
-            }
+            nla_parse(tbVendor, QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MAX,
+                    (struct nlattr *)mVendorData,
+                    mDataLen, NULL);
 
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MEMDUMP_SIZE]) {
                 ALOGE("%s: LOGGER_RESULTS_MEMDUMP_SIZE not"
-                    "found", __func__);
+                      "found", __func__);
                 break;
             }
 
@@ -992,6 +956,31 @@ int WifiLoggerCommand::handleEvent(WifiEvent &event)
         }
         break;
 
+        default :
+            ALOGE("%s: Wrong Wifi Logger subcmd response received %d",
+                __FUNCTION__, mSubcmd);
+    }
+
+    /* free the allocated memory */
+    if (memBuffer) {
+        free(memBuffer);
+    }
+    if (memDumpFilePtr) {
+        fclose(memDumpFilePtr);
+    }
+    return NL_SKIP;
+}
+
+/* This function will be the main handler for incoming (from driver)
+ * WIFI_LOGGER_SUBCMD.
+ * Calls the appropriate callback handler after parsing the vendor data.
+ */
+int WifiLoggerCommand::handleEvent(WifiEvent &event)
+{
+    WifiVendorCommand::handleEvent(event);
+
+    switch(mSubcmd)
+    {
        default:
            /* Error case should not happen print log */
            ALOGE("%s: Wrong subcmd received %d", __func__, mSubcmd);
@@ -999,10 +988,6 @@ int WifiLoggerCommand::handleEvent(WifiEvent &event)
     }
 
 cleanup:
-    /* free the allocated memory */
-    if (memBuffer) {
-        free(memBuffer);
-    }
     return NL_SKIP;
 }
 
