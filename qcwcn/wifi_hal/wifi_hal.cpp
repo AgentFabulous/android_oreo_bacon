@@ -49,6 +49,7 @@
 #include "cpp_bindings.h"
 #include "ifaceeventhandler.h"
 #include "wifiloggercmd.h"
+#include "vendor_definitions.h"
 
 /*
  BUGBUG: normally, libnl allocates ports for all connections it makes; but
@@ -711,8 +712,12 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
     if (cmd == NL80211_CMD_VENDOR) {
         vendor_id = event.get_u32(NL80211_ATTR_VENDOR_ID);
         subcmd = event.get_u32(NL80211_ATTR_VENDOR_SUBCMD);
-        ALOGI("event received %s, vendor_id = 0x%0x, subcmd = 0x%0x",
-                event.get_cmdString(), vendor_id, subcmd);
+        /* Restrict printing GSCAN_FULL_RESULT which is causing lot
+           of logs in bug report */
+        if (subcmd != QCA_NL80211_VENDOR_SUBCMD_GSCAN_FULL_SCAN_RESULT) {
+            ALOGI("event received %s, vendor_id = 0x%0x, subcmd = 0x%0x",
+                  event.get_cmdString(), vendor_id, subcmd);
+        }
     } else {
         ALOGI("event received %s", event.get_cmdString());
     }
@@ -742,9 +747,11 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
         }
     }
 
+#ifdef QC_HAL_DEBUG
     if (!dispatched) {
         ALOGI("event ignored!!");
     }
+#endif
 
     pthread_mutex_unlock(&info->cb_lock);
     return NL_OK;

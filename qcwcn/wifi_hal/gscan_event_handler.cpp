@@ -1098,9 +1098,10 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             u32 resultsBufSize = 0;
             u32 lengthOfInfoElements = 0;
 
+#ifdef QC_HAL_DEBUG
             ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_FULL_SCAN_RESULT "
                 "received.");
-
+#endif
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
             {
@@ -1116,8 +1117,10 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
              *  request_id value which we're maintaining.
              */
             if (reqId != mRequestId) {
+#ifdef QC_HAL_DEBUG
                 ALOGE("%s: Event has Req. ID:%d <> Ours:%d, continue...",
                     __FUNCTION__, reqId, mRequestId);
+#endif
                 reqId = mRequestId;
             }
 
