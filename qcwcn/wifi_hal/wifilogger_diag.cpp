@@ -1228,6 +1228,7 @@ static wifi_error populate_rx_aggr_stats(hal_info *info)
         pps_entry->last_transmit_rate = info->aggr_stats.last_transmit_rate;
         pps_entry->rssi = info->aggr_stats.rssi;
         pps_entry->firmware_entry_timestamp = info->aggr_stats.timestamp;
+        pps_entry->tid = info->aggr_stats.tid;
 
         index += pRingBufferEntry->entry_size;
         status = update_stats_to_ring_buf(info, (u8 *)pRingBufferEntry,
@@ -1320,8 +1321,6 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
     if (rx_stats_rcvd->mpdu_start.encrypted)
         rb_pkt_stats->flags |= PER_PACKET_ENTRY_FLAGS_PROTECTED;
 
-    rb_pkt_stats->tid = rx_stats_rcvd->mpdu_start.tid;
-
     if (rx_stats_rcvd->attention.first_mpdu) {
         MCS *mcs = &info->aggr_stats.RxMCS;
         u32 ht_vht_sig;
@@ -1355,6 +1354,7 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
             = get_rate(info->aggr_stats.RxMCS.mcs);
 
         info->aggr_stats.rssi = rx_stats_rcvd->ppdu_start.rssi_comb;
+        info->aggr_stats.tid = rx_stats_rcvd->mpdu_start.tid;
     }
     rb_pkt_stats->link_layer_transmit_sequence
         = rx_stats_rcvd->mpdu_start.seq_num;
