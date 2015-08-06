@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <time.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include "common.h"
 #include "cpp_bindings.h"
@@ -110,7 +111,7 @@ wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    requestId = rand();
+    requestId = get_requestid();
     ALOGI("%s: RequestId:%d Enter band:%d max_channels:%d", __FUNCTION__,
           requestId, band, max_channels);
 
@@ -208,7 +209,7 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate it randomly.
      */
-    requestId = rand();
+    requestId = get_requestid();
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, requestId);
 
     if (capabilities == NULL) {
@@ -1216,7 +1217,7 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
 
     /* No request id from caller, so generate one and pass it on to the driver. */
     /* Generate it randomly */
-    requestId = rand();
+    requestId = get_requestid();
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, requestId);
 
     if (results == NULL || num == NULL) {

@@ -166,6 +166,9 @@ wifi_error wifi_stop_rssi_monitoring(wifi_request_id id, wifi_interface_handle i
 #define min(x, y)       ((x) < (y) ? (x) : (y))
 #define max(x, y)       ((x) > (y) ? (x) : (y))
 
+#define REQUEST_ID_MAX 1000
+#define get_requestid() ((arc4random()%REQUEST_ID_MAX) + 1)
+
 #ifdef __cplusplus
 extern "C"
 {

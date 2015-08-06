@@ -31,6 +31,7 @@
 #include <utils/Log.h>
 #include <time.h>
 #include <errno.h>
+#include <stdlib.h>
 #include "wificonfigcommand.h"
 
 /* Implementation of the API functions exposed in wifi_config.h */
@@ -120,8 +121,7 @@ wifi_error wifi_set_country_code(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate it randomly.
      */
-    srand(time(NULL));
-    requestId = rand();
+    requestId = get_requestid();
 
     wifiConfigCommand = new WiFiConfigCommand(
                             wifiHandle,

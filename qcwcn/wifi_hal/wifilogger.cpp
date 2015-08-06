@@ -35,6 +35,7 @@
 #include <utils/Log.h>
 #include "wifiloggercmd.h"
 #include "rb_wrapper.h"
+#include <stdlib.h>
 
 #define LOGGER_MEMDUMP_FILENAME "/proc/debug/fwdump"
 #define LOGGER_MEMDUMP_CHUNKSIZE (4 * 1024)
@@ -77,7 +78,7 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
      * No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    requestId = rand();
+    requestId = get_requestid();
 
     if (buffer_name == NULL) {
         ALOGE("%s: Invalid Ring Name. \n", __FUNCTION__);
@@ -223,7 +224,7 @@ wifi_error wifi_get_logger_supported_feature_set(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    requestId = rand();
+    requestId = get_requestid();
 
     wifiLoggerCommand = new WifiLoggerCommand(
                             wifiHandle,
@@ -292,7 +293,7 @@ wifi_error wifi_get_ring_data(wifi_interface_handle iface,
         return WIFI_ERROR_UNKNOWN;
     }
 
-    requestId = rand();
+    requestId = get_requestid();
 
     wifiLoggerCommand = new WifiLoggerCommand(
                                 wifiHandle,
@@ -358,7 +359,7 @@ wifi_error wifi_get_firmware_version(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    requestId = rand();
+    requestId = get_requestid();
 
     wifiLoggerCommand = new WifiLoggerCommand(
                                 wifiHandle,
@@ -422,7 +423,7 @@ wifi_error wifi_get_driver_version(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    requestId = rand();
+    requestId = get_requestid();
 
     wifiLoggerCommand = new WifiLoggerCommand(
                             wifiHandle,
@@ -485,7 +486,7 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    requestId = rand();
+    requestId = get_requestid();
 
     wifiLoggerCommand = new WifiLoggerCommand(
                             wifiHandle,

@@ -308,7 +308,6 @@ wifi_error wifi_initialize(wifi_handle *handle)
     struct nl_sock *cmd_sock = NULL;
     struct nl_sock *event_sock = NULL;
     struct nl_cb *cb = NULL;
-    srand(getpid());
 
     ALOGI("Initializing wifi");
     hal_info *info = (hal_info *)malloc(sizeof(hal_info));
