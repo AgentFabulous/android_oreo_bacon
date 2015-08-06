@@ -251,6 +251,8 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_scanning_mac_oui =  wifi_set_scanning_mac_oui;
     fn->wifi_get_ifaces = wifi_get_ifaces;
     fn->wifi_get_iface_name = wifi_get_iface_name;
+    fn->wifi_set_iface_event_handler = wifi_set_iface_event_handler;
+    fn->wifi_reset_iface_event_handler = wifi_reset_iface_event_handler;
     fn->wifi_start_gscan = wifi_start_gscan;
     fn->wifi_stop_gscan = wifi_stop_gscan;
     fn->wifi_get_cached_gscan_results = wifi_get_cached_gscan_results;
@@ -278,6 +280,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_log_handler = wifi_set_log_handler;
     fn->wifi_reset_log_handler = wifi_reset_log_handler;
     fn->wifi_set_alert_handler = wifi_set_alert_handler;
+    fn->wifi_reset_alert_handler = wifi_reset_alert_handler;
     fn->wifi_get_firmware_version = wifi_get_firmware_version;
     fn->wifi_get_ring_buffers_status = wifi_get_ring_buffers_status;
     fn->wifi_get_logger_supported_feature_set = wifi_get_logger_supported_feature_set;
@@ -290,6 +293,8 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_bssid_preference = wifi_set_bssid_preference;
     fn->wifi_set_gscan_roam_params = wifi_set_gscan_roam_params;
     fn->wifi_set_ssid_white_list = wifi_set_ssid_white_list;
+    fn->wifi_set_lci = wifi_set_lci;
+    fn->wifi_set_lcr = wifi_set_lcr;
     fn->wifi_start_sending_offloaded_packet =
             wifi_start_sending_offloaded_packet;
     fn->wifi_stop_sending_offloaded_packet = wifi_stop_sending_offloaded_packet;
