@@ -46,7 +46,6 @@
 #define PKTLOG_TYPE_MAX             9
 #define BW_OFFSET 8
 #define INVALID_RSSI 255
-#define EVENT_RX_PEERINFO_SIZE 64
 
 #define PKT_INFO_FLG_TX_LOCAL_S          0x1
 #define PKT_INFO_FLG_RX_HOST_RXD         0x2

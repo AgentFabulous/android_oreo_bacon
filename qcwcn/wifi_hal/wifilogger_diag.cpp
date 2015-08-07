@@ -1258,12 +1258,7 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
     wifi_ring_buffer_entry *pRingBufferEntry;
     u32 len_ring_buffer_entry = 0;
 
-    if (size == EVENT_RX_PEERINFO_SIZE) {
-        // TODO Parse the event later
-        return WIFI_SUCCESS;
-    }
-
-    if (size != sizeof(rb_pkt_stats_t)) {
+    if (size < sizeof(rb_pkt_stats_t)) {
         ALOGE("%s Unexpected rx stats event length: %d", __FUNCTION__, size);
         memset(info->rx_aggr_pkts, 0, info->rx_buf_size_occupied);
         memset(&info->aggr_stats, 0, sizeof(rx_aggr_stats));
@@ -1503,7 +1498,7 @@ static wifi_error parse_tx_stats(hal_info *info, void *buf,
     {
         case PKTLOG_TYPE_TX_CTRL:
         {
-            if (buflen != sizeof (wh_pktlog_txctl)) {
+            if (buflen < sizeof (wh_pktlog_txctl)) {
                 ALOGE("Unexpected tx_ctrl event length: %d", buflen);
                 return WIFI_ERROR_UNKNOWN;
             }
@@ -1530,7 +1525,7 @@ static wifi_error parse_tx_stats(hal_info *info, void *buf,
         break;
         case PKTLOG_TYPE_TX_STAT:
         {
-            if (buflen != sizeof(struct tx_ppdu_end)) {
+            if (buflen < sizeof(struct tx_ppdu_end)) {
                 ALOGE("Unexpected tx_stat event length: %d", buflen);
                 return WIFI_ERROR_UNKNOWN;
             }
