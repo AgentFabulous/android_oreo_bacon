@@ -17,7 +17,7 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := bio_b64.c rsa_pss.c
 LOCAL_SHARED_LIBRARIES := liblog libcrypto
-LOCAL_MODULE := boringssl-compat
+LOCAL_MODULE := libboringssl-compat
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
 
