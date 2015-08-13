@@ -67,8 +67,7 @@
          PKT_INFO_FLG_RX_LOCAL_S | \
          PKT_INFO_FLG_RX_REMOTE_S | \
          PKT_INFO_FLG_RX_LOCAL_DISCARD_S | \
-         PKT_INFO_FLG_RX_REMOTE_DISCARD_S | \
-         PKT_INFO_FLG_RX_REORDER_STORE_S)
+         PKT_INFO_FLG_RX_REMOTE_DISCARD_S)
 
 /* Format of the packet stats event*/
 typedef struct {

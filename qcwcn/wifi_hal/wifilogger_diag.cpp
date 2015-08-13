@@ -1246,7 +1246,6 @@ static wifi_error populate_rx_aggr_stats(hal_info *info)
                             + pRingBufferEntry->entry_size);
     }
     memset(info->rx_aggr_pkts, 0, info->rx_buf_size_occupied);
-    memset(&info->aggr_stats, 0, sizeof(rx_aggr_stats));
     info->rx_buf_size_occupied = 0;
 
     return WIFI_SUCCESS;
@@ -1324,6 +1323,9 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
     if (rx_stats_rcvd->attention.first_mpdu) {
         MCS *mcs = &info->aggr_stats.RxMCS;
         u32 ht_vht_sig;
+
+        /* Flush the cached stats as this is the first MPDU. */
+        memset(&info->aggr_stats, 0, sizeof(rx_aggr_stats));
         if (rx_stats_rcvd->ppdu_start.preamble_type == PREAMBLE_L_SIG_RATE) {
             if (rx_stats_rcvd->ppdu_start.l_sig_rate_select)
                 mcs->mcs_s.preamble = WL_PREAMBLE_OFDM;
