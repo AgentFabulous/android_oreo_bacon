@@ -199,10 +199,11 @@ void push_out_all_ring_buffers(hal_info *info)
 
 void send_alert(hal_info *info, int reason_code)
 {
-    //TODO check locking
+    pthread_mutex_lock(&info->ah_lock);
     if (info->on_alert) {
         info->on_alert(0, NULL, 0, reason_code);
     }
+    pthread_mutex_unlock(&info->ah_lock);
 }
 
 void WifiLoggerCommand::setFeatureSet(u32 *support) {
@@ -545,7 +546,9 @@ wifi_error wifi_set_log_handler(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
+    pthread_mutex_lock(&info->lh_lock);
     info->on_ring_buffer_data = handler.on_ring_buffer_data;
+    pthread_mutex_unlock(&info->lh_lock);
     if (handler.on_ring_buffer_data == NULL) {
         ALOGE("Set log handler is NULL");
         return WIFI_ERROR_UNKNOWN;
@@ -559,8 +562,9 @@ wifi_error wifi_reset_log_handler(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    /* Some locking needs to be introduced here */
+    pthread_mutex_lock(&info->lh_lock);
     info->on_ring_buffer_data = NULL;
+    pthread_mutex_unlock(&info->lh_lock);
     return WIFI_SUCCESS;
 }
 
@@ -575,8 +579,9 @@ wifi_error wifi_set_alert_handler(wifi_request_id id,
         ALOGE("Set alert handler is NULL");
         return WIFI_ERROR_UNKNOWN;
     }
-    //TODO check locking
+    pthread_mutex_lock(&info->ah_lock);
     info->on_alert = handler.on_alert;
+    pthread_mutex_unlock(&info->ah_lock);
     return WIFI_SUCCESS;
 }
 
@@ -586,8 +591,9 @@ wifi_error wifi_reset_alert_handler(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    /* Some locking needs to be introduced here */
+    pthread_mutex_lock(&info->ah_lock);
     info->on_alert = NULL;
+    pthread_mutex_unlock(&info->ah_lock);
     return WIFI_SUCCESS;
 }
 
@@ -698,6 +704,9 @@ wifi_error wifi_logger_ring_buffers_init(hal_info *info)
         goto cleanup;
     }
 
+    pthread_mutex_init(&info->lh_lock, NULL);
+    pthread_mutex_init(&info->ah_lock, NULL);
+
     return ret;
 
 cleanup:
@@ -712,6 +721,8 @@ void wifi_logger_ring_buffers_deinit(hal_info *info)
     for (i = 0; i < NUM_RING_BUFS; i++) {
         rb_deinit(&info->rb_infos[i]);
     }
+    pthread_mutex_destroy(&info->lh_lock);
+    pthread_mutex_destroy(&info->ah_lock);
 }
 
 

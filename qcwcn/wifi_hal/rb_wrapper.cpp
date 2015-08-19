@@ -105,8 +105,10 @@ void push_out_rb_data(void *cb_ctx)
     hal_info *info = (hal_info *)rb_info->ctx;
     wifi_ring_buffer_status rbs;
 
+    pthread_mutex_lock(&info->lh_lock);
     if (info->on_ring_buffer_data == NULL) {
         ALOGE("on_ring_buffer_data handle is not set yet");
+        pthread_mutex_unlock(&info->lh_lock);
         return;
     }
 
@@ -122,6 +124,7 @@ void push_out_rb_data(void *cb_ctx)
         info->on_ring_buffer_data(rb_info->name, (char *)buf, length, &rbs);
         free(buf);
     };
+    pthread_mutex_unlock(&info->lh_lock);
     gettimeofday(&rb_info->last_push_time, NULL);
 }
 

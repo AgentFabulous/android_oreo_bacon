@@ -129,6 +129,10 @@ typedef struct hal_info_s {
     u32 prev_seq_no;
     // pointer to structure having various gscan_event_handlers
     struct gscan_event_handlers_s *gscan_handlers;
+    /* mutex for the log_handler access*/
+    pthread_mutex_t lh_lock;
+    /* mutex for the alert_handler access*/
+    pthread_mutex_t ah_lock;
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);
