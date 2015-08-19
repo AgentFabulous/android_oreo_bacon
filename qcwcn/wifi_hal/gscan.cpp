@@ -17,7 +17,6 @@
 #include "sync.h"
 #define LOG_TAG  "WifiHAL"
 #include <utils/Log.h>
-#include <errno.h>
 #include <time.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -476,11 +475,7 @@ wifi_error wifi_start_gscan(wifi_request_id id,
         }
         event_handlers->gscanStartCmdEventHandler = gScanStartCmdEventHandler;
     } else {
-        previousGScanRunning = true;
-        ALOGD("%s: "
-                "GScan is already running with request id=%d",
-                __FUNCTION__,
-                gScanStartCmdEventHandler->get_request_id());
+        gScanStartCmdEventHandler->setCallbackHandler(callbackHandler);
     }
 
     ret = gScanCommand->requestResponse();
@@ -491,17 +486,16 @@ wifi_error wifi_start_gscan(wifi_request_id id,
 
     if (gScanStartCmdEventHandler != NULL) {
         gScanStartCmdEventHandler->set_request_id(id);
+        gScanStartCmdEventHandler->enableEventHandling();
     }
 
 cleanup:
     delete gScanCommand;
-    /* Delete the command event handler object if ret != 0 */
-    if (!previousGScanRunning && ret &&
-        (event_handlers->gscanStartCmdEventHandler)) {
-        ALOGI("%s: Error ret:%d, delete event handler object.",
+    /* Disable Event Handling if ret != 0 */
+    if (ret && gScanStartCmdEventHandler) {
+        ALOGI("%s: Error ret:%d, disable event handling",
             __FUNCTION__, ret);
-        delete event_handlers->gscanStartCmdEventHandler;
-        event_handlers->gscanStartCmdEventHandler = NULL;
+        gScanStartCmdEventHandler->disableEventHandling();
     }
     ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
@@ -544,7 +538,8 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
     }
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
-    if (gScanStartCmdEventHandler == NULL) {
+    if (gScanStartCmdEventHandler == NULL ||
+        gScanStartCmdEventHandler->isEventHandlingEnabled() == false) {
         ALOGE("%s: GSCAN isn't running or already stopped. "
             "Nothing to do. Exit", __FUNCTION__);
         return WIFI_ERROR_NOT_AVAILABLE;
@@ -588,10 +583,9 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
     }
 
-    /* Delete different GSCAN event handlers for the specified Request ID. */
-    if (event_handlers->gscanStartCmdEventHandler) {
-        delete event_handlers->gscanStartCmdEventHandler;
-        event_handlers->gscanStartCmdEventHandler = NULL;
+    /* Disable Event Handling. */
+    if (gScanStartCmdEventHandler) {
+        gScanStartCmdEventHandler->disableEventHandling();
     }
 
 cleanup:
@@ -755,12 +749,7 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
             gScanSetBssidHotlistCmdEventHandler;
         ALOGD("%s: Handler object was created for HOTLIST_AP_FOUND.", __FUNCTION__);
     } else {
-        previousGScanSetBssidRunning = true;
-        ALOGD("%s: "
-                "A HOTLIST_AP_FOUND event handler object already exists "
-                "with request id=%d",
-                __FUNCTION__,
-                gScanSetBssidHotlistCmdEventHandler->get_request_id());
+        gScanSetBssidHotlistCmdEventHandler->setCallbackHandler(callbackHandler);
     }
 
     ret = gScanCommand->requestResponse();
@@ -771,15 +760,16 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
 
     if (gScanSetBssidHotlistCmdEventHandler != NULL) {
         gScanSetBssidHotlistCmdEventHandler->set_request_id(id);
+        gScanSetBssidHotlistCmdEventHandler->enableEventHandling();
     }
 
 cleanup:
     delete gScanCommand;
-    /* Delete the command event handler object if ret != 0 */
-    if (!previousGScanSetBssidRunning && ret
-        && (event_handlers->gScanSetBssidHotlistCmdEventHandler)) {
-        delete event_handlers->gScanSetBssidHotlistCmdEventHandler;
-        event_handlers->gScanSetBssidHotlistCmdEventHandler = NULL;
+    /* Disable Event Handling if ret != 0 */
+    if (ret && gScanSetBssidHotlistCmdEventHandler) {
+        ALOGI("%s: Error ret:%d, disable event handling",
+            __FUNCTION__, ret);
+        gScanSetBssidHotlistCmdEventHandler->disableEventHandling();
     }
     ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
@@ -822,7 +812,9 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
-    if (gScanSetBssidHotlistCmdEventHandler == NULL) {
+    if (gScanSetBssidHotlistCmdEventHandler == NULL ||
+        (gScanSetBssidHotlistCmdEventHandler->isEventHandlingEnabled() ==
+         false)) {
         ALOGE("wifi_reset_bssid_hotlist: GSCAN bssid_hotlist isn't set. "
             "Nothing to do. Exit");
         return WIFI_ERROR_NOT_AVAILABLE;
@@ -866,9 +858,9 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
     }
 
-    if (event_handlers->gScanSetBssidHotlistCmdEventHandler) {
-        delete event_handlers->gScanSetBssidHotlistCmdEventHandler;
-        event_handlers->gScanSetBssidHotlistCmdEventHandler = NULL;
+    /* Disable Event Handling. */
+    if (gScanSetBssidHotlistCmdEventHandler) {
+        gScanSetBssidHotlistCmdEventHandler->disableEventHandling();
     }
 
 cleanup:
@@ -1047,12 +1039,7 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
         ALOGD("%s: Event handler object was created for SIGNIFICANT_CHANGE.",
             __FUNCTION__);
     } else {
-        previousGScanSetSigChangeRunning = true;
-        ALOGD("%s: "
-            "A SIGNIFICANT_CHANGE event handler object already exists "
-            "with request id=%d",
-            __FUNCTION__,
-            gScanSetSignificantChangeCmdEventHandler->get_request_id());
+        gScanSetSignificantChangeCmdEventHandler->setCallbackHandler(callbackHandler);
     }
 
     ret = gScanCommand->requestResponse();
@@ -1063,14 +1050,15 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
 
     if (gScanSetSignificantChangeCmdEventHandler != NULL) {
         gScanSetSignificantChangeCmdEventHandler->set_request_id(id);
+        gScanSetSignificantChangeCmdEventHandler->enableEventHandling();
     }
 
 cleanup:
-    /* Delete the command event handler object if ret != 0 */
-    if (!previousGScanSetSigChangeRunning && ret
-        && (event_handlers->gScanSetSignificantChangeCmdEventHandler)) {
-        delete event_handlers->gScanSetSignificantChangeCmdEventHandler;
-        event_handlers->gScanSetSignificantChangeCmdEventHandler = NULL;
+    /* Disable Event Handling if ret != 0 */
+    if (ret && gScanSetSignificantChangeCmdEventHandler) {
+        ALOGI("%s: Error ret:%d, disable event handling",
+            __FUNCTION__, ret);
+        gScanSetSignificantChangeCmdEventHandler->disableEventHandling();
     }
     delete gScanCommand;
     ALOGI("%s: Exit.", __FUNCTION__);
@@ -1115,7 +1103,9 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
-    if (gScanSetSignificantChangeCmdEventHandler == NULL) {
+    if (gScanSetSignificantChangeCmdEventHandler == NULL ||
+        (gScanSetSignificantChangeCmdEventHandler->isEventHandlingEnabled() ==
+        false)) {
         ALOGE("wifi_reset_significant_change_handler: GSCAN significant_change"
             " isn't set. Nothing to do. Exit");
         return WIFI_ERROR_NOT_AVAILABLE;
@@ -1161,9 +1151,9 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
     }
 
-    if (event_handlers->gScanSetSignificantChangeCmdEventHandler) {
-        delete event_handlers->gScanSetSignificantChangeCmdEventHandler;
-        event_handlers->gScanSetSignificantChangeCmdEventHandler = NULL;
+    /* Disable Event Handling. */
+    if (gScanSetSignificantChangeCmdEventHandler) {
+        gScanSetSignificantChangeCmdEventHandler->disableEventHandling();
     }
 
 cleanup:
@@ -1540,12 +1530,7 @@ wifi_error wifi_set_ssid_hotlist(wifi_request_id id,
         event_handlers->gScanSetSsidHotlistCmdEventHandler =
             gScanSetSsidHotlistCmdEventHandler;
     } else {
-        previousGScanSetSsidRunning = true;
-        ALOGD("%s: "
-                "A HOTLIST_AP_FOUND event handler object already exists "
-                "with request id=%d",
-                __FUNCTION__,
-                gScanSetSsidHotlistCmdEventHandler->get_request_id());
+        gScanSetSsidHotlistCmdEventHandler->setCallbackHandler(callbackHandler);
     }
 
     ret = gScanCommand->requestResponse();
@@ -1556,15 +1541,16 @@ wifi_error wifi_set_ssid_hotlist(wifi_request_id id,
 
     if (gScanSetSsidHotlistCmdEventHandler != NULL) {
         gScanSetSsidHotlistCmdEventHandler->set_request_id(id);
+        gScanSetSsidHotlistCmdEventHandler->enableEventHandling();
     }
 
 cleanup:
     delete gScanCommand;
-    /* Delete the command event handler object if ret != 0 */
-    if (!previousGScanSetSsidRunning && ret
-        && (event_handlers->gScanSetSsidHotlistCmdEventHandler)) {
-        delete event_handlers->gScanSetSsidHotlistCmdEventHandler;
-        event_handlers->gScanSetSsidHotlistCmdEventHandler = NULL;
+    /* Disable Event Handling if ret != 0 */
+    if (ret && gScanSetSsidHotlistCmdEventHandler) {
+        ALOGI("%s: Error ret:%d, disable event handling",
+            __FUNCTION__, ret);
+        gScanSetSsidHotlistCmdEventHandler->disableEventHandling();
     }
     ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
@@ -1607,7 +1593,9 @@ wifi_error wifi_reset_ssid_hotlist(wifi_request_id id,
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
-    if (gScanSetSsidHotlistCmdEventHandler == NULL) {
+    if (gScanSetSsidHotlistCmdEventHandler == NULL ||
+        (gScanSetSsidHotlistCmdEventHandler->isEventHandlingEnabled() ==
+        false)) {
         ALOGE("wifi_reset_ssid_hotlist: GSCAN ssid_hotlist isn't set. "
             "Nothing to do. Exit");
         return WIFI_ERROR_NOT_AVAILABLE;
@@ -1651,9 +1639,9 @@ wifi_error wifi_reset_ssid_hotlist(wifi_request_id id,
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
     }
 
-    if (event_handlers->gScanSetSsidHotlistCmdEventHandler) {
-        delete event_handlers->gScanSetSsidHotlistCmdEventHandler;
-        event_handlers->gScanSetSsidHotlistCmdEventHandler = NULL;
+    /* Disable Event Handling. */
+    if (gScanSetSsidHotlistCmdEventHandler) {
+        gScanSetSsidHotlistCmdEventHandler->disableEventHandling();
     }
 
 cleanup:
@@ -2556,12 +2544,7 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
         ALOGD("%s: Handler object was created for PNO_NETWORK_FOUND.",
             __FUNCTION__);
     } else {
-        previousGScanSetEpnoListRunning = true;
-        ALOGD("%s: "
-                "A PNO_NETWORK_FOUND event handler object already exists"
-                " with request id=%d",
-                __FUNCTION__,
-                gScanSetPnoListCmdEventHandler->get_request_id());
+        gScanSetPnoListCmdEventHandler->setCallbackHandler(callbackHandler);
     }
 
     ret = gScanCommand->requestResponse();
@@ -2572,15 +2555,16 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
 
     if (gScanSetPnoListCmdEventHandler != NULL) {
         gScanSetPnoListCmdEventHandler->set_request_id(id);
+        gScanSetPnoListCmdEventHandler->enableEventHandling();
     }
 
 cleanup:
     delete gScanCommand;
-    /* Delete the command event handler object if ret != 0 */
-    if (!previousGScanSetEpnoListRunning && ret
-        && (event_handlers->gScanSetPnoListCmdEventHandler)) {
-        delete event_handlers->gScanSetPnoListCmdEventHandler;
-        event_handlers->gScanSetPnoListCmdEventHandler = NULL;
+    /* Disable Event Handling if ret != 0 */
+    if (ret && gScanSetPnoListCmdEventHandler) {
+        ALOGI("%s: Error ret:%d, disable event handling",
+            __FUNCTION__, ret);
+        gScanSetPnoListCmdEventHandler->disableEventHandling();
     }
     ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
@@ -2735,12 +2719,7 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
         ALOGD("%s: Handler object was created for PNO_PASSPOINT_"
             "NETWORK_FOUND.", __FUNCTION__);
     } else {
-        previousGScanPnoSetPasspointListRunning = true;
-        ALOGD("%s: "
-                "A PNO_PASSPOINT_NETWORK_FOUND event handler object "
-                "already exists with request id=%d",
-                __FUNCTION__,
-                gScanPnoSetPasspointListCmdEventHandler->get_request_id());
+        gScanPnoSetPasspointListCmdEventHandler->setCallbackHandler(callbackHandler);
     }
 
     ret = gScanCommand->requestResponse();
@@ -2751,15 +2730,16 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
 
     if (gScanPnoSetPasspointListCmdEventHandler != NULL) {
         gScanPnoSetPasspointListCmdEventHandler->set_request_id(id);
+        gScanPnoSetPasspointListCmdEventHandler->enableEventHandling();
     }
 
 cleanup:
     delete gScanCommand;
-    /* Delete the command event handler object if ret != 0 */
-    if (!previousGScanPnoSetPasspointListRunning && ret
-        && (event_handlers->gScanPnoSetPasspointListCmdEventHandler)) {
-        delete event_handlers->gScanPnoSetPasspointListCmdEventHandler;
-        event_handlers->gScanPnoSetPasspointListCmdEventHandler = NULL;
+    /* Disable Event Handling if ret != 0 */
+    if (ret && gScanPnoSetPasspointListCmdEventHandler) {
+        ALOGI("%s: Error ret:%d, disable event handling",
+            __FUNCTION__, ret);
+        gScanPnoSetPasspointListCmdEventHandler->disableEventHandling();
     }
     ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
@@ -2789,7 +2769,9 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
-    if (gScanPnoSetPasspointListCmdEventHandler == NULL) {
+    if (gScanPnoSetPasspointListCmdEventHandler == NULL ||
+        (gScanPnoSetPasspointListCmdEventHandler->isEventHandlingEnabled() ==
+         false)) {
         ALOGE("wifi_reset_passpoint_list: ePNO passpoint_list isn't set. "
             "Nothing to do. Exit");
         return WIFI_ERROR_NOT_AVAILABLE;
@@ -2843,28 +2825,15 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
     }
 
-    if (event_handlers->gScanPnoSetPasspointListCmdEventHandler) {
-        delete event_handlers->gScanPnoSetPasspointListCmdEventHandler;
-        event_handlers->gScanPnoSetPasspointListCmdEventHandler = NULL;
+    /* Disable Event Handling. */
+    if (gScanPnoSetPasspointListCmdEventHandler) {
+        gScanPnoSetPasspointListCmdEventHandler->disableEventHandling();
     }
 
 cleanup:
     delete gScanCommand;
     ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
-}
-
-int GScanCommand::setCallbackHandler(GScanCallbackHandler nHandler)
-{
-    int res = 0;
-    mHandler = nHandler;
-    res = registerVendorHandler(mVendor_id, mSubcmd);
-    if (res != 0) {
-        /* Error case: should not happen, so print a log when it does. */
-        ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x subcmd=%u",
-              __FUNCTION__, mVendor_id, mSubcmd);
-    }
-    return res;
 }
 
 int GScanCommand::allocCachedResultsTemp(int max,

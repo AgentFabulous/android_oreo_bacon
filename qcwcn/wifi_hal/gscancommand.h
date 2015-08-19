@@ -122,7 +122,6 @@ public:
     virtual int create();
     virtual int requestResponse();
     virtual int handleResponse(WifiEvent &reply);
-    virtual int setCallbackHandler(GScanCallbackHandler nHandler);
     virtual void setMaxChannels(int max_channels);
     virtual void setChannels(int *channels);
     virtual void setNumChannelsPtr(int *num_channels);
