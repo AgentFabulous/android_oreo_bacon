@@ -848,6 +848,7 @@ typedef struct {
     int settled;
     uint32_t exp_index;
     uint32_t line_count;
+    uint32_t unknown[4];
 } cam_ae_params_t;
 
 typedef struct {
@@ -1176,6 +1177,7 @@ typedef enum {
     CAM_INTF_PARM_FLASH_BRACKETING,
     CAM_INTF_PARM_GET_IMG_PROP,
 
+    CAM_INTF_PARM_UNKNOWN, // Increment CAM_INTF_PARM_MAX by 1
     CAM_INTF_PARM_MAX
 } cam_intf_parm_type_t;
 
