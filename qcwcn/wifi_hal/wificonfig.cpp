@@ -116,7 +116,7 @@ wifi_error wifi_set_country_code(wifi_interface_handle iface,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGD("wifi_set_country_code(): Enter");
+    ALOGD("wifi_set_country_code(): %s", country_code);
 
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate it randomly.
@@ -152,9 +152,10 @@ wifi_error wifi_set_country_code(wifi_interface_handle iface,
         ALOGE("wifi_set_country_code(): requestEvent Error:%d", ret);
         goto cleanup;
     }
+    usleep(WAIT_TIME_FOR_SET_REG_DOMAIN);
 
 cleanup:
-    ALOGI("%s: Delete object.", __func__);
+    ALOGV("%s: Delete object.", __func__);
     delete wifiConfigCommand;
     return (wifi_error)ret;
 }
@@ -300,7 +301,6 @@ WiFiConfigCommand::WiFiConfigCommand(wifi_handle handle,
                                      u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
 {
-    ALOGD("WiFiConfigCommand %p constructed", this);
     /* Initialize the member data variables here */
     mWaitforRsp = false;
     mRequestId = id;
@@ -308,7 +308,6 @@ WiFiConfigCommand::WiFiConfigCommand(wifi_handle handle,
 
 WiFiConfigCommand::~WiFiConfigCommand()
 {
-    ALOGD("WiFiConfigCommand %p destructor", this);
     unregisterVendorHandler(mVendor_id, mSubcmd);
 }
 
@@ -365,7 +364,6 @@ static int ack_handler_wifi_config(struct nl_msg *msg, void *arg)
     int *ret = (int *)arg;
     struct nl_msg * a;
 
-    ALOGE("%s: called", __func__);
     a = msg;
     *ret = 0;
     return NL_STOP;
@@ -377,7 +375,6 @@ static int finish_handler_wifi_config(struct nl_msg *msg, void *arg)
   int *ret = (int *)arg;
   struct nl_msg * a;
 
-  ALOGE("%s: called", __func__);
   a = msg;
   *ret = 0;
   return NL_SKIP;
@@ -394,8 +391,6 @@ int WiFiConfigCommand::requestEvent()
     int res = -1;
     struct nl_cb *cb;
 
-    ALOGD("%s: Entry.", __func__);
-
     cb = nl_cb_alloc(NL_CB_DEFAULT);
     if (!cb) {
         ALOGE("%s: Callback allocation failed",__func__);
@@ -403,8 +398,6 @@ int WiFiConfigCommand::requestEvent()
         goto out;
     }
 
-    /* Send message */
-    ALOGE("%s:Handle:%p Socket Value:%p", __func__, mInfo, mInfo->cmd_sock);
     res = nl_send_auto_complete(mInfo->cmd_sock, mMsg.getMessage());
     if (res < 0)
         goto out;
@@ -420,7 +413,6 @@ int WiFiConfigCommand::requestEvent()
          nl_recvmsgs(mInfo->cmd_sock, cb);
     }
 
-    ALOGD("%s: Msg sent, res=%d, mWaitForRsp=%d", __func__, res, mWaitforRsp);
     /* Only wait for the asynchronous event if HDD returns success, res=0 */
     if (!res && (mWaitforRsp == true)) {
         struct timespec abstime;
