@@ -642,8 +642,16 @@ static waiting_command_t* get_waiting_command(command_opcode_t opcode) {
     waiting_command_t* wait_entry =
         reinterpret_cast<waiting_command_t*>(list_node(node));
 
-    if (!wait_entry || wait_entry->opcode != opcode) continue;
-
+    if (!wait_entry || wait_entry->opcode != opcode) {
+        if(((wait_entry->opcode & HCI_GRP_VENDOR_SPECIFIC) == HCI_GRP_VENDOR_SPECIFIC) &&
+           ((opcode & HCI_GRP_VENDOR_SPECIFIC) == HCI_GRP_VENDOR_SPECIFIC)) {
+            LOG_DEBUG("%s VS event found treat it as valid 0x%x", __func__, opcode);
+        }
+        else {
+            continue;
+        }
+    }
+ 
     list_remove(commands_pending_response, wait_entry);
 
     return wait_entry;
