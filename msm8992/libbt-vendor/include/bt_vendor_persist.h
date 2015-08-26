@@ -27,6 +27,8 @@
 #ifndef BT_VENDOR_PERSIST_H_
 #define BT_VENDOR_PERSIST_H_
 
+#ifdef BT_NV_SUPPORT
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -34,9 +36,9 @@ extern "C"
 
 #include <stdio.h>
 
-#ifdef BT_NV_SUPPORT
+//#ifdef BT_NV_SUPPORT
 
-#endif /* BT_NV_SUPPORT */
+//#endif /* BT_NV_SUPPORT */
 typedef unsigned char boolean;
 /*===========================================================================
 FUNCTION   bt_vendor_nv_read
@@ -64,6 +66,8 @@ extern uint8_t bt_vendor_nv_read
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* BT_NV_SUPPORT */
 
 #endif /* BT_VENDOR_PERSIST_H_ */
 

@@ -28,8 +28,10 @@ LOCAL_SRC_FILES := \
         src/hci_uart.c \
         src/hci_smd.c \
         src/hw_rome.c \
-        src/hw_ar3k.c \
-        src/bt_vendor_persist.cpp
+        src/hw_ar3k.c
+
+# if read from bt nv
+#        src/bt_vendor_persist.cpp
 
 ifeq ($(QCOM_BT_USE_SIBS),true)
 LOCAL_CFLAGS += -DQCOM_BT_SIBS_ENABLE
@@ -55,15 +57,18 @@ endif #WIFI_BT_STATUS_SYNC
 
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
-        liblog \
-        libbtnv
+        liblog
+
+
+# if read from bt nv
+#        libbtnv
+#LOCAL_CFLAGS += -DBT_NV_SUPPORT
 
 LOCAL_MODULE := libbt-vendor
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
 LOCAL_MODULE_OWNER := qcom
 
-LOCAL_CFLAGS += -DBT_NV_SUPPORT
 #LOCAL_CFLAGS += -DREAD_BT_ADDR_FROM_PROP
 
 #include $(LOCAL_PATH)/vnd_buildcfg.mk
