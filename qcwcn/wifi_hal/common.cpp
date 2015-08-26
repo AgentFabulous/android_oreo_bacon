@@ -68,7 +68,8 @@ wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_
             info->event_cb[i].cb_func = func;
             ALOGI("Updated event handler %p for nl_cmd 0x%0x"
                     " and arg %p", func, cmd, arg);
-            result = WIFI_SUCCESS;
+            pthread_mutex_unlock(&info->cb_lock);
+            return WIFI_SUCCESS;
         }
     }
 
@@ -106,7 +107,8 @@ wifi_error wifi_register_vendor_handler(wifi_handle handle,
             info->event_cb[i].cb_arg  = arg;
             ALOGI("Updated event handler %p for vendor 0x%0x, subcmd 0x%0x"
                 " and arg %p", func, id, subcmd, arg);
-            result = WIFI_SUCCESS;
+            pthread_mutex_unlock(&info->cb_lock);
+            return WIFI_SUCCESS;
         }
     }
 
