@@ -115,7 +115,7 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
                     QCA_NL80211_VENDOR_SUBCMD_GSCAN_FULL_SCAN_RESULT) ||
                   registerVendorHandler(mVendor_id,
                     QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_EVENT);
-            if (ret < 0)
+            if (ret)
                 ALOGD("%s: Error in registering handler for "
                     "GSCAN_START. \n", __FUNCTION__);
         }
@@ -125,7 +125,7 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
         {
             ret = registerVendorHandler(mVendor_id,
                     QCA_NL80211_VENDOR_SUBCMD_GSCAN_SIGNIFICANT_CHANGE);
-            if (ret < 0)
+            if (ret)
                 ALOGD("%s: Error in registering handler for "
                     "GSCAN_SIGNIFICANT_CHANGE. \n", __FUNCTION__);
         }
@@ -135,13 +135,13 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
         {
             ret = registerVendorHandler(mVendor_id,
                     QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_FOUND);
-            if (ret < 0)
+            if (ret)
                 ALOGD("%s: Error in registering handler for"
                     " GSCAN_HOTLIST_AP_FOUND. \n", __FUNCTION__);
 
             ret = registerVendorHandler(mVendor_id,
                     QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_LOST);
-            if (ret < 0)
+            if (ret)
                 ALOGD("%s: Error in registering handler for"
                     " GSCAN_HOTLIST_AP_LOST. \n", __FUNCTION__);
         }
@@ -151,13 +151,13 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
         {
             ret = registerVendorHandler(mVendor_id,
                     QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_SSID_FOUND);
-            if (ret < 0)
+            if (ret)
                 ALOGD("%s: Error in registering handler for"
                     " GSCAN_HOTLIST_SSID_FOUND. \n", __FUNCTION__);
 
             ret = registerVendorHandler(mVendor_id,
                     QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_SSID_LOST);
-            if (ret < 0)
+            if (ret)
                 ALOGD("%s: Error in registering handler for"
                     " GSCAN_HOTLIST_SSID_LOST. \n", __FUNCTION__);
         }
@@ -167,7 +167,7 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
         {
             ret = registerVendorHandler(mVendor_id,
                     QCA_NL80211_VENDOR_SUBCMD_PNO_NETWORK_FOUND);
-            if (ret < 0)
+            if (ret)
                 ALOGD("%s: Error in registering handler for"
                     " PNO_NETWORK_FOUND. \n", __FUNCTION__);
         }
@@ -177,7 +177,7 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
         {
             ret = registerVendorHandler(mVendor_id,
                 QCA_NL80211_VENDOR_SUBCMD_PNO_PASSPOINT_NETWORK_FOUND);
-            if (ret < 0)
+            if (ret)
                 ALOGD("%s: Error in registering handler for"
                     " PNO_PASSPOINT_NETWORK_FOUND. \n", __FUNCTION__);
         }
