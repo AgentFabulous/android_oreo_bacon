@@ -88,13 +88,22 @@ int is_rb_name_match(struct rb_info *rb_info, char *name)
 wifi_error ring_buffer_write(struct rb_info *rb_info, u8 *buf, size_t length,
                              int no_of_records)
 {
-    if (rb_write(rb_info->rb_ctx, buf, length, 0) != RB_SUCCESS) {
-        push_out_rb_data(rb_info);
-        /* Try writing the data after reading it out */
-        if (rb_write(rb_info->rb_ctx, buf, length, 0) != RB_SUCCESS) {
-            ALOGE("Failed to write %zu bytes to rb %s", length, rb_info->name);
-            return WIFI_ERROR_OUT_OF_MEMORY;
+    enum rb_status status;
+
+    status = rb_write(rb_info->rb_ctx, buf, length, 0);
+    if ((status == RB_FULL) || (status == RB_RETRY)) {
+         push_out_rb_data(rb_info);
+         /* Try writing the data after reading it out */
+        status = rb_write(rb_info->rb_ctx, buf, length, 0);
+        if (status != RB_SUCCESS) {
+            ALOGE("Failed to rewrite %zu bytes to rb %s with error %d", length,
+                  rb_info->name, status);
+            return WIFI_ERROR_UNKNOWN;
         }
+    } else if (status == RB_FAILURE) {
+        ALOGE("Failed to write %zu bytes to rb %s with error %d", length,
+              rb_info->name, status);
+        return WIFI_ERROR_UNKNOWN;
     }
 
     rb_info->written_records += no_of_records;

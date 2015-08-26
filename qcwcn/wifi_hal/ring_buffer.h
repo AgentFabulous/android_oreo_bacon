@@ -33,6 +33,8 @@
 enum rb_status {
     RB_SUCCESS = 0,
     RB_FAILURE = 1,
+    RB_FULL = 2,
+    RB_RETRY = 3,
 };
 
 struct rb_stats {
