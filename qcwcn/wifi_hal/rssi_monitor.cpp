@@ -181,10 +181,8 @@ int RSSIMonitorCommand::setCallbackHandler(wifi_rssi_event_handler nHandler,
     return ret;
 }
 
-wifi_error RSSIMonitorCommand::unregisterHandler(u32 subCmd, wifi_request_id reqid)
+wifi_error RSSIMonitorCommand::unregisterHandler(u32 subCmd)
 {
-    if (reqid != id())
-        return WIFI_ERROR_INVALID_REQUEST_ID;
     unregisterVendorHandler(mVendor_id, subCmd);
     return WIFI_SUCCESS;
 }
@@ -298,8 +296,8 @@ wifi_error wifi_stop_rssi_monitoring(wifi_request_id id,
         goto cleanup;
     }
 
-    ret = rssiCommand->unregisterHandler(QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI,
-                                         id);
+    ret = rssiCommand->unregisterHandler(
+                                        QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI);
     if (ret != WIFI_SUCCESS)
         goto cleanup;
 
