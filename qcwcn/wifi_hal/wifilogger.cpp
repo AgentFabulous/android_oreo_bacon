@@ -199,11 +199,15 @@ void push_out_all_ring_buffers(hal_info *info)
 
 void send_alert(hal_info *info, int reason_code)
 {
+    wifi_alert_handler handler;
+
     pthread_mutex_lock(&info->ah_lock);
-    if (info->on_alert) {
-        info->on_alert(0, NULL, 0, reason_code);
-    }
+    handler.on_alert = info->on_alert;
     pthread_mutex_unlock(&info->ah_lock);
+
+    if (handler.on_alert) {
+        handler.on_alert(0, NULL, 0, reason_code);
+    }
 }
 
 void WifiLoggerCommand::setFeatureSet(u32 *support) {
