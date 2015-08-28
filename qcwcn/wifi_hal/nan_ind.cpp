@@ -898,9 +898,16 @@ int NanCommand::getNanFurtherAvailabilityMap(const u8 *pInValue,
               __func__, pFam->numchans);
         return -1;
     }
+
+    if (length < (sizeof(u8) +
+        (pFam->numchans * sizeof(NanFurtherAvailabilityChan)))) {
+        ALOGE("%s: Invalid TLV Length", __func__);
+        return -1;
+    }
+
     for (idx = 0; idx < pFam->numchans; idx++) {
         pNanFurtherAvailabilityChan pRsp = \
-              (pNanFurtherAvailabilityChan)(pInValue[1] + \
+              (pNanFurtherAvailabilityChan)((u8 *)&pInValue[1] + \
               (idx * sizeof(NanFurtherAvailabilityChan)));
         NanFurtherAvailabilityChannel *pFamChan = &pFam->famchan[idx];
 
