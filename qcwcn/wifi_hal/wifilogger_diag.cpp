@@ -902,8 +902,9 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
             case WLAN_DIAG_TYPE_MSG:
             {
                 /* Length field is only one byte for WLAN_DIAG_TYPE_MSG */
-                payloadlen = diag_msg_hdr->u.msg_hdr.payload_len;
-                process_firmware_prints(info, diag_msg_hdr->payload,
+                payloadlen = diag_msg_hdr->u.msg_hdr.payload_len +
+                             sizeof(fw_diag_msg_hdr_t);
+                process_firmware_prints(info, (u8 *)diag_msg_hdr,
                                         payloadlen);
             }
             break;
