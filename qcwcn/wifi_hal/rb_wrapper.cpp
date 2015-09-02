@@ -89,10 +89,12 @@ wifi_error ring_buffer_write(struct rb_info *rb_info, u8 *buf, size_t length,
                              int no_of_records)
 {
     if (rb_write(rb_info->rb_ctx, buf, length, 0) != RB_SUCCESS) {
-        ALOGE("Failed to write into rb, RB migght be full");
-        /* TODO Probably the data can be read from here the RB and then
-         * rb_write can be tried */
-        return WIFI_ERROR_OUT_OF_MEMORY;
+        push_out_rb_data(rb_info);
+        /* Try writing the data after reading it out */
+        if (rb_write(rb_info->rb_ctx, buf, length, 0) != RB_SUCCESS) {
+            ALOGE("Failed to write %zu bytes to rb %s", length, rb_info->name);
+            return WIFI_ERROR_OUT_OF_MEMORY;
+        }
     }
 
     rb_info->written_records += no_of_records;
