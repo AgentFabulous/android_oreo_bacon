@@ -86,15 +86,15 @@ int is_rb_name_match(struct rb_info *rb_info, char *name)
 }
 
 wifi_error ring_buffer_write(struct rb_info *rb_info, u8 *buf, size_t length,
-                             int no_of_records)
+                             int no_of_records, size_t record_length)
 {
     enum rb_status status;
 
-    status = rb_write(rb_info->rb_ctx, buf, length, 0);
+    status = rb_write(rb_info->rb_ctx, buf, length, 0, record_length);
     if ((status == RB_FULL) || (status == RB_RETRY)) {
          push_out_rb_data(rb_info);
          /* Try writing the data after reading it out */
-        status = rb_write(rb_info->rb_ctx, buf, length, 0);
+        status = rb_write(rb_info->rb_ctx, buf, length, 0, record_length);
         if (status != RB_SUCCESS) {
             ALOGE("Failed to rewrite %zu bytes to rb %s with error %d", length,
                   rb_info->name, status);

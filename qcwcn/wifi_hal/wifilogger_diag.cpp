@@ -101,7 +101,7 @@ static wifi_error update_connectivity_ring_buf(hal_info *info,
     if (info->rb_infos[CONNECTIVITY_EVENTS_RB_ID].verbose_level >= 1 &&
         info->on_ring_buffer_data) {
         return ring_buffer_write(&info->rb_infos[CONNECTIVITY_EVENTS_RB_ID],
-                      (u8*)rbe, total_length, 1);
+                      (u8*)rbe, total_length, 1, total_length);
     }
 
     return WIFI_SUCCESS;
@@ -773,13 +773,15 @@ wifi_error process_firmware_prints(hal_info *info, u8 *buf, u16 length)
          * complete payload memcpy */
         status = ring_buffer_write(&info->rb_infos[FIRMWARE_PRINTS_RB_ID],
                                    (u8*)&rb_entry_hdr,
-                                   sizeof(wifi_ring_buffer_entry), 0);
+                                   sizeof(wifi_ring_buffer_entry),
+                                   0,
+                                   sizeof(wifi_ring_buffer_entry) + length);
         if (status != WIFI_SUCCESS) {
             ALOGE("Failed to write firmware prints rb header %d", status);
             return status;
         }
         status = ring_buffer_write(&info->rb_infos[FIRMWARE_PRINTS_RB_ID],
-                                   buf, length, 1);
+                                   buf, length, 1, length);
         if (status != WIFI_SUCCESS) {
             ALOGE("Failed to write firmware prints rb payload %d", status);
             return status;
@@ -1089,7 +1091,9 @@ static wifi_error process_wakelock_event(hal_info *info, u8* buf, int length)
         info->on_ring_buffer_data) {
         status = ring_buffer_write(&info->rb_infos[POWER_EVENTS_RB_ID],
                                    (u8*)pRingBufferEntry,
-                                   len_ring_buffer_entry, 1);
+                                   len_ring_buffer_entry,
+                                   1,
+                                   len_ring_buffer_entry);
     } else {
         status = WIFI_SUCCESS;
     }
@@ -1140,7 +1144,8 @@ static wifi_error update_stats_to_ring_buf(hal_info *info,
         ring_buffer_write(&info->rb_infos[PKT_STATS_RB_ID],
                           (u8*)pRingBufferEntry,
                           size,
-                          num_records);
+                          num_records,
+                          size);
     }
 
     return WIFI_SUCCESS;
@@ -1733,13 +1738,15 @@ wifi_error process_driver_prints(hal_info *info, u8 *buf, u16 length)
          * complete payload memcpy */
         status = ring_buffer_write(&info->rb_infos[DRIVER_PRINTS_RB_ID],
                                    (u8*)&rb_entry_hdr,
-                                   sizeof(wifi_ring_buffer_entry), 0);
+                                   sizeof(wifi_ring_buffer_entry),
+                                   0,
+                                   sizeof(wifi_ring_buffer_entry) + length);
         if (status != WIFI_SUCCESS) {
             ALOGE("Failed to write driver prints rb header %d", status);
             return status;
         }
         status = ring_buffer_write(&info->rb_infos[DRIVER_PRINTS_RB_ID],
-                                   buf, length, 1);
+                                   buf, length, 1, length);
         if (status != WIFI_SUCCESS) {
             ALOGE("Failed to write driver prints rb payload %d", status);
             return status;

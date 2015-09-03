@@ -146,14 +146,18 @@ void ring_buffer_deinit(void *ctx)
     free(rbc);
 }
 
-enum rb_status rb_write (void *ctx, u8 *buf, size_t length, int overwrite)
+/*
+ * record_length : 0  - byte boundary
+ *               : >0 - Ensures to write record_length no.of bytes to the same buffer.
+ */
+enum rb_status rb_write (void *ctx, u8 *buf, size_t length, int overwrite,
+                         size_t record_length)
 {
     rbc_t *rbc = (rbc_t *)ctx;
     unsigned int bytes_written = 0; // bytes written into rb so far
     unsigned int push_in_rd_ptr = 0; // push required in read pointer because of
                                      // write in current buffer
     unsigned int total_push_in_rd_ptr = 0; // Total amount of push in read pointer in this write
-    size_t record_length = length;
 
     if (record_length > rbc->each_buf_size) {
         return RB_FAILURE;
