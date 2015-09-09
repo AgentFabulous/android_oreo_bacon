@@ -325,6 +325,7 @@ enum rb_status rb_write (void *ctx, u8 *buf, size_t length, int overwrite,
     /* check if valid bytes is going more than threshold */
     if ((rbc->threshold_reached == RB_FALSE) &&
         (rbc->cur_valid_bytes >= rbc->num_min_bytes) &&
+        ((length == record_length) || !record_length) &&
         rbc->threshold_cb) {
         /* Release the lock before calling threshold_cb as it might call rb_read
          * in this same context in order to avoid dead lock
