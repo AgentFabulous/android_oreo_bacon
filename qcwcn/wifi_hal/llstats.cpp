@@ -47,7 +47,6 @@ int LLStatsCommand::create() {
     if (ret < 0)
         goto out;
 
-    ALOGI("mVendor_id = %d, Subcmd = %d in  %s:%d\n", mVendor_id, mSubcmd, __func__, __LINE__);
 out:
     return ret;
 }
@@ -55,7 +54,6 @@ out:
 LLStatsCommand::LLStatsCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
 {
-    ALOGV("LLStatsCommand %p constructed", this);
     memset(&mClearRspParams, 0,sizeof(LLStatsClearRspParams));
     memset(&mResultsParams, 0,sizeof(LLStatsResultsParams));
     memset(&mHandler, 0,sizeof(mHandler));
@@ -63,7 +61,6 @@ LLStatsCommand::LLStatsCommand(wifi_handle handle, int id, u32 vendor_id, u32 su
 
 LLStatsCommand::~LLStatsCommand()
 {
-    ALOGW("LLStatsCommand %p distructor", this);
     mLLStatsCommandInstance = NULL;
 }
 
@@ -77,7 +74,6 @@ LLStatsCommand* LLStatsCommand::instance(wifi_handle handle)
         mLLStatsCommandInstance = new LLStatsCommand(handle, 0,
                 OUI_QCA,
                 QCA_NL80211_VENDOR_SUBCMD_LL_STATS_SET);
-        ALOGV("LLStatsCommand %p created", mLLStatsCommandInstance);
         return mLLStatsCommandInstance;
     }
     else
@@ -90,7 +86,6 @@ LLStatsCommand* LLStatsCommand::instance(wifi_handle handle)
             mLLStatsCommandInstance->mInfo = (hal_info *)handle;
         }
     }
-    ALOGV("LLStatsCommand %p created already", mLLStatsCommandInstance);
     return mLLStatsCommandInstance;
 }
 
@@ -1202,6 +1197,8 @@ wifi_error wifi_set_link_stats(wifi_interface_handle iface,
     interface_info *iinfo = getIfaceInfo(iface);
     wifi_handle handle = getWifiHandle(iface);
 
+    ALOGI("mpdu_size_threshold : %u, aggressive_statistics_gathering : %u",
+          params.mpdu_size_threshold, params.aggressive_statistics_gathering);
     LLCommand = LLStatsCommand::instance(handle);
     if (LLCommand == NULL) {
         ALOGE("%s: Error LLStatsCommand NULL", __func__);
@@ -1314,6 +1311,7 @@ wifi_error wifi_clear_link_stats(wifi_interface_handle iface,
     interface_info *iinfo = getIfaceInfo(iface);
     wifi_handle handle = getWifiHandle(iface);
 
+    ALOGI("clear_req : %x, stop_req : %u", stats_clear_req_mask, stop_req);
     LLCommand = LLStatsCommand::instance(handle);
     if (LLCommand == NULL) {
         ALOGE("%s: Error LLStatsCommand NULL", __func__);

@@ -189,7 +189,6 @@ int TdlsCommand::handleEvent(WifiEvent &event)
 
 int TdlsCommand::handleResponse(WifiEvent &reply)
 {
-    ALOGI("Received a TDLS response message from Driver");
     u32 status;
     int i = 0;
     WifiVendorCommand::handleResponse(reply);

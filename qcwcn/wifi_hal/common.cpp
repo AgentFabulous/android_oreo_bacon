@@ -394,7 +394,7 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities)
     bool lowi_get_capabilities_support = false;
 
     if (requested_lowi_capabilities == GSCAN_SUPPORTED) {
-        ALOGI("%s: Returning Null, GSCAN not supported by lowi",
+        ALOGV("%s: Returning Null, GSCAN not supported by lowi",
               __FUNCTION__);
         return NULL;
     }

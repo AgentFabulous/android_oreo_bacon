@@ -849,7 +849,6 @@ int WifiVendorCommand::create() {
 
     //insert the iface id to be "wlan0"
     ifindex = if_nametoindex("wlan0");
-    ALOGE("%s ifindex obtained:%d",__FUNCTION__,ifindex);
     mMsg.set_iface_id(ifindex);
 out:
     return ret;
@@ -971,7 +970,6 @@ void WifiVendorCommand::attr_end(struct nlattr *attribute)
 int WifiVendorCommand::set_iface_id(const char* name)
 {
     unsigned ifindex = if_nametoindex(name);
-    ALOGE("%s ifindex obtained:%d", __FUNCTION__,ifindex);
     return mMsg.set_iface_id(ifindex);
 }
 

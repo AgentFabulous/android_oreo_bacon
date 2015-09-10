@@ -71,7 +71,6 @@ RSSIMonitorCommand* RSSIMonitorCommand::instance(wifi_handle handle,
         mRSSIMonitorCommandInstance = new RSSIMonitorCommand(handle, id,
                 OUI_QCA,
                 QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI);
-        ALOGV("RSSIMonitorCommand %p created", mRSSIMonitorCommandInstance);
         return mRSSIMonitorCommandInstance;
     }
     else
@@ -85,7 +84,6 @@ RSSIMonitorCommand* RSSIMonitorCommand::instance(wifi_handle handle,
         }
         mRSSIMonitorCommandInstance->setReqId(id);
     }
-    ALOGV("RSSIMonitorCommand %p created already", mRSSIMonitorCommandInstance);
     return mRSSIMonitorCommandInstance;
 }
 
@@ -130,7 +128,7 @@ int RSSIMonitorCommand::handleEvent(WifiEvent &event)
              *  request_id value which we're maintaining.
              */
             if (reqId != id()) {
-                ALOGE("%s: Event has Req. ID:%d <> Ours:%d, continue...",
+                ALOGD("%s: Event has Req. ID:%d <> Ours:%d, continue...",
                     __FUNCTION__, reqId, id());
                 reqId = id();
             }
@@ -207,7 +205,8 @@ wifi_error wifi_start_rssi_monitoring(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("Max RSSI : %d\nMin RSSI : %d", max_rssi, min_rssi);
+    ALOGI("%s: Max RSSI:%d Min RSSI:%d", __FUNCTION__,
+          max_rssi, min_rssi);
     /* Add the vendor specific attributes for the NL command. */
     nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData)

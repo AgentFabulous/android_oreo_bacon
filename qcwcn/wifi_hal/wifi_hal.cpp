@@ -127,7 +127,6 @@ static nl_sock * wifi_create_nl_socket(int port, int protocol)
         return NULL;
     }
 
-    ALOGI("Socket Value:%p", sock);
     return sock;
 }
 
@@ -323,7 +322,6 @@ wifi_error wifi_initialize(wifi_handle *handle)
 
     memset(info, 0, sizeof(*info));
 
-    ALOGI("Creating socket");
     cmd_sock = wifi_create_nl_socket(WIFI_HAL_CMD_SOCK_PORT,
                                                      NETLINK_GENERIC);
     if (cmd_sock == NULL) {
@@ -337,9 +335,6 @@ wifi_error wifi_initialize(wifi_handle *handle)
         ALOGE("Could not set nl_socket RX buffer size for cmd_sock: %s",
                    strerror(errno));
         /* continue anyway with the default (smaller) buffer */
-    }
-    else {
-        ALOGI("nl_socket_set_buffer_size for cmd_sock successful");
     }
 
     event_sock =
@@ -355,9 +350,6 @@ wifi_error wifi_initialize(wifi_handle *handle)
         ALOGE("Could not set nl_socket RX buffer size for event_sock: %s",
                    strerror(errno));
         /* continue anyway with the default (smaller) buffer */
-    }
-    else {
-        ALOGI("nl_socket_set_buffer_size for event_sock successful");
     }
 
     cb = nl_socket_get_cb(event_sock);
@@ -406,7 +398,6 @@ wifi_error wifi_initialize(wifi_handle *handle)
         ret = WIFI_ERROR_UNKNOWN;
         goto unload;
     }
-    ALOGI("%s: family_id:%d", __func__, info->nl80211_family_id);
 
     pthread_mutex_init(&info->cb_lock, NULL);
 
@@ -466,7 +457,6 @@ wifi_error wifi_initialize(wifi_handle *handle)
         ret = WIFI_SUCCESS;
     }
 
-    ALOGI("Initializing Wifi Logger Rings");
     ret = wifi_logger_ring_buffers_init(info);
     if (ret != WIFI_SUCCESS) {
         ALOGE("Wifi Logger Ring Initialization Failed");
@@ -723,7 +713,7 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
                   event.get_cmdString(), vendor_id, subcmd);
         }
     } else {
-        ALOGI("event received %s", event.get_cmdString());
+        ALOGV("event received %s", event.get_cmdString());
     }
 
     // event.log();
@@ -930,7 +920,6 @@ wifi_error wifi_init_interfaces(wifi_handle handle)
     closedir(d);
 
     info->num_interfaces = n;
-    ALOGI("Found %d interfaces", info->num_interfaces);
 
     return WIFI_SUCCESS;
 }
@@ -1031,7 +1020,6 @@ wifi_error wifi_get_concurrency_matrix(wifi_interface_handle handle,
     }
 
 cleanup:
-    ALOGI("%s: Delete object.", __func__);
     delete vCommand;
     if (ret) {
         *set_size = 0;

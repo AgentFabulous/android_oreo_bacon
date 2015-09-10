@@ -98,7 +98,7 @@ wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->get_valid_channels == NULL) {
-        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->get_valid_channels(handle, band, max_channels,
                           channels, num_channels);
@@ -111,7 +111,7 @@ wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
      * Generate one randomly.
      */
     requestId = get_requestid();
-    ALOGI("%s: RequestId:%d Enter band:%d max_channels:%d", __FUNCTION__,
+    ALOGI("%s: RequestId:%d band:%d max_channels:%d", __FUNCTION__,
           requestId, band, max_channels);
 
     if (channels == NULL) {
@@ -170,7 +170,6 @@ wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
 
 cleanup:
     delete gScanCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -196,7 +195,7 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->get_gscan_capabilities == NULL) {
-        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->get_gscan_capabilities(handle,
                                                      capabilities);
@@ -209,7 +208,7 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
      * Generate it randomly.
      */
     requestId = get_requestid();
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, requestId);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, requestId);
 
     if (capabilities == NULL) {
         ALOGE("%s: NULL capabilities pointer provided. Exit.",
@@ -267,7 +266,6 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
 cleanup:
     gScanCommand->freeRspParams(eGScanGetCapabilitiesRspParams);
     delete gScanCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -304,7 +302,7 @@ wifi_error wifi_start_gscan(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->start_gscan  == NULL) {
-        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->start_gscan(id, iface, params, handler);
         ALOGI("%s: lowi start_gscan "
@@ -312,7 +310,7 @@ wifi_error wifi_start_gscan(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: Enter RequestId:%d ", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d ", __FUNCTION__, id);
     /* Wi-Fi HAL doesn't need to check if a similar request to start gscan was
      *  made earlier. If start_gscan() is called while another gscan is already
      *  running, the request will be sent down to driver and firmware. If new
@@ -497,7 +495,6 @@ cleanup:
             __FUNCTION__, ret);
         gScanStartCmdEventHandler->disableEventHandling();
     }
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 
 }
@@ -529,7 +526,7 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->stop_gscan == NULL) {
-        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->stop_gscan(id, iface);
         ALOGI("%s: lowi stop_gscan "
@@ -537,7 +534,7 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
     if (gScanStartCmdEventHandler == NULL ||
         gScanStartCmdEventHandler->isEventHandlingEnabled() == false) {
         ALOGE("%s: GSCAN isn't running or already stopped. "
@@ -590,7 +587,6 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
 
 cleanup:
     delete gScanCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -625,7 +621,7 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->set_bssid_hotlist == NULL) {
-        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->set_bssid_hotlist(id, iface, params,handler);
         ALOGI("%s: lowi set_bssid_hotlist "
@@ -633,7 +629,7 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set bssid
      * hotlist was made earlier. If set_bssid_hotlist() is called while
@@ -771,7 +767,6 @@ cleanup:
             __FUNCTION__, ret);
         gScanSetBssidHotlistCmdEventHandler->disableEventHandling();
     }
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -802,7 +797,7 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->reset_bssid_hotlist == NULL) {
-        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->reset_bssid_hotlist(id, iface);
         ALOGI("%s: lowi reset_bssid_hotlist "
@@ -810,7 +805,7 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     if (gScanSetBssidHotlistCmdEventHandler == NULL ||
         (gScanSetBssidHotlistCmdEventHandler->isEventHandlingEnabled() ==
@@ -865,7 +860,6 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
 
 cleanup:
     delete gScanCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -900,7 +894,7 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->set_significant_change_handler == NULL) {
-        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->set_significant_change_handler(id,
                                                              iface,
@@ -911,7 +905,7 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set significant
      * change list was made earlier. If set_significant_change() is called while
@@ -1061,7 +1055,6 @@ cleanup:
         gScanSetSignificantChangeCmdEventHandler->disableEventHandling();
     }
     delete gScanCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -1093,7 +1086,7 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->reset_significant_change_handler == NULL) {
-        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->reset_significant_change_handler(id, iface);
         ALOGI("%s: lowi reset_significant_change_handler "
@@ -1101,7 +1094,7 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     if (gScanSetSignificantChangeCmdEventHandler == NULL ||
         (gScanSetSignificantChangeCmdEventHandler->isEventHandlingEnabled() ==
@@ -1158,7 +1151,6 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
 
 cleanup:
     delete gScanCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -1193,7 +1185,7 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->get_cached_gscan_results == NULL) {
-        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->get_cached_gscan_results(iface,
                                                        flush,
@@ -1208,7 +1200,7 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver. */
     /* Generate it randomly */
     requestId = get_requestid();
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, requestId);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, requestId);
 
     if (results == NULL || num == NULL) {
         ALOGE("%s: NULL pointer provided. Exit.",
@@ -1307,7 +1299,6 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
 cleanup:
     gScanCommand->freeRspParams(eGScanGetCachedResultsRspParams);
     delete gScanCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -1319,8 +1310,6 @@ wifi_error wifi_set_scanning_mac_oui(wifi_interface_handle handle, oui scan_oui)
     WifiVendorCommand *vCommand = NULL;
     interface_info *iinfo = getIfaceInfo(handle);
     wifi_handle wifiHandle = getWifiHandle(handle);
-
-    ALOGI("%s: Enter", __FUNCTION__);
 
     vCommand = new WifiVendorCommand(wifiHandle, 0,
             OUI_QCA,
@@ -1344,7 +1333,8 @@ wifi_error wifi_set_scanning_mac_oui(wifi_interface_handle handle, oui scan_oui)
     if (!nlData)
         goto cleanup;
 
-    ALOGI("MAC_OUI - %02x:%02x:%02x", scan_oui[0], scan_oui[1], scan_oui[2]);
+    ALOGI("%s: MAC_OUI - %02x:%02x:%02x", __FUNCTION__,
+          scan_oui[0], scan_oui[1], scan_oui[2]);
 
     /* Add the fixed part of the mac_oui to the nl command */
     ret = vCommand->put_bytes(
@@ -1364,7 +1354,6 @@ wifi_error wifi_set_scanning_mac_oui(wifi_interface_handle handle, oui scan_oui)
 
 cleanup:
     delete vCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -1400,7 +1389,7 @@ wifi_error wifi_set_ssid_hotlist(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->set_ssid_hotlist == NULL) {
-        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->set_ssid_hotlist(id, iface, params,handler);
         ALOGI("%s: lowi set_ssid_hotlist "
@@ -1408,7 +1397,7 @@ wifi_error wifi_set_ssid_hotlist(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set ssid
      * hotlist was made earlier. If set_ssid_hotlist() is called while
@@ -1552,7 +1541,6 @@ cleanup:
             __FUNCTION__, ret);
         gScanSetSsidHotlistCmdEventHandler->disableEventHandling();
     }
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -1583,7 +1571,7 @@ wifi_error wifi_reset_ssid_hotlist(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->reset_ssid_hotlist == NULL) {
-        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->reset_ssid_hotlist(id, iface);
         ALOGI("%s: lowi reset_ssid_hotlist "
@@ -1591,7 +1579,7 @@ wifi_error wifi_reset_ssid_hotlist(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     if (gScanSetSsidHotlistCmdEventHandler == NULL ||
         (gScanSetSsidHotlistCmdEventHandler->isEventHandlingEnabled() ==
@@ -1646,7 +1634,6 @@ wifi_error wifi_reset_ssid_hotlist(wifi_request_id id,
 
 cleanup:
     delete gScanCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -1966,7 +1953,7 @@ int GScanCommand::handleResponse(WifiEvent &reply) {
 int GScanCommand::gscan_parse_capabilities(struct nlattr **tbVendor)
 {
     if (!mGetCapabilitiesRspParams){
-        ALOGE("%s: mGetCapabilitiesRspParams ptr is NULL. Exit. ",
+        ALOGE("%s: mGetCapabilitiesRspParams ptr is NULL. Exit.",
             __FUNCTION__);
         return WIFI_ERROR_INVALID_ARGS;
     }
@@ -2420,7 +2407,7 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set ePNO
      * list was made earlier. If wifi_set_epno_list() is called while
@@ -2566,7 +2553,6 @@ cleanup:
             __FUNCTION__, ret);
         gScanSetPnoListCmdEventHandler->disableEventHandling();
     }
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -2596,7 +2582,7 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set ePNO
      * passpoint list was made earlier. If wifi_set_passpoint_list() is called
@@ -2741,7 +2727,6 @@ cleanup:
             __FUNCTION__, ret);
         gScanPnoSetPasspointListCmdEventHandler->disableEventHandling();
     }
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -2767,13 +2752,13 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     if (gScanPnoSetPasspointListCmdEventHandler == NULL ||
         (gScanPnoSetPasspointListCmdEventHandler->isEventHandlingEnabled() ==
          false)) {
         ALOGE("wifi_reset_passpoint_list: ePNO passpoint_list isn't set. "
-            "Nothing to do. Exit");
+            "Nothing to do. Exit.");
         return WIFI_ERROR_NOT_AVAILABLE;
     }
 
@@ -2832,7 +2817,6 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
 
 cleanup:
     delete gScanCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -2935,8 +2919,6 @@ wifi_error GScanCommand::copyCachedScanResults(
     int i;
     wifi_cached_scan_results *cachedResultRsp;
 
-    ALOGI("%s: Enter", __FUNCTION__);
-
     if (mGetCachedResultsRspParams && cached_results)
     {
         /* Populate the number of parsed cached results. */
@@ -2966,7 +2948,6 @@ wifi_error GScanCommand::copyCachedScanResults(
         *numResults = 0;
         ret = WIFI_ERROR_INVALID_ARGS;
     }
-    ALOGI("%s: Exit", __FUNCTION__);
     return ret;
 }
 
@@ -3013,7 +2994,7 @@ wifi_error wifi_set_ssid_white_list(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     ALOGI("Number of SSIDs : %d", num_networks);
     for (i = 0; i < num_networks; i++) {
@@ -3081,7 +3062,6 @@ wifi_error wifi_set_ssid_white_list(wifi_request_id id,
 
 cleanup:
     delete roamCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 
 }
@@ -3103,7 +3083,7 @@ wifi_error wifi_set_gscan_roam_params(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     if(params) {
         ALOGI("A_band_boost_threshold   %d", params->A_band_boost_threshold);
@@ -3180,7 +3160,6 @@ wifi_error wifi_set_gscan_roam_params(wifi_request_id id,
 
 cleanup:
     delete roamCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 
 }
@@ -3250,7 +3229,6 @@ wifi_error wifi_enable_lazy_roam(wifi_request_id id,
 
 cleanup:
     delete roamCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 
 }
@@ -3273,7 +3251,7 @@ wifi_error wifi_set_bssid_preference(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     ALOGI("Number of BSSIDs: %d", num_bssid);
     if(prefs && num_bssid) {
@@ -3352,7 +3330,6 @@ wifi_error wifi_set_bssid_preference(wifi_request_id id,
 
 cleanup:
     delete roamCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 
 }
@@ -3374,7 +3351,7 @@ wifi_error wifi_set_bssid_blacklist(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     for (i = 0; i < params.num_bssid; i++) {
         ALOGI("BSSID: %d : %02x:%02x:%02x:%02x:%02x:%02x", i,
@@ -3443,7 +3420,6 @@ wifi_error wifi_set_bssid_blacklist(wifi_request_id id,
 
 cleanup:
     delete roamCommand;
-    ALOGI("%s: Exit.", __FUNCTION__);
     return (wifi_error)ret;
 
 }
