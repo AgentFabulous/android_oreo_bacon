@@ -84,6 +84,9 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
     mHotlistApFoundResults = NULL;
     mHotlistApFoundNumResults = 0;
     mHotlistApFoundMoreData = false;
+    mHotlistApLostResults = NULL;
+    mHotlistApLostNumResults = 0;
+    mHotlistApLostMoreData = false;
     mSignificantChangeResults = NULL;
     mSignificantChangeNumResults = 0;
     mSignificantChangeMoreData = false;
