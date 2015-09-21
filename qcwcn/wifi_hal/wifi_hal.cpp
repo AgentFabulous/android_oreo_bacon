@@ -747,7 +747,7 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
 
             cb_info *cbi = &(info->event_cb[i]);
             pthread_mutex_unlock(&info->cb_lock);
-            if (cbi && cbi->cb_func) {
+            if (cbi->cb_func) {
                 (*(cbi->cb_func))(msg, cbi->cb_arg);
                 dispatched = true;
             }

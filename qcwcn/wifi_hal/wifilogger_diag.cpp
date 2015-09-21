@@ -1258,7 +1258,7 @@ static wifi_error populate_rx_aggr_stats(hal_info *info)
 
 static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
 {
-    wifi_error status;
+    wifi_error status = WIFI_SUCCESS;
     rb_pkt_stats_t *rx_stats_rcvd = (rb_pkt_stats_t *)buf;
     wifi_ring_buffer_entry *pRingBufferEntry;
     u32 len_ring_buffer_entry = 0;

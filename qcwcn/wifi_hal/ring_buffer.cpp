@@ -505,6 +505,12 @@ u8 *rb_get_read_buf(void *ctx, size_t *length)
          * and copy the data into it.
          */
         buf = (u8 *)malloc(cur_read_len);
+        if (buf == NULL) {
+            ALOGE("Failed to alloc buffer for partial buf read");
+            *length = 0;
+            rb_unlock(&rbc->rb_rw_lock);
+            return NULL;
+        }
         memcpy(buf,
                (rbc->bufs[rbc->rd_buf_no].data + rbc->cur_rd_buf_idx),
                cur_read_len);
