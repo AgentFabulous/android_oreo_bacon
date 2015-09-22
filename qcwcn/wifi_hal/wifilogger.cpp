@@ -148,7 +148,7 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
         }
 
     }
-    ALOGI("%s: Logging Started for %s.", __FUNCTION__, buffer_name);
+    ALOGV("%s: Logging Started for %s.", __FUNCTION__, buffer_name);
     rb_start_logging(&info->rb_infos[ring_id], verbose_level,
                     flags, max_interval_sec, min_data_size);
 cleanup:
@@ -616,7 +616,7 @@ WifiLoggerCommand::WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, 
 
 WifiLoggerCommand::~WifiLoggerCommand()
 {
-    ALOGD("WifiLoggerCommand %p destructor", this);
+    ALOGV("WifiLoggerCommand %p destructor", this);
     unregisterVendorHandler(mVendor_id, mSubcmd);
 }
 
@@ -636,7 +636,7 @@ int WifiLoggerCommand::create() {
     if (ret < 0)
         goto out;
 
-     ALOGI("%s: mVendor_id = %d, Subcmd = %d.",
+     ALOGV("%s: mVendor_id = %d, Subcmd = %d.",
         __FUNCTION__, mVendor_id, mSubcmd);
 
 out:
@@ -749,7 +749,6 @@ static int ack_handler_wifi_logger(struct nl_msg *msg, void *arg)
     int *ret = (int *)arg;
     struct nl_msg * a;
 
-    ALOGE("%s: called", __FUNCTION__);
     a = msg;
     *ret = 0;
     return NL_STOP;
@@ -761,7 +760,6 @@ static int finish_handler_wifi_logger(struct nl_msg *msg, void *arg)
   int *ret = (int *)arg;
   struct nl_msg * a;
 
-  ALOGE("%s: called", __FUNCTION__);
   a = msg;
   *ret = 0;
   return NL_SKIP;
@@ -771,8 +769,6 @@ int WifiLoggerCommand::requestEvent()
 {
     int res = -1;
     struct nl_cb *cb;
-
-    ALOGD("%s: Entry.", __FUNCTION__);
 
     cb = nl_cb_alloc(NL_CB_DEFAULT);
     if (!cb) {
@@ -796,7 +792,7 @@ int WifiLoggerCommand::requestEvent()
          nl_recvmsgs(mInfo->cmd_sock, cb);
     }
 
-    ALOGD("%s: Msg sent, res=%d, mWaitForRsp=%d", __FUNCTION__, res, mWaitforRsp);
+    ALOGV("%s: Msg sent, res=%d, mWaitForRsp=%d", __FUNCTION__, res, mWaitforRsp);
     /* Only wait for the asynchronous event if HDD returns success, res=0 */
     if (!res && (mWaitforRsp == true)) {
         struct timespec abstime;
@@ -807,7 +803,7 @@ int WifiLoggerCommand::requestEvent()
         {
             ALOGE("%s: Time out happened.", __FUNCTION__);
         }
-        ALOGD("%s: Command invoked return value:%d, mWaitForRsp=%d",
+        ALOGV("%s: Command invoked return value:%d, mWaitForRsp=%d",
             __FUNCTION__, res, mWaitforRsp);
     }
 out:
@@ -822,7 +818,6 @@ int WifiLoggerCommand::requestResponse()
 }
 
 int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
-    ALOGD("Received a WifiLogger response message from Driver");
     u32 status;
     int ret = WIFI_SUCCESS;
     int i = 0;
@@ -832,6 +827,7 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
     FILE* memDumpFilePtr = NULL;
     WifiVendorCommand::handleResponse(reply);
 
+    memset(version_type, 0, 20);
     switch(mSubcmd)
     {
         case QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_INFO:
@@ -900,7 +896,7 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_LOGGER_RESULTS_MEMDUMP_SIZE]) {
                 ALOGE("%s: LOGGER_RESULTS_MEMDUMP_SIZE not"
-                      "found", __func__);
+                      "found", __FUNCTION__);
                 break;
             }
 
@@ -951,7 +947,7 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
                     if (numRecordsRead) {
                         remaining -= readSize;
                         buffer += readSize;
-                        ALOGI("%s: Read successful for size:%u "
+                        ALOGV("%s: Read successful for size:%u "
                               "remaining:%u", __func__, readSize,
                               remaining);
                     }

@@ -1015,7 +1015,7 @@ static wifi_error process_wlan_eapol_event(hal_info *info, u8* buf, int length)
     else if ((pWlanEapolEvent->eapol_key_info & EAPOL_MASK) == EAPOL_M4_MASK)
         eapol_msg_type = 4;
     else
-        ALOGI("Unknow EAPOL message type \n");
+        ALOGI("Unknown EAPOL message type \n");
     pTlv = addLoggerTlv(WIFI_TAG_EAPOL_MESSAGE_TYPE, sizeof(u32),
                         (u8 *)&eapol_msg_type, pTlv);
     tot_len += sizeof(tlv_log) + sizeof(u32);
