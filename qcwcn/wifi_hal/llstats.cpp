@@ -531,8 +531,6 @@ wifi_error LLStatsCommand::get_wifi_iface_stats(wifi_iface_stat *stats,
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_AVERAGE_TSF_OFFSET])
     {
-        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_AVERAGE_TSF_OFFSET"
-                " not found", __func__);
         stats->average_tsf_offset = 0;
     } else {
         stats->average_tsf_offset = nla_get_u64(tb_vendor[
@@ -541,8 +539,6 @@ wifi_error LLStatsCommand::get_wifi_iface_stats(wifi_iface_stat *stats,
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_LEAKY_AP_DETECTED])
     {
-        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_LEAKY_AP_DETECTED"
-                " not found", __func__);
         stats->leaky_ap_detected = 0;
     } else {
         stats->leaky_ap_detected = nla_get_u32(tb_vendor[
@@ -552,9 +548,6 @@ wifi_error LLStatsCommand::get_wifi_iface_stats(wifi_iface_stat *stats,
     if (!tb_vendor[
         QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_LEAKY_AP_AVG_NUM_FRAMES_LEAKED])
     {
-        ALOGE("%s: "
-        "QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_LEAKY_AP_AVG_NUM_FRAMES_LEAKED"
-                " not found", __func__);
         stats->leaky_ap_avg_num_frames_leaked = 0;
     } else {
         stats->leaky_ap_avg_num_frames_leaked = nla_get_u32(tb_vendor[
@@ -563,8 +556,6 @@ wifi_error LLStatsCommand::get_wifi_iface_stats(wifi_iface_stat *stats,
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_LEAKY_AP_GUARD_TIME])
     {
-        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_LEAKY_AP_GUARD_TIME"
-                " not found", __func__);
         stats->leaky_ap_guard_time = 0;
     } else {
         stats->leaky_ap_guard_time = nla_get_u32(tb_vendor[
@@ -966,12 +957,16 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                     {
                         goto cleanup;
                     }
-                    if (!tb_vendor[
+
+                    /* Driver/firmware might send this attribute when there
+                     * are no peers connected.
+                     * So that, the event
+                     * QCA_NL80211_VENDOR_SUBCMD_LL_STATS_TYPE_PEERS can be
+                     * avoided.
+                     */
+                    if (tb_vendor[
                         QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
                     {
-                        ALOGE("%s:QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS"
-                                " not found", __func__);
-                    } else {
                         mResultsParams.iface_stat->num_peers =
                             nla_get_u32(tb_vendor[
                                 QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS]);
