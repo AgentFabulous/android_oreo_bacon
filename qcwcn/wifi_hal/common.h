@@ -179,6 +179,7 @@ extern "C"
 {
 #endif /* __cplusplus */
 void hexdump(void *bytes, u16 len);
+u8 get_rssi(u8 rssi_wo_noise_floor);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -791,6 +791,45 @@ wifi_error process_firmware_prints(hal_info *info, u8 *buf, u16 length)
     return WIFI_SUCCESS;
 }
 
+static wifi_error process_beacon_received_event(hal_info *info,
+                                      u8* buf, int length)
+{
+    wifi_ring_buffer_driver_connectivity_event *pConnectEvent;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    tlv_log *pTlv;
+    int tot_len = sizeof(wifi_ring_buffer_driver_connectivity_event);
+    u8 out_buf[RING_BUF_ENTRY_SIZE];
+    wlan_beacon_received_payload_type *pBeaconRcvd;
+    u32 rssi;
+    wifi_error status;
+
+    pRingBufferEntry = (wifi_ring_buffer_entry *)&out_buf[0];
+    memset(pRingBufferEntry, 0, RING_BUF_ENTRY_SIZE);
+    pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
+                     (pRingBufferEntry + 1);
+
+    pBeaconRcvd = (wlan_beacon_received_payload_type *)buf;
+
+    pConnectEvent->event = WIFI_EVENT_BEACON_RECEIVED;
+    pTlv = &pConnectEvent->tlvs[0];
+
+    pTlv = addLoggerTlv(WIFI_TAG_BSSID, sizeof(pBeaconRcvd->bssid),
+                        (u8 *)pBeaconRcvd->bssid, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(pBeaconRcvd->bssid);
+
+    rssi = get_rssi(pBeaconRcvd->beacon_rssi);
+    pTlv = addLoggerTlv(WIFI_TAG_RSSI,
+            sizeof(rssi), (u8 *)&rssi, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(pBeaconRcvd->beacon_rssi);
+
+    status = update_connectivity_ring_buf(info, pRingBufferEntry, tot_len);
+    if (status != WIFI_SUCCESS) {
+        ALOGE("Failed to write addba event into ring buffer");
+    }
+
+    return status;
+}
+
 static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
 {
     u16 count = 0, id, payloadlen;
@@ -873,6 +912,15 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                                                       payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process addba failed event");
+                            return status;
+                        }
+                        break;
+                   case EVENT_WLAN_BEACON_EVENT:
+                        status = process_beacon_received_event(info,
+                                                      diag_msg_hdr->payload,
+                                                      payloadlen);
+                        if (status != WIFI_SUCCESS) {
+                            ALOGE("Failed to process beacon received event");
                             return status;
                         }
                         break;
