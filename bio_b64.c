@@ -116,7 +116,7 @@ static BIO_METHOD methods_b64=
 	b64_callback_ctrl,
 	};
 
-BIO_METHOD *BIO_f_base64(void)
+const BIO_METHOD *BIO_f_base64(void)
 	{
 	return(&methods_b64);
 	}
