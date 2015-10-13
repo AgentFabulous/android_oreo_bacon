@@ -1920,6 +1920,8 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
     } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_LOG) {
         if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_PRINT_TYPE) {
             process_driver_prints(info, (u8 *)(wnl + 1), wnl->wmsg.length);
+        } else if (wnl->wmsg.type == ANI_NL_MSG_LOG_FW_MSG_TYPE) {
+            process_firmware_prints(info, (u8 *)(wnl + 1), wnl->wmsg.length);
         }
     } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_CNSS_DIAG) {
         uint16_t diag_fw_type;
