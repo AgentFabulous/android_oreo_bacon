@@ -299,6 +299,19 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_stop_sending_offloaded_packet = wifi_stop_sending_offloaded_packet;
     fn->wifi_start_rssi_monitoring = wifi_start_rssi_monitoring;
     fn->wifi_stop_rssi_monitoring = wifi_stop_rssi_monitoring;
+    fn->wifi_nan_enable_request = nan_enable_request;
+    fn->wifi_nan_disable_request = nan_disable_request;
+    fn->wifi_nan_publish_request = nan_publish_request;
+    fn->wifi_nan_publish_cancel_request = nan_publish_cancel_request;
+    fn->wifi_nan_subscribe_request = nan_subscribe_request;
+    fn->wifi_nan_subscribe_cancel_request = nan_subscribe_cancel_request;
+    fn->wifi_nan_transmit_followup_request = nan_transmit_followup_request;
+    fn->wifi_nan_stats_request = nan_stats_request;
+    fn->wifi_nan_config_request = nan_config_request;
+    fn->wifi_nan_tca_request = nan_tca_request;
+    fn->wifi_nan_beacon_sdf_payload_request = nan_beacon_sdf_payload_request;
+    fn->wifi_nan_register_handler = nan_register_handler;
+    fn->wifi_nan_get_version = nan_get_version;
 
     return WIFI_SUCCESS;
 }

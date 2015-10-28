@@ -19,7 +19,6 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS := -Wno-unused-parameter
-LOCAL_CFLAGS += -DNAN_2_0
 
 # gscan.cpp: address of array 'cached_results[i].results' will always evaluate to 'true'
 LOCAL_CLANG_CFLAGS := -Wno-pointer-bool-conversion
@@ -71,7 +70,6 @@ include $(CLEAR_VARS)
 LOCAL_REQUIRED_MODULES :=
 
 LOCAL_CFLAGS += -Wno-unused-parameter
-LOCAL_CFLAGS += -DNAN_2_0
 LOCAL_CPPFLAGS += -Wno-conversion-null
 
 # gscan.cpp: address of array 'cached_results[i].results' will always evaluate to 'true'
