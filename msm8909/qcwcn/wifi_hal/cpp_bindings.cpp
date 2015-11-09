@@ -631,6 +631,7 @@ int WifiCommand::requestResponse(WifiRequest& request) {
     }
 out:
     nl_cb_put(cb);
+    mMsg.destroy();
     return err;
 }
 
