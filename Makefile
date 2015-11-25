@@ -376,6 +376,8 @@ KBUILD_CFLAGS   := -Wall -DNDEBUG -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
+                   -Wno-shift-overflow -Wno-tautological-compare \
+		   -Wno-unused-const-variable \
 		   -fno-delete-null-pointer-checks \
 		   -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -marm \
 		   -ffast-math -fsingle-precision-constant \
@@ -582,7 +584,7 @@ ifdef CONFIG_CC_OPTIMIZE_DEFAULT
 KBUILD_CFLAGS += -O2
 endif
 ifdef CONFIG_CC_OPTIMIZE_MORE
-KBUILD_CFLAGS += -O3 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -Wno-array-bounds
+KBUILD_CFLAGS += -O3 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -Wno-array-bounds -fno-inline-functions
 endif
 
 # Tell gcc to never replace conditional load with a non-conditional one
