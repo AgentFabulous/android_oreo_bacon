@@ -28,12 +28,11 @@
 #define PCC_ADJ 0x80
 
 // Fix bullhead's shit yellow screen! - by jollaman999
-// Modified for bacon by Matthew_333
-#define KCAL_RED	0xF1
-#define KCAL_GREEN	0xF1
-#define KCAL_BLUE	DEF_PCC
-#define KCAL_SAT	0x101
-
+// Modified for bacon - by Matthew_333
+#define KCAL_RED	0xEB	// 235
+#define KCAL_GREEN	0xF0	// 240
+#define KCAL_BLUE	0xF5	// 245
+#define KCAL_SAT	0x106	// 262 / 38 (KA)
 
 struct kcal_lut_data {
 	int red;
