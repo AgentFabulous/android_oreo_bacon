@@ -43,6 +43,7 @@ int NanCommand::isNanResponse()
     case NAN_MSG_ID_DISABLE_RSP:
     case NAN_MSG_ID_TCA_RSP:
     case NAN_MSG_ID_BEACON_SDF_RSP:
+    case NAN_MSG_ID_CAPABILITIES_RSP:
         return 1;
     default:
         return 0;
@@ -210,6 +211,40 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pRsp->status = (NanStatusType)pFwRsp->status;
             pRsp->value = 0;
             pRsp->response_type = NAN_RESPONSE_BEACON_SDF_PAYLOAD;
+            break;
+        }
+        case NAN_MSG_ID_CAPABILITIES_RSP:
+        {
+            pNanCapabilitiesRspMsg pFwRsp = \
+                (pNanCapabilitiesRspMsg)mNanVendorEvent;
+            *id = (transaction_id)pFwRsp->fwHeader.transactionId;
+            pRsp->status = (NanStatusType)pFwRsp->status;
+            pRsp->value = pFwRsp->value;
+            pRsp->response_type = NAN_GET_CAPABILITIES;
+            pRsp->body.nan_capabilities.max_concurrent_nan_clusters = \
+                        pFwRsp->max_concurrent_nan_clusters;
+            pRsp->body.nan_capabilities.max_publishes = \
+                        pFwRsp->max_publishes;
+            pRsp->body.nan_capabilities.max_subscribes = \
+                        pFwRsp->max_subscribes;
+            pRsp->body.nan_capabilities.max_service_name_len = \
+                        pFwRsp->max_service_name_len;
+            pRsp->body.nan_capabilities.max_match_filter_len = \
+                        pFwRsp->max_match_filter_len;
+            pRsp->body.nan_capabilities.max_total_match_filter_len = \
+                        pFwRsp->max_total_match_filter_len;
+            pRsp->body.nan_capabilities.max_service_specific_info_len = \
+                        pFwRsp->max_service_specific_info_len;
+            pRsp->body.nan_capabilities.max_vsa_data_len = \
+                        pFwRsp->max_vsa_data_len;
+            pRsp->body.nan_capabilities.max_mesh_data_len = \
+                        pFwRsp->max_mesh_data_len;
+            pRsp->body.nan_capabilities.max_ndi_interfaces = \
+                       pFwRsp->max_ndi_interfaces;
+            pRsp->body.nan_capabilities.max_ndp_sessions = \
+                       pFwRsp->max_ndp_sessions;
+            pRsp->body.nan_capabilities.max_app_info_len = \
+                       pFwRsp->max_app_info_len;
             break;
         }
         default:

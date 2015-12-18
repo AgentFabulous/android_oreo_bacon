@@ -347,6 +347,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_nan_get_version = nan_get_version;
     fn->wifi_set_packet_filter = wifi_set_packet_filter;
     fn->wifi_get_packet_filter_capabilities = wifi_get_packet_filter_capabilities;
+    fn->wifi_nan_get_capabilities = nan_get_capabilities;
 
     return WIFI_SUCCESS;
 }

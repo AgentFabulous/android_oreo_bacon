@@ -55,12 +55,12 @@ int NanCommand::handleNanIndication()
         }
         break;
 
-    case NAN_INDICATION_UNMATCH:
-        NanUnmatchInd unMatchInd;
-        memset(&unMatchInd, 0, sizeof(unMatchInd));
-        res = getNanUnMatch(&unMatchInd);
-        if (!res && mHandler.EventUnMatch) {
-            (*mHandler.EventUnMatch)(&unMatchInd);
+    case NAN_INDICATION_MATCH_EXPIRED:
+        NanMatchExpiredInd matchExpiredInd;
+        memset(&matchExpiredInd, 0, sizeof(matchExpiredInd));
+        res = getNanMatchExpired(&matchExpiredInd);
+        if (!res && mHandler.EventMatchExpired) {
+            (*mHandler.EventMatchExpired)(&matchExpiredInd);
         }
         break;
 
@@ -145,8 +145,8 @@ NanIndicationType NanCommand::getIndicationType()
         return NAN_INDICATION_PUBLISH_TERMINATED;
     case NAN_MSG_ID_MATCH_IND:
         return NAN_INDICATION_MATCH;
-    case NAN_MSG_ID_UNMATCH_IND:
-        return NAN_INDICATION_UNMATCH;
+    case NAN_MSG_ID_MATCH_EXPIRED_IND:
+        return NAN_INDICATION_MATCH_EXPIRED;
     case NAN_MSG_ID_FOLLOWUP_IND:
         return NAN_INDICATION_FOLLOWUP;
     case NAN_MSG_ID_SUBSCRIBE_TERMINATED_IND:
@@ -297,7 +297,7 @@ int NanCommand::getNanMatch(NanMatchInd *event)
     return WIFI_SUCCESS;
 }
 
-int NanCommand::getNanUnMatch(NanUnmatchInd *event)
+int NanCommand::getNanMatchExpired(NanMatchExpiredInd *event)
 {
     if (event == NULL || mNanVendorEvent == NULL) {
         ALOGE("%s: Invalid input argument event:%p mNanVendorEvent:%p",
@@ -305,9 +305,9 @@ int NanCommand::getNanUnMatch(NanUnmatchInd *event)
         return WIFI_ERROR_INVALID_ARGS;
     }
 
-    pNanUnmatchIndMsg pRsp = (pNanUnmatchIndMsg)mNanVendorEvent;
+    pNanMatchExpiredIndMsg pRsp = (pNanMatchExpiredIndMsg)mNanVendorEvent;
     event->publish_subscribe_id = pRsp->fwHeader.handle;
-    event->requestor_instance_id = pRsp->unmatchIndParams.matchHandle;
+    event->requestor_instance_id = pRsp->matchExpiredIndParams.matchHandle;
     return WIFI_SUCCESS;
 }
 

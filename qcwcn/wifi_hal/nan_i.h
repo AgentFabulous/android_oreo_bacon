@@ -29,7 +29,39 @@ extern "C"
 #ifndef PACKED
 #define PACKED  __attribute__((packed))
 #endif
-
+#define BIT_NONE            0x00
+#define BIT_0               0x01
+#define BIT_1               0x02
+#define BIT_2               0x04
+#define BIT_3               0x08
+#define BIT_4               0x10
+#define BIT_5               0x20
+#define BIT_6               0x40
+#define BIT_7               0x80
+#define BIT_8               0x0100
+#define BIT_9               0x0200
+#define BIT_10              0x0400
+#define BIT_11              0x0800
+#define BIT_12              0x1000
+#define BIT_13              0x2000
+#define BIT_14              0x4000
+#define BIT_15              0x8000
+#define BIT_16              0x010000
+#define BIT_17              0x020000
+#define BIT_18              0x040000
+#define BIT_19              0x080000
+#define BIT_20              0x100000
+#define BIT_21              0x200000
+#define BIT_22              0x400000
+#define BIT_23              0x800000
+#define BIT_24              0x01000000
+#define BIT_25              0x02000000
+#define BIT_26              0x04000000
+#define BIT_27              0x08000000
+#define BIT_28              0x10000000
+#define BIT_29              0x20000000
+#define BIT_30              0x40000000
+#define BIT_31              0x80000000
 typedef u8 SirMacAddr[NAN_MAC_ADDR_LEN];
 /*---------------------------------------------------------------------------
 * WLAN NAN CONSTANTS
@@ -51,7 +83,7 @@ typedef enum
     NAN_MSG_ID_SUBSCRIBE_SERVICE_CANCEL_REQ = 11,
     NAN_MSG_ID_SUBSCRIBE_SERVICE_CANCEL_RSP = 12,
     NAN_MSG_ID_MATCH_IND                    = 13,
-    NAN_MSG_ID_UNMATCH_IND                  = 14,
+    NAN_MSG_ID_MATCH_EXPIRED_IND            = 14,
     NAN_MSG_ID_SUBSCRIBE_TERMINATED_IND     = 15,
     NAN_MSG_ID_DE_EVENT_IND                 = 16,
     NAN_MSG_ID_TRANSMIT_FOLLOWUP_REQ        = 17,
@@ -67,9 +99,11 @@ typedef enum
     NAN_MSG_ID_TCA_REQ                      = 27,
     NAN_MSG_ID_TCA_RSP                      = 28,
     NAN_MSG_ID_TCA_IND                      = 29,
-    NAN_MSG_ID_BEACON_SDF_REQ                = 30,
-    NAN_MSG_ID_BEACON_SDF_RSP                = 31,
-    NAN_MSG_ID_BEACON_SDF_IND                = 32
+    NAN_MSG_ID_BEACON_SDF_REQ               = 30,
+    NAN_MSG_ID_BEACON_SDF_RSP               = 31,
+    NAN_MSG_ID_BEACON_SDF_IND               = 32,
+    NAN_MSG_ID_CAPABILITIES_REQ             = 33,
+    NAN_MSG_ID_CAPABILITIES_RSP             = 34
 } NanMsgId;
 
 /*
@@ -101,7 +135,7 @@ typedef enum
     NAN_TLV_TYPE_24G_BEACON,
     NAN_TLV_TYPE_24G_SDF,
     NAN_TLV_TYPE_24G_RSSI_CLOSE,
-    NAN_TLV_TYPE_24G_RSSI_MIDDLE,
+    NAN_TLV_TYPE_24G_RSSI_MIDDLE = 4100,
     NAN_TLV_TYPE_24G_RSSI_CLOSE_PROXIMITY,
     NAN_TLV_TYPE_5G_SUPPORT,
     NAN_TLV_TYPE_5G_BEACON,
@@ -111,7 +145,7 @@ typedef enum
     NAN_TLV_TYPE_5G_RSSI_CLOSE_PROXIMITY,
     NAN_TLV_TYPE_SID_BEACON,
     NAN_TLV_TYPE_HOP_COUNT_LIMIT,
-    NAN_TLV_TYPE_MASTER_PREFERENCE,
+    NAN_TLV_TYPE_MASTER_PREFERENCE = 4110,
     NAN_TLV_TYPE_CLUSTER_ID_LOW,
     NAN_TLV_TYPE_CLUSTER_ID_HIGH,
     NAN_TLV_TYPE_RSSI_AVERAGING_WINDOW_SIZE,
@@ -121,7 +155,7 @@ typedef enum
     NAN_TLV_TYPE_SOCIAL_CHANNEL_SCAN_PARAMS,
     NAN_TLV_TYPE_DEBUGGING_FLAGS,
     NAN_TLV_TYPE_POST_NAN_CONNECTIVITY_CAPABILITIES_TRANSMIT,
-    NAN_TLV_TYPE_POST_NAN_DISCOVERY_ATTRIBUTE_TRANSMIT,
+    NAN_TLV_TYPE_POST_NAN_DISCOVERY_ATTRIBUTE_TRANSMIT = 4120,
     NAN_TLV_TYPE_FURTHER_AVAILABILITY_MAP,
     NAN_TLV_TYPE_HOP_COUNT_FORCE,
     NAN_TLV_TYPE_RANDOM_FACTOR_FORCE,
@@ -131,6 +165,8 @@ typedef enum
     NAN_TLV_TYPE_DW_INTERVAL = 4128,
     NAN_TLV_TYPE_DB_INTERVAL,
     NAN_TLV_TYPE_FURTHER_AVAILABILITY,
+    NAN_TLV_TYPE_24G_CHANNEL,
+    NAN_TLV_TYPE_5G_CHANNEL,
     NAN_TLV_TYPE_CONFIG_LAST = 8191,
 
     /* Attributes types */
@@ -270,7 +306,10 @@ typedef struct PACKED
     u32 matchAlg:2;
     u32 count:8;
     u32 connmap:8;
-    u32 reserved2:8;
+    u32 pubTerminatedIndDisableFlag:1;
+    u32 pubMatchExpiredIndDisableFlag:1;
+    u32 followupRxIndDisableFlag:1;
+    u32 reserved2:5;
     /*
      * Excludes TLVs
      *
@@ -334,7 +373,10 @@ typedef struct PACKED
     u32 count:8;
     u32 rssiThresholdFlag:1;
     u32 ota_flag:1;
-    u32 reserved:6;
+    u32 subTerminatedIndDisableFlag:1;
+    u32 subMatchExpiredIndDisableFlag:1;
+    u32 followupRxIndDisableFlag:1;
+    u32 reserved:3;
     u32 connmap:8;
     /*
      * Excludes TLVs
@@ -395,13 +437,13 @@ typedef struct PACKED
 typedef struct PACKED
 {
     u32 matchHandle;
-} NanUnmatchIndParams;
+} NanmatchExpiredIndParams;
 
 typedef struct PACKED
 {
     NanMsgHeader fwHeader;
-    NanUnmatchIndParams unmatchIndParams;
-} NanUnmatchIndMsg, *pNanUnmatchIndMsg;
+    NanmatchExpiredIndParams matchExpiredIndParams;
+} NanMatchExpiredIndMsg, *pNanMatchExpiredIndMsg;
 
 /* NAN Subscribe Terminated Ind */
 typedef struct PACKED
@@ -431,7 +473,8 @@ typedef struct PACKED
     u32 matchHandle;
     u32 priority:4;
     u32 window:1;
-    u32 reserved:27;
+    u32 followupTxRspDisableFlag:1;
+    u32 reserved:26;
     /*
      * Excludes TLVs
      *
@@ -874,7 +917,7 @@ typedef struct PACKED
 typedef enum {
     NAN_INDICATION_PUBLISH_TERMINATED      =1,
     NAN_INDICATION_MATCH                   =2,
-    NAN_INDICATION_UNMATCH                 =3,
+    NAN_INDICATION_MATCH_EXPIRED           =3,
     NAN_INDICATION_SUBSCRIBE_TERMINATED    =4,
     NAN_INDICATION_DE_EVENT                =5,
     NAN_INDICATION_FOLLOWUP                =6,
@@ -895,6 +938,33 @@ typedef struct {
   u8 hop_count;
   u32 beacon_transmit_time;
 } NanStaParameter;
+
+/* NAN Capabilities Req */
+typedef struct PACKED
+{
+    NanMsgHeader fwHeader;
+} NanCapabilitiesReqMsg, *pNanCapabilitiesReqMsg;
+
+/* NAN Capabilities Rsp */
+typedef struct PACKED
+{
+    NanMsgHeader fwHeader;
+    /* status of the request */
+    u16 status;
+    u32 value;
+    u32 max_concurrent_nan_clusters;
+    u32 max_publishes;
+    u32 max_subscribes;
+    u32 max_service_name_len;
+    u32 max_match_filter_len;
+    u32 max_total_match_filter_len;
+    u32 max_service_specific_info_len;
+    u32 max_vsa_data_len;
+    u32 max_mesh_data_len;
+    u32 max_ndi_interfaces;
+    u32 max_ndp_sessions;
+    u32 max_app_info_len;
+} NanCapabilitiesRspMsg, *pNanCapabilitiesRspMsg;
 
 /*
     Function to get the sta_parameter expected by Sigma

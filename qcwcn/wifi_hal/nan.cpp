@@ -556,6 +556,47 @@ cleanup:
     return (wifi_error)ret;
 }
 
+/*  Function to get NAN capabilities */
+wifi_error nan_get_capabilities(transaction_id id,
+                                wifi_interface_handle iface)
+{
+    int ret = 0;
+    NanCommand *nanCommand = NULL;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+
+    nanCommand = new NanCommand(wifiHandle,
+                                0,
+                                OUI_QCA,
+                                QCA_NL80211_VENDOR_SUBCMD_NAN);
+    if (nanCommand == NULL) {
+        ALOGE("%s: Error NanCommand NULL", __func__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ret = nanCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    /* Set the interface Id of the message. */
+    ret = nanCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    ret = nanCommand->putNanCapabilities(id);
+    if (ret != 0) {
+        ALOGE("%s: putNanCapabilities Error:%d",__func__, ret);
+        goto cleanup;
+    }
+    ret = nanCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+    }
+cleanup:
+    delete nanCommand;
+    return (wifi_error)ret;
+}
+
 // Implementation related to nan class common functions
 // Constructor
 //Making the constructor private since this class is a singleton
