@@ -4497,6 +4497,9 @@ int32_t QCameraParameters::init(cam_capability_t *capabilities,
         capabilities->livesnapshot_sizes_tbl_cnt = CAM1_VID_TBL_SIZE;
     }
 
+    // Set default sharpness to 1
+    capabilities->sharpness_ctrl.def_value = 6;
+
     m_pCapability = capabilities;
     m_pCamOpsTbl = mmOps;
     m_AdjustFPS = adjustFPS;
