@@ -3835,8 +3835,12 @@ int32_t QCameraParameters::initDefaultParameters()
         set(KEY_SUPPORTED_VIDEO_SIZES, videoSizeValues.string());
         ALOGD("%s: supported video sizes: %s", __func__, videoSizeValues.string());
         // Set default video size
-        CameraParameters::setVideoSize(m_pCapability->video_sizes_tbl[0].width,
-                                       m_pCapability->video_sizes_tbl[0].height);
+        if (m_pCapability->position == CAM_POSITION_BACK)
+            CameraParameters::setVideoSize(m_pCapability->video_sizes_tbl[3].width,
+                                           m_pCapability->video_sizes_tbl[3].height);
+        else
+            CameraParameters::setVideoSize(m_pCapability->video_sizes_tbl[2].width,
+                                           m_pCapability->video_sizes_tbl[2].height);
 
         //Set preferred Preview size for video
         String8 vSize = createSizesString(&m_pCapability->video_sizes_tbl[0], 1);
