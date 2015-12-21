@@ -3818,11 +3818,9 @@ int32_t QCameraParameters::initDefaultParameters()
         ALOGD("%s: supported preview sizes: %s", __func__, previewSizeValues.string());
         // Set default preview size
         if (m_pCapability->position == CAM_POSITION_BACK)
-            CameraParameters::setPreviewSize(m_pCapability->preview_sizes_tbl[3].width,
-                                             m_pCapability->preview_sizes_tbl[3].height);
+            CameraParameters::setPreviewSize(1920, 1080);
         else
-            CameraParameters::setPreviewSize(m_pCapability->preview_sizes_tbl[4].width,
-                                             m_pCapability->preview_sizes_tbl[4].height);
+            CameraParameters::setPreviewSize(1280, 720);
     } else {
         ALOGE("%s: supported preview sizes cnt is 0 or exceeds max!!!", __func__);
     }
@@ -3836,11 +3834,9 @@ int32_t QCameraParameters::initDefaultParameters()
         ALOGD("%s: supported video sizes: %s", __func__, videoSizeValues.string());
         // Set default video size
         if (m_pCapability->position == CAM_POSITION_BACK)
-            CameraParameters::setVideoSize(m_pCapability->video_sizes_tbl[3].width,
-                                           m_pCapability->video_sizes_tbl[3].height);
+            CameraParameters::setVideoSize(1920, 1080);
         else
-            CameraParameters::setVideoSize(m_pCapability->video_sizes_tbl[2].width,
-                                           m_pCapability->video_sizes_tbl[2].height);
+            CameraParameters::setVideoSize(1280, 720);
 
         //Set preferred Preview size for video
         String8 vSize = createSizesString(&m_pCapability->video_sizes_tbl[0], 1);
