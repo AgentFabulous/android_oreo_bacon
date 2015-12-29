@@ -381,11 +381,11 @@ wifi_error wifi_start_gscan(wifi_request_id id,
                                 MAX_CHANNELS : bucketSpec.num_channels;
 
         ALOGI("%s: Index: %d Bucket Id:%d Band:%d Period:%d ReportEvent:%d "
-              "numChannelSpecs:%d max_period:%d exponent:%d step_count:%d",
+              "numChannelSpecs:%d max_period:%d base:%d step_count:%d",
               __FUNCTION__, i, bucketSpec.bucket, bucketSpec.band,
               bucketSpec.period, bucketSpec.report_events,
               numChannelSpecs, bucketSpec.max_period,
-              bucketSpec.exponent, bucketSpec.step_count);
+              bucketSpec.base, bucketSpec.step_count);
 
         struct nlattr *nlBucketSpec = gScanCommand->attr_start(i);
         if (gScanCommand->put_u8(
@@ -407,8 +407,8 @@ wifi_error wifi_start_gscan(wifi_request_id id,
                 QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_MAX_PERIOD,
                 bucketSpec.max_period) ||
             gScanCommand->put_u32(
-                QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_EXPONENT,
-                bucketSpec.exponent) ||
+                QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_BASE,
+                bucketSpec.base) ||
             gScanCommand->put_u32(
                 QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_STEP_COUNT,
                 bucketSpec.step_count))

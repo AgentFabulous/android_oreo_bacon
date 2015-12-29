@@ -561,9 +561,9 @@ enum qca_wlan_vendor_attr_gscan_config_params
      */
     QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_MAX_PERIOD,
     /* Unsigned 32-bit value. */
-    QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_EXPONENT,
+    QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_BASE,
     /* Unsigned 32-bit value. For exponential back off bucket, number of scans
-     * performed at a given period and until the exponent is applied.
+     * to perform for a given period.
      */
     QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_STEP_COUNT,
     /* Unsigned 8-bit value; in number of scans, wake up AP after these
