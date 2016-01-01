@@ -3839,7 +3839,6 @@ int32_t QCameraParameters::initDefaultParameters()
             CameraParameters::setVideoSize(1280, 720);
 
         //Set preferred Preview size for video
-        String8 vSize = createSizesString(&m_pCapability->video_sizes_tbl[0], 1);
         if (m_pCapability->position == CAM_POSITION_BACK)
             set(KEY_PREFERRED_PREVIEW_SIZE_FOR_VIDEO, "1920x1080");
         else
@@ -4354,7 +4353,7 @@ int32_t QCameraParameters::initDefaultParameters()
     return rc;
 }
 
-#define CAM0_PIC_TBL_SIZE 21
+#define CAM0_PIC_TBL_SIZE 19
 static cam_dimension_t new_pic_sizes_cam0[CAM0_PIC_TBL_SIZE] = {
     {4208, 3120},
     {4160, 3120},
@@ -4367,7 +4366,6 @@ static cam_dimension_t new_pic_sizes_cam0[CAM0_PIC_TBL_SIZE] = {
     {2048, 1536},
     {1920, 1080},
     {1600, 1200},
-    {1280, 960},
     {1280, 768},
     {1280, 720},
     {1024, 768},
@@ -4375,44 +4373,36 @@ static cam_dimension_t new_pic_sizes_cam0[CAM0_PIC_TBL_SIZE] = {
     {800, 480},
     {720, 480},
     {640, 480},
-    {352, 288},
     {320, 240}
 };
 
-#define CAM0_VID_TBL_SIZE 12
+#define CAM0_VID_TBL_SIZE 9
 static cam_dimension_t new_vid_sizes_cam0[CAM0_VID_TBL_SIZE] = {
     {4096, 2160},
     {3840, 2160},
     {2560, 1440},
     {1920, 1080},
-    {1280, 960},
     {1280, 720},
     {800, 480},
     {720, 480},
     {640, 480},
-    {480, 320},
-    {352, 288},
     {320, 240}
 };
 
-#define CAM0_PRVW_TBL_SIZE 13
+#define CAM0_PRVW_TBL_SIZE 9
 static cam_dimension_t new_prvw_sizes_cam0[CAM0_PRVW_TBL_SIZE] = {
     {4096, 2160},
     {3840, 2160},
     {2560, 1440},
     {1920, 1080},
     {1440, 1080},
-    {1280, 960},
     {1280, 720},
-    {768, 432},
     {720, 480},
     {640, 480},
-    {576, 432},
-    {384, 288},
     {320, 240}
 };
 
-#define CAM1_VID_TBL_SIZE 10
+#define CAM1_VID_TBL_SIZE 8
 static cam_dimension_t new_vid_sizes_cam1[CAM1_VID_TBL_SIZE] = {
     {2560, 1440},
     {1920, 1080},
@@ -4421,23 +4411,18 @@ static cam_dimension_t new_vid_sizes_cam1[CAM1_VID_TBL_SIZE] = {
     {800, 480},
     {720, 480},
     {640, 480},
-    {480, 320},
-    {352, 288},
     {320, 240}
 };
 
-#define CAM1_PRVW_TBL_SIZE 11
+#define CAM1_PRVW_TBL_SIZE 8
 static cam_dimension_t new_prvw_sizes_cam1[CAM1_PRVW_TBL_SIZE] = {
     {2560, 1440},
     {1920, 1080},
     {1440, 1080},
-    {1280, 960},
     {1280, 720},
-    {768, 432},
     {720, 480},
     {640, 480},
     {576, 432},
-    {384, 288},
     {320, 240}
 };
 
@@ -4504,6 +4489,13 @@ int32_t QCameraParameters::init(cam_capability_t *capabilities,
             capabilities->livesnapshot_sizes_tbl[i] = new_vid_sizes_cam1[i];
         capabilities->livesnapshot_sizes_tbl_cnt = CAM1_VID_TBL_SIZE;
     }
+
+    // For CTS
+    capabilities->fps_ranges_tbl_cnt = 2;
+    capabilities->fps_ranges_tbl[1].min_fps = 30.0f;
+    capabilities->fps_ranges_tbl[1].max_fps = 30.0f;
+    capabilities->fps_ranges_tbl[1].video_min_fps = 30.0f;
+    capabilities->fps_ranges_tbl[1].video_max_fps = 30.0f;
 
     // Set default sharpness to 1
     capabilities->sharpness_ctrl.def_value = 6;
