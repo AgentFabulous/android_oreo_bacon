@@ -453,8 +453,6 @@ wifi_error wifi_start_gscan(wifi_request_id id,
     /* Set the callback handler functions for related events. */
     GScanCallbackHandler callbackHandler;
     memset(&callbackHandler, 0, sizeof(callbackHandler));
-    callbackHandler.on_scan_results_available =
-                        handler.on_scan_results_available;
     callbackHandler.on_full_scan_result = handler.on_full_scan_result;
     callbackHandler.on_scan_event = handler.on_scan_event;
 
@@ -1358,286 +1356,6 @@ cleanup:
 }
 
 
-/* Set the GSCAN SSID Hotlist. */
-wifi_error wifi_set_ssid_hotlist(wifi_request_id id,
-                                    wifi_interface_handle iface,
-                                    wifi_ssid_hotlist_params params,
-                                    wifi_hotlist_ssid_handler handler)
-{
-    int i, numSsid, ret = 0;
-    GScanCommand *gScanCommand;
-    struct nlattr *nlData, *nlSsidThresholdParamList;
-    interface_info *ifaceInfo = getIfaceInfo(iface);
-    wifi_handle wifiHandle = getWifiHandle(iface);
-    bool previousGScanSetSsidRunning = false;
-    hal_info *info = getHalInfo(wifiHandle);
-    lowi_cb_table_t *lowiWifiHalApi = NULL;
-    gscan_event_handlers* event_handlers;
-    GScanCommandEventHandler *gScanSetSsidHotlistCmdEventHandler;
-
-    event_handlers = (gscan_event_handlers*)info->gscan_handlers;
-    gScanSetSsidHotlistCmdEventHandler =
-        event_handlers->gScanSetSsidHotlistCmdEventHandler;
-
-    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
-        ALOGE("%s: GSCAN is not supported by driver",
-            __FUNCTION__);
-        return WIFI_ERROR_NOT_SUPPORTED;
-    }
-
-    /* Route request through LOWI if supported*/
-    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
-    if (lowiWifiHalApi == NULL ||
-        lowiWifiHalApi->set_ssid_hotlist == NULL) {
-        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
-    } else {
-        ret = lowiWifiHalApi->set_ssid_hotlist(id, iface, params,handler);
-        ALOGI("%s: lowi set_ssid_hotlist "
-            "returned: %d. Exit.", __FUNCTION__, ret);
-        return (wifi_error)ret;
-    }
-
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
-
-    /* Wi-Fi HAL doesn't need to check if a similar request to set ssid
-     * hotlist was made earlier. If set_ssid_hotlist() is called while
-     * another one is running, the request will be sent down to driver and
-     * firmware. If the new request is successfully honored, then Wi-Fi HAL
-     * will use the new request id for the gScanSetSsidHotlistCmdEventHandler
-     * object.
-     */
-
-    gScanCommand =
-        new GScanCommand(
-                    wifiHandle,
-                    id,
-                    OUI_QCA,
-                    QCA_NL80211_VENDOR_SUBCMD_GSCAN_SET_SSID_HOTLIST);
-    if (gScanCommand == NULL) {
-        ALOGE("%s: Error GScanCommand NULL", __FUNCTION__);
-        return WIFI_ERROR_UNKNOWN;
-    }
-
-    /* Create the NL message. */
-    ret = gScanCommand->create();
-    if (ret < 0)
-        goto cleanup;
-
-    /* Set the interface Id of the message. */
-    ret = gScanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
-        goto cleanup;
-
-    /* Add the vendor specific attributes for the NL command. */
-    nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
-        goto cleanup;
-
-    numSsid = (unsigned int)params.num_ssid > MAX_HOTLIST_SSID ?
-        MAX_HOTLIST_SSID : params.num_ssid;
-    if (gScanCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID,
-            id) ||
-        gScanCommand->put_u32(
-        QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_HOTLIST_PARAMS_LOST_SSID_SAMPLE_SIZE,
-            params.lost_ssid_sample_size) ||
-        gScanCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_HOTLIST_PARAMS_NUM_SSID,
-            numSsid))
-    {
-        goto cleanup;
-    }
-    ALOGI("%s: numSsid:%d "
-          "lost_ssid_sameple_size: %d",
-          __FUNCTION__, numSsid,
-          params.lost_ssid_sample_size);
-
-    /* Add the vendor specific attributes for the NL command. */
-    nlSsidThresholdParamList =
-        gScanCommand->attr_start(
-                            QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM);
-    if (!nlSsidThresholdParamList)
-        goto cleanup;
-
-    /* Add nested NL attributes for SSID Threshold Param. */
-    for (i = 0; i < numSsid; i++) {
-        ssid_threshold_param ssidThreshold = params.ssid[i];
-        struct nlattr *nlSsidThresholdParam = gScanCommand->attr_start(i);
-        if (!nlSsidThresholdParam)
-            goto cleanup;
-        if (gScanCommand->put_string(
-                QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM_SSID,
-                ssidThreshold.ssid) ||
-            gScanCommand->put_u8(
-                QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM_BAND,
-                ssidThreshold.band) ||
-            gScanCommand->put_s32(
-                QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM_RSSI_LOW,
-                ssidThreshold.low) ||
-            gScanCommand->put_s32(
-                QCA_WLAN_VENDOR_ATTR_GSCAN_SSID_THRESHOLD_PARAM_RSSI_HIGH,
-                ssidThreshold.high))
-        {
-            goto cleanup;
-        }
-        ALOGI("%s: SSID[%d].ssid:%s "
-              "SSID[%d].band:%d SSID[%d].low:%d "
-              "SSID[%d].high:%d", __FUNCTION__,
-              i, ssidThreshold.ssid,
-              i, ssidThreshold.band,
-              i, ssidThreshold.low,
-              i, ssidThreshold.high);
-        gScanCommand->attr_end(nlSsidThresholdParam);
-    }
-
-    gScanCommand->attr_end(nlSsidThresholdParamList);
-
-    gScanCommand->attr_end(nlData);
-
-    GScanCallbackHandler callbackHandler;
-    memset(&callbackHandler, 0, sizeof(callbackHandler));
-    callbackHandler.on_hotlist_ssid_found = handler.on_hotlist_ssid_found;
-    callbackHandler.on_hotlist_ssid_lost = handler.on_hotlist_ssid_lost;
-
-    /* Create an object of the event handler class to take care of the
-      * asychronous events on the north-bound.
-      */
-    if (gScanSetSsidHotlistCmdEventHandler == NULL) {
-        gScanSetSsidHotlistCmdEventHandler = new GScanCommandEventHandler(
-                            wifiHandle,
-                            id,
-                            OUI_QCA,
-                            QCA_NL80211_VENDOR_SUBCMD_GSCAN_SET_SSID_HOTLIST,
-                            callbackHandler);
-        if (gScanSetSsidHotlistCmdEventHandler == NULL) {
-            ALOGE("%s: Error instantiating "
-                "gScanSetSsidHotlistCmdEventHandler.", __FUNCTION__);
-            ret = WIFI_ERROR_UNKNOWN;
-            goto cleanup;
-        }
-        ALOGD("%s: Handler object was created for HOTLIST_AP_FOUND.", __FUNCTION__);
-        event_handlers->gScanSetSsidHotlistCmdEventHandler =
-            gScanSetSsidHotlistCmdEventHandler;
-    } else {
-        gScanSetSsidHotlistCmdEventHandler->setCallbackHandler(callbackHandler);
-    }
-
-    ret = gScanCommand->requestResponse();
-    if (ret != 0) {
-        ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
-        goto cleanup;
-    }
-
-    if (gScanSetSsidHotlistCmdEventHandler != NULL) {
-        gScanSetSsidHotlistCmdEventHandler->set_request_id(id);
-        gScanSetSsidHotlistCmdEventHandler->enableEventHandling();
-    }
-
-cleanup:
-    delete gScanCommand;
-    /* Disable Event Handling if ret != 0 */
-    if (ret && gScanSetSsidHotlistCmdEventHandler) {
-        ALOGI("%s: Error ret:%d, disable event handling",
-            __FUNCTION__, ret);
-        gScanSetSsidHotlistCmdEventHandler->disableEventHandling();
-    }
-    return (wifi_error)ret;
-}
-
-wifi_error wifi_reset_ssid_hotlist(wifi_request_id id,
-                            wifi_interface_handle iface)
-{
-    int ret = 0;
-    GScanCommand *gScanCommand;
-    struct nlattr *nlData;
-    interface_info *ifaceInfo = getIfaceInfo(iface);
-    wifi_handle wifiHandle = getWifiHandle(iface);
-    hal_info *info = getHalInfo(wifiHandle);
-    lowi_cb_table_t *lowiWifiHalApi = NULL;
-    gscan_event_handlers* event_handlers;
-    GScanCommandEventHandler *gScanSetSsidHotlistCmdEventHandler;
-
-    event_handlers = (gscan_event_handlers*)info->gscan_handlers;
-    gScanSetSsidHotlistCmdEventHandler =
-        event_handlers->gScanSetSsidHotlistCmdEventHandler;
-
-    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
-        ALOGE("%s: GSCAN is not supported by driver",
-            __FUNCTION__);
-        return WIFI_ERROR_NOT_SUPPORTED;
-    }
-
-    /* Route request through LOWI if supported*/
-    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
-    if (lowiWifiHalApi == NULL ||
-        lowiWifiHalApi->reset_ssid_hotlist == NULL) {
-        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
-    } else {
-        ret = lowiWifiHalApi->reset_ssid_hotlist(id, iface);
-        ALOGI("%s: lowi reset_ssid_hotlist "
-            "returned: %d. Exit.", __FUNCTION__, ret);
-        return (wifi_error)ret;
-    }
-
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
-
-    if (gScanSetSsidHotlistCmdEventHandler == NULL ||
-        (gScanSetSsidHotlistCmdEventHandler->isEventHandlingEnabled() ==
-        false)) {
-        ALOGE("wifi_reset_ssid_hotlist: GSCAN ssid_hotlist isn't set. "
-            "Nothing to do. Exit");
-        return WIFI_ERROR_NOT_AVAILABLE;
-    }
-
-    gScanCommand = new GScanCommand(
-                        wifiHandle,
-                        id,
-                        OUI_QCA,
-                        QCA_NL80211_VENDOR_SUBCMD_GSCAN_RESET_SSID_HOTLIST);
-
-    if (gScanCommand == NULL) {
-        ALOGE("%s: Error GScanCommand NULL", __FUNCTION__);
-        return WIFI_ERROR_UNKNOWN;
-    }
-
-    /* Create the NL message. */
-    ret = gScanCommand->create();
-    if (ret < 0)
-        goto cleanup;
-
-    /* Set the interface Id of the message. */
-    ret = gScanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
-        goto cleanup;
-
-    /* Add the vendor specific attributes for the NL command. */
-    nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
-        goto cleanup;
-
-    ret = gScanCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID, id);
-    if (ret < 0)
-        goto cleanup;
-
-    gScanCommand->attr_end(nlData);
-
-    ret = gScanCommand->requestResponse();
-    if (ret != 0) {
-        ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
-    }
-
-    /* Disable Event Handling. */
-    if (gScanSetSsidHotlistCmdEventHandler) {
-        gScanSetSsidHotlistCmdEventHandler->disableEventHandling();
-    }
-
-cleanup:
-    delete gScanCommand;
-    return (wifi_error)ret;
-}
-
-
 GScanCommand::GScanCommand(wifi_handle handle, int id, u32 vendor_id,
                                   u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
@@ -2160,6 +1878,15 @@ int GScanCommand:: gscan_get_cached_results(
                nla_get_u32(
                tb2[QCA_WLAN_VENDOR_ATTR_GSCAN_CACHED_RESULTS_FLAGS]);
 
+           if (!tb2[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_BUCKETS_SCANNED])
+           {
+               ALOGI("%s: GSCAN_RESULTS_BUCKETS_SCANNED"
+                   "not found", __FUNCTION__);
+           } else {
+               cached_results[i].buckets_scanned = nla_get_u32(
+                       tb2[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_BUCKETS_SCANNED]);
+           }
+
            if (!
                tb2[
                    QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE
@@ -2385,11 +2112,10 @@ int GScanCommand:: gscan_get_cached_results(
 /* Set the GSCAN BSSID Hotlist. */
 wifi_error wifi_set_epno_list(wifi_request_id id,
                                 wifi_interface_handle iface,
-                                int num_networks,
-                                wifi_epno_network *networks,
+                                const wifi_epno_params *epno_params,
                                 wifi_epno_handler handler)
 {
-    int i, ret = 0;
+    int i, ret = 0, num_networks;
     GScanCommand *gScanCommand;
     struct nlattr *nlData, *nlPnoParamList;
     interface_info *ifaceInfo = getIfaceInfo(iface);
@@ -2452,11 +2178,32 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
         goto cleanup;
     }
 
-    num_networks = (unsigned int)num_networks > MAX_PNO_SSID ?
-        MAX_PNO_SSID : num_networks;
+    num_networks = (unsigned int)epno_params->num_networks > MAX_EPNO_NETWORKS ?
+                   MAX_EPNO_NETWORKS : epno_params->num_networks;
     if (gScanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID,
             id) ||
+        gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_EPNO_MIN5GHZ_RSSI,
+            epno_params->min5GHz_rssi) ||
+        gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_EPNO_MIN24GHZ_RSSI,
+            epno_params->min24GHz_rssi) ||
+        gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_EPNO_INITIAL_SCORE_MAX,
+            epno_params->initial_score_max) ||
+        gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_EPNO_CURRENT_CONNECTION_BONUS,
+            epno_params->current_connection_bonus) ||
+        gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_EPNO_SAME_NETWORK_BONUS,
+            epno_params->same_network_bonus) ||
+        gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_EPNO_SECURE_BONUS,
+            epno_params->secure_bonus) ||
+        gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_EPNO_BAND5GHZ_BONUS,
+            epno_params->band5GHz_bonus) ||
         gScanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_NUM_NETWORKS,
             num_networks))
@@ -2477,7 +2224,7 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
 
     /* Add nested NL attributes for ePno List. */
     for (i = 0; i < num_networks; i++) {
-        wifi_epno_network pnoNetwork = networks[i];
+        wifi_epno_network pnoNetwork = epno_params->networks[i];
         struct nlattr *nlPnoNetwork = gScanCommand->attr_start(i);
         if (!nlPnoNetwork) {
             ALOGE("%s: Failed attr_start for nlPnoNetwork. Error:%d",
@@ -2487,9 +2234,6 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
         if (gScanCommand->put_string(
                 QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_SSID,
                 pnoNetwork.ssid) ||
-                gScanCommand->put_s8(
-           QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_RSSI_THRESHOLD,
-                pnoNetwork.rssi_threshold) ||
             gScanCommand->put_u8(
                 QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_FLAGS,
                 pnoNetwork.flags) ||
@@ -2555,6 +2299,76 @@ cleanup:
             __FUNCTION__, ret);
         gScanSetPnoListCmdEventHandler->disableEventHandling();
     }
+    return (wifi_error)ret;
+}
+
+/* Reset the ePNO list - no ePNO networks should be matched after this */
+wifi_error wifi_reset_epno_list(wifi_request_id id, wifi_interface_handle iface)
+{
+    int ret = 0;
+    GScanCommand *gScanCommand;
+    struct nlattr *nlData;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_HAL_EPNO)) {
+        ALOGE("%s: Enhanced PNO is not supported by the driver",
+            __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    gScanCommand = new GScanCommand(wifiHandle,
+                                    id,
+                                    OUI_QCA,
+                                    QCA_NL80211_VENDOR_SUBCMD_PNO_SET_LIST);
+    if (gScanCommand == NULL) {
+        ALOGE("%s: Error GScanCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = gScanCommand->create();
+    if (ret < 0) {
+        ALOGE("%s: Failed to create the NL msg. Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    ret = gScanCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0) {
+        ALOGE("%s: Failed to set iface id. Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        ALOGE("%s: Failed to add attribute NL80211_ATTR_VENDOR_DATA. Error:%d",
+            __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    if (gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID,
+            id) ||
+        gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_NUM_NETWORKS,
+            EPNO_NO_NETWORKS))
+    {
+        ALOGE("%s: Failed to add vendor atributes Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    gScanCommand->attr_end(nlData);
+
+    ret = gScanCommand->requestResponse();
+    if (ret != 0) {
+        ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
+    }
+
+cleanup:
+    delete gScanCommand;
     return (wifi_error)ret;
 }
 
@@ -2931,6 +2745,7 @@ wifi_error GScanCommand::copyCachedScanResults(
             cached_results[i].scan_id = cachedResultRsp->scan_id;
             cached_results[i].flags = cachedResultRsp->flags;
             cached_results[i].num_results = cachedResultRsp->num_results;
+            cached_results[i].buckets_scanned = cachedResultRsp->buckets_scanned;
 
             if (!cached_results[i].num_results) {
                 ALOGI("Error: cached_results[%d].num_results=0", i);
@@ -2976,364 +2791,6 @@ void GScanCommand::setChannels(int *channels) {
 
 void GScanCommand::setNumChannelsPtr(int *num_channels) {
     mNumChannelsPtr = num_channels;
-}
-
-wifi_error wifi_set_ssid_white_list(wifi_request_id id,
-                                    wifi_interface_handle iface,
-                                    int num_networks,
-                                    wifi_ssid *ssids)
-{
-    int ret = 0, i;
-    GScanCommand *roamCommand;
-    struct nlattr *nlData, *nlSsids;
-    interface_info *ifaceInfo = getIfaceInfo(iface);
-    wifi_handle wifiHandle = getWifiHandle(iface);
-    hal_info *info = getHalInfo(wifiHandle);
-
-    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
-        ALOGE("%s: GSCAN is not supported by driver",
-            __FUNCTION__);
-        return WIFI_ERROR_NOT_SUPPORTED;
-    }
-
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
-
-    ALOGI("Number of SSIDs : %d", num_networks);
-    for (i = 0; i < num_networks; i++) {
-        ALOGI("ssid %d : %s", i, ssids[i].ssid);
-    }
-
-    roamCommand = new GScanCommand(
-                                wifiHandle,
-                                id,
-                                OUI_QCA,
-                                QCA_NL80211_VENDOR_SUBCMD_ROAM);
-    if (roamCommand == NULL) {
-        ALOGE("wifi_set_ssid_white_list(): Error roamCommand NULL");
-        return WIFI_ERROR_UNKNOWN;
-    }
-
-    /* Create the NL message. */
-    ret = roamCommand->create();
-    if (ret < 0)
-        goto cleanup;
-
-    /* Set the interface Id of the message. */
-    ret = roamCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
-        goto cleanup;
-
-    /* Add the vendor specific attributes for the NL command. */
-    nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
-        goto cleanup;
-
-    if (roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
-            QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SSID_WHITE_LIST) ||
-        roamCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID,
-            id) ||
-        roamCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_NUM_NETWORKS,
-            num_networks)) {
-        goto cleanup;
-    }
-
-    nlSsids =
-      roamCommand->attr_start(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_LIST);
-    for (i = 0; i < num_networks; i++) {
-        struct nlattr *nl_ssid = roamCommand->attr_start(i);
-
-        if ( roamCommand->put_string(
-                    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID,
-                    ssids[i].ssid)) {
-            goto cleanup;
-        }
-
-        roamCommand->attr_end(nl_ssid);
-    }
-    roamCommand->attr_end(nlSsids);
-
-    roamCommand->attr_end(nlData);
-
-    ret = roamCommand->requestResponse();
-    if (ret != 0) {
-        ALOGE("wifi_set_ssid_white_list(): requestResponse Error:%d", ret);
-    }
-
-cleanup:
-    delete roamCommand;
-    return (wifi_error)ret;
-
-}
-
-wifi_error wifi_set_gscan_roam_params(wifi_request_id id,
-                                      wifi_interface_handle iface,
-                                      wifi_roam_params * params)
-{
-    int ret = 0;
-    GScanCommand *roamCommand;
-    struct nlattr *nlData;
-    interface_info *ifaceInfo = getIfaceInfo(iface);
-    wifi_handle wifiHandle = getWifiHandle(iface);
-    hal_info *info = getHalInfo(wifiHandle);
-
-    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
-        ALOGE("%s: GSCAN is not supported by driver",
-            __FUNCTION__);
-        return WIFI_ERROR_NOT_SUPPORTED;
-    }
-
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
-
-    if(params) {
-        ALOGI("A_band_boost_threshold   %d", params->A_band_boost_threshold);
-        ALOGI("A_band_penalty_threshol  %d", params->A_band_penalty_threshold);
-        ALOGI("A_band_boost_factor      %u", params->A_band_boost_factor);
-        ALOGI("A_band_penalty_factor    %u", params->A_band_penalty_factor);
-        ALOGI("A_band_max_boost         %u", params->A_band_max_boost);
-        ALOGI("lazy_roam_histeresys     %u", params->lazy_roam_hysteresis);
-        ALOGI("alert_roam_rssi_trigger  %d", params->alert_roam_rssi_trigger);
-    } else {
-        ALOGE("wifi_roam_params is NULL");
-        return WIFI_ERROR_INVALID_ARGS;
-    }
-
-    roamCommand = new GScanCommand(wifiHandle,
-                                   id,
-                                   OUI_QCA,
-                                   QCA_NL80211_VENDOR_SUBCMD_ROAM);
-    if (roamCommand == NULL) {
-        ALOGE("wifi_set_gscan_roam_params(): Error roamCommand NULL");
-        return WIFI_ERROR_UNKNOWN;
-    }
-
-    /* Create the NL message. */
-    ret = roamCommand->create();
-    if (ret < 0)
-        goto cleanup;
-
-    /* Set the interface Id of the message. */
-    ret = roamCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
-        goto cleanup;
-
-    /* Add the vendor specific attributes for the NL command. */
-    nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
-        goto cleanup;
-
-    if (roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
-            QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_GSCAN_ROAM_PARAMS) ||
-        roamCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID,
-            id) ||
-        roamCommand->put_s32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_BOOST_THRESHOLD,
-            params->A_band_boost_threshold) ||
-        roamCommand->put_s32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_PENALTY_THRESHOLD,
-            params->A_band_penalty_threshold) ||
-        roamCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_BOOST_FACTOR,
-            params->A_band_boost_factor) ||
-        roamCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_PENALTY_FACTOR,
-            params->A_band_penalty_factor) ||
-        roamCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_MAX_BOOST,
-            params->A_band_max_boost) ||
-        roamCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_LAZY_ROAM_HISTERESYS,
-            params->lazy_roam_hysteresis) ||
-        roamCommand->put_s32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_ALERT_ROAM_RSSI_TRIGGER,
-            params->alert_roam_rssi_trigger)) {
-        goto cleanup;
-    }
-
-    roamCommand->attr_end(nlData);
-
-    ret = roamCommand->requestResponse();
-    if (ret != 0) {
-        ALOGE("wifi_set_gscan_roam_params(): requestResponse Error:%d", ret);
-    }
-
-cleanup:
-    delete roamCommand;
-    return (wifi_error)ret;
-
-}
-
-wifi_error wifi_enable_lazy_roam(wifi_request_id id,
-                                 wifi_interface_handle iface,
-                                 int enable)
-{
-    int ret = 0;
-    GScanCommand *roamCommand;
-    struct nlattr *nlData;
-    interface_info *ifaceInfo = getIfaceInfo(iface);
-    wifi_handle wifiHandle = getWifiHandle(iface);
-    hal_info *info = getHalInfo(wifiHandle);
-
-    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
-        ALOGE("%s: GSCAN is not supported by driver",
-            __FUNCTION__);
-        return WIFI_ERROR_NOT_SUPPORTED;
-    }
-
-    ALOGI("%s: RequestId:%d Setting lazy roam: %s",
-          __FUNCTION__, id, enable?"ENABLE":"DISABLE");
-
-    roamCommand =
-         new GScanCommand(wifiHandle,
-                          id,
-                          OUI_QCA,
-                          QCA_NL80211_VENDOR_SUBCMD_ROAM);
-    if (roamCommand == NULL) {
-        ALOGE("%s: Error roamCommand NULL", __FUNCTION__);
-        return WIFI_ERROR_UNKNOWN;
-    }
-
-    /* Create the NL message. */
-    ret = roamCommand->create();
-    if (ret < 0)
-        goto cleanup;
-
-    /* Set the interface Id of the message. */
-    ret = roamCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
-        goto cleanup;
-
-    /* Add the vendor specific attributes for the NL command. */
-    nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
-        goto cleanup;
-
-    if (roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
-            QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_LAZY_ROAM) ||
-        roamCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID,
-            id) ||
-        roamCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_ENABLE,
-            enable)) {
-        goto cleanup;
-    }
-
-    roamCommand->attr_end(nlData);
-
-    ret = roamCommand->requestResponse();
-    if (ret != 0) {
-        ALOGE("wifi_enable_lazy_roam(): requestResponse Error:%d", ret);
-    }
-
-cleanup:
-    delete roamCommand;
-    return (wifi_error)ret;
-
-}
-
-wifi_error wifi_set_bssid_preference(wifi_request_id id,
-                                     wifi_interface_handle iface,
-                                     int num_bssid,
-                                     wifi_bssid_preference *prefs)
-{
-    int ret = 0, i;
-    GScanCommand *roamCommand;
-    struct nlattr *nlData, *nlBssids;
-    interface_info *ifaceInfo = getIfaceInfo(iface);
-    wifi_handle wifiHandle = getWifiHandle(iface);
-    hal_info *info = getHalInfo(wifiHandle);
-
-    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
-        ALOGE("%s: GSCAN is not supported by driver",
-            __FUNCTION__);
-        return WIFI_ERROR_NOT_SUPPORTED;
-    }
-
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
-
-    ALOGI("Number of BSSIDs: %d", num_bssid);
-    if(prefs && num_bssid) {
-        for (i = 0; i < num_bssid; i++) {
-            ALOGI("BSSID: %d : %02x:%02x:%02x:%02x:%02x:%02x", i,
-                    prefs[i].bssid[0], prefs[i].bssid[1],
-                    prefs[i].bssid[2], prefs[i].bssid[3],
-                    prefs[i].bssid[4], prefs[i].bssid[5]);
-            ALOGI("alert_roam_rssi_trigger : %d", prefs[i].rssi_modifier);
-        }
-    } else {
-        ALOGE("wifi_bssid_preference is NULL");
-        return WIFI_ERROR_INVALID_ARGS;
-    }
-
-    roamCommand =
-         new GScanCommand(wifiHandle,
-                          id,
-                          OUI_QCA,
-                          QCA_NL80211_VENDOR_SUBCMD_ROAM);
-    if (roamCommand == NULL) {
-        ALOGE("%s: Error roamCommand NULL", __FUNCTION__);
-        return WIFI_ERROR_UNKNOWN;
-    }
-
-    /* Create the NL message. */
-    ret = roamCommand->create();
-    if (ret < 0)
-        goto cleanup;
-
-    /* Set the interface Id of the message. */
-    ret = roamCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
-        goto cleanup;
-
-    /* Add the vendor specific attributes for the NL command. */
-    nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
-        goto cleanup;
-
-    if (roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
-            QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_BSSID_PREFS) ||
-        roamCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID,
-            id) ||
-        roamCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_NUM_BSSID,
-            num_bssid)) {
-        goto cleanup;
-    }
-
-    nlBssids = roamCommand->attr_start(
-            QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PREFS);
-    for (i = 0; i < num_bssid; i++) {
-        struct nlattr *nl_ssid = roamCommand->attr_start(i);
-
-        if (roamCommand->put_addr(
-                QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_BSSID,
-                (u8 *)prefs[i].bssid) ||
-            roamCommand->put_s32(
-                QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_RSSI_MODIFIER,
-                prefs[i].rssi_modifier)) {
-            goto cleanup;
-        }
-
-        roamCommand->attr_end(nl_ssid);
-    }
-    roamCommand->attr_end(nlBssids);
-
-    roamCommand->attr_end(nlData);
-
-    ret = roamCommand->requestResponse();
-    if (ret != 0) {
-        ALOGE("wifi_set_bssid_preference(): requestResponse Error:%d", ret);
-    }
-
-cleanup:
-    delete roamCommand;
-    return (wifi_error)ret;
-
 }
 
 wifi_error wifi_set_bssid_blacklist(wifi_request_id id,
