@@ -401,12 +401,6 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities)
     int ret = WIFI_SUCCESS;
     bool lowi_get_capabilities_support = false;
 
-    if (requested_lowi_capabilities == GSCAN_SUPPORTED) {
-        ALOGV("%s: Returning Null, GSCAN not supported by lowi",
-              __FUNCTION__);
-        return NULL;
-    }
-
     ALOGI("%s: Entry", __FUNCTION__);
     if (LowiWifiHalApi == NULL) {
         ALOGI("%s: LowiWifiHalApi Null, Initialize Lowi",
