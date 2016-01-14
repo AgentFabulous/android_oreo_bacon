@@ -94,6 +94,8 @@
 #define QCA_NL80211_VENDOR_SUBCMD_OFFLOADED_PACKETS 79
 /* RSSI monitoring*/
 #define QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI 80
+/* Nan Data Path */
+#define QCA_NL80211_VENDOR_SUBCMD_NDP 81
 /* Set packet filter for BPF*/
 #define QCA_NL80211_VENDOR_SUBCMD_PACKET_FILTER 83
 /* Get Driver-firmware interface maximum supported size*/
@@ -1217,5 +1219,79 @@ enum qca_wlan_vendor_attr_packet_filter
     QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX =
         QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_AFTER_LAST - 1,
 
+};
+
+enum qca_wlan_vendor_attr_ndp_params
+{
+    QCA_WLAN_VENDOR_ATTR_NDP_PARAM_INVALID = 0,
+    /* enum of sub commands */
+    QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
+    /* Unsigned 16-bit value */
+    QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID,
+    /* NL attributes for data used NDP SUB cmds */
+    /* Unsigned 16-bit value indicating a service info */
+    QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_INSTANCE_ID,
+    /* Unsigned 32-bit value; channel frequency */
+    QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL_SPEC_CHANNEL,
+    /* Interface Discovery MAC address. An array of 6 Unsigned int8 */
+    QCA_WLAN_VENDOR_ATTR_NDP_PEER_DISCOVERY_MAC_ADDR,
+    /* Interface name on which NDP is being created */
+    QCA_WLAN_VENDOR_ATTR_NDP_IFACE_STR,
+    /* Unsigned 32-bit value for security */
+    QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_SECURITY,
+    /* Unsigned 32-bit value for Qos */
+    QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_QOS,
+    /* Unsigned 16-bit value for app info length */
+    QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO_LEN,
+    /* Array of u8: len = QCA_WLAN_VENDOR_ATTR_NAN_DP_APP_INFO_LEN */
+    QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO,
+    /* Unsigned 32-bit value for NDP instance Id */
+    QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID,
+    /* Unsigned 32-bit value for schedule update response code accept/reject */
+    QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_RESPONSE_CODE,
+    /* Unsigned 32-bit value for schedule status success/fail */
+    QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_STATUS_CODE,
+    /* NDI MAC address. An array of 6 Unsigned int8 */
+    QCA_WLAN_VENDOR_ATTR_NDP_NDI_MAC_ADDR,
+
+   /* KEEP LAST */
+   QCA_WLAN_VENDOR_ATTR_NDP_AFTER_LAST,
+   QCA_WLAN_VENDOR_ATTR_NDP_MAX =
+        QCA_WLAN_VENDOR_ATTR_NDP_AFTER_LAST - 1,
+};
+
+enum qca_wlan_vendor_attr_ndp_cfg_security
+{
+   /* Security info will be added when proposed in the specification */
+   QCA_WLAN_VENDOR_ATTR_NDP_SECURITY_TYPE = 1,
+
+};
+
+enum qca_wlan_vendor_attr_ndp_qos
+{
+   /* Qos info will be added when proposed in the specification */
+   QCA_WLAN_VENDOR_ATTR_NDP_QOS_CONFIG = 1,
+
+};
+
+/*
+ * QCA_NL80211_VENDOR_SUBCMD_NDP sub commands.
+ */
+enum qca_wlan_vendor_attr_ndp_sub_cmd_value
+{
+   QCA_WLAN_VENDOR_ATTR_NDP_INTERFACE_CREATE = 1,
+   QCA_WLAN_VENDOR_ATTR_NDP_INTERFACE_DELETE = 2,
+   QCA_WLAN_VENDOR_ATTR_NDP_INITIATOR_REQUEST = 3,
+   QCA_WLAN_VENDOR_ATTR_NDP_INITIATOR_RESPONSE = 4,
+   QCA_WLAN_VENDOR_ATTR_NDP_RESPONDER_REQUEST = 5,
+   QCA_WLAN_VENDOR_ATTR_NDP_RESPONDER_RESPONSE = 6,
+   QCA_WLAN_VENDOR_ATTR_NDP_END_REQUEST = 7,
+   QCA_WLAN_VENDOR_ATTR_NDP_END_RESPONSE = 8,
+   QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_REQUEST = 9,
+   QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_RESPONSE = 10,
+   QCA_WLAN_VENDOR_ATTR_NDP_DATA_REQUEST_IND = 11,
+   QCA_WLAN_VENDOR_ATTR_NDP_CONFIRM_IND = 12,
+   QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_IND = 13,
+   QCA_WLAN_VENDOR_ATTR_NDP_END_IND = 14
 };
 #endif
