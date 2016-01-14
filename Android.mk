@@ -5,6 +5,11 @@ ifneq ($(TARGET_BOARD_AUTO),true)
   else
     ifneq ($(filter msm8994 msm8992,$(TARGET_BOARD_PLATFORM)),)
       include $(call all-named-subdir-makefiles,msm8992)
+    else
+      ifneq ($(filter msm8909 ,$(TARGET_BOARD_PLATFORM)),)
+        #For msm8909 target
+        include $(call all-named-subdir-makefiles,msm8909)
+      endif
     endif
   endif
 endif
