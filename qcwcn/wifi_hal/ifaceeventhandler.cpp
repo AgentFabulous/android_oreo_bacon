@@ -208,6 +208,9 @@ WifihalGeneric::WifihalGeneric(wifi_handle handle, int id, u32 vendor_id,
     mSetSizeMax = 0;
     mSetSizePtr = NULL;
     mConcurrencySet = 0;
+    filterVersion = 0;
+    filterLength = 0;
+    firmware_bus_max_size = 0;
 }
 
 WifihalGeneric::~WifihalGeneric()
@@ -291,6 +294,56 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 }
             }
             break;
+        case QCA_NL80211_VENDOR_SUBCMD_PACKET_FILTER:
+            {
+                struct nlattr *tb_vendor[
+                        QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX + 1];
+                nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX,
+                        (struct nlattr *)mVendorData,
+                        mDataLen, NULL);
+
+                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION])
+                {
+                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION"
+                          " not found", __FUNCTION__);
+                    return WIFI_ERROR_INVALID_ARGS;
+                }
+                filterVersion = nla_get_u32(
+                       tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION]);
+                ALOGI("Current version : %u", filterVersion);
+
+                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH])
+                {
+                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH"
+                          " not found", __FUNCTION__);
+                    return WIFI_ERROR_INVALID_ARGS;
+                }
+                filterLength = nla_get_u32(
+                    tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH]);
+                ALOGI("Max filter length Supported : %u", filterLength);
+
+            }
+            break;
+        case QCA_NL80211_VENDOR_SUBCMD_GET_BUS_SIZE:
+            {
+                struct nlattr *tb_vendor[
+                        QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX + 1];
+                nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX,
+                        (struct nlattr *)mVendorData,
+                        mDataLen, NULL);
+
+                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_BUS_SIZE_MAX])
+                {
+                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_BUS_SIZE_MAX"
+                          " not found", __FUNCTION__);
+                    return WIFI_ERROR_INVALID_ARGS;
+                }
+                firmware_bus_max_size = nla_get_u32(
+                       tb_vendor[QCA_WLAN_VENDOR_ATTR_BUS_SIZE_MAX]);
+                ALOGI("Max BUS size Supported: %d", firmware_bus_max_size);
+
+            }
+            break;
         default :
             ALOGE("%s: Wrong Wi-Fi HAL event received %d", __func__, mSubcmd);
     }
@@ -312,4 +365,16 @@ void WifihalGeneric::setConcurrencySet(feature_set set[]) {
 
 void WifihalGeneric::setSizePtr(int *set_size) {
     mSetSizePtr = set_size;
+}
+
+int WifihalGeneric::getFilterVersion() {
+    return filterVersion;
+}
+
+int WifihalGeneric::getFilterLength() {
+    return filterLength;
+}
+
+int WifihalGeneric::getBusSize() {
+    return firmware_bus_max_size;
 }

@@ -71,6 +71,10 @@ static int wifi_get_multicast_id(wifi_handle handle, const char *name,
         const char *group);
 static int wifi_add_membership(wifi_handle handle, const char *group);
 static wifi_error wifi_init_interfaces(wifi_handle handle);
+static wifi_error wifi_set_packet_filter(wifi_interface_handle iface,
+                                         const u8 *program, u32 len);
+static wifi_error wifi_get_packet_filter_capabilities(wifi_interface_handle handle,
+                                              u32 *version, u32 *max_len);
 
 /* Initialize/Cleanup */
 
@@ -186,6 +190,38 @@ static wifi_error acquire_supported_features(wifi_interface_handle iface,
     }
 
     supportedFeatures.getResponseparams(set);
+
+cleanup:
+    return (wifi_error)ret;
+}
+
+static wifi_error get_firmware_bus_max_size_supported(
+                                                wifi_interface_handle iface)
+{
+    int ret = 0;
+    interface_info *iinfo = getIfaceInfo(iface);
+    wifi_handle handle = getWifiHandle(iface);
+    hal_info *info = (hal_info *)handle;
+
+    WifihalGeneric busSizeSupported(handle, 0,
+                                    OUI_QCA,
+                                    QCA_NL80211_VENDOR_SUBCMD_GET_BUS_SIZE);
+
+    /* create the message */
+    ret = busSizeSupported.create();
+    if (ret < 0)
+        goto cleanup;
+
+    ret = busSizeSupported.set_iface_id(iinfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    ret = busSizeSupported.requestResponse();
+    if (ret != 0) {
+        ALOGE("%s: requestResponse Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+    info->firmware_bus_max_size = busSizeSupported.getBusSize();
 
 cleanup:
     return (wifi_error)ret;
@@ -309,6 +345,8 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_nan_beacon_sdf_payload_request = nan_beacon_sdf_payload_request;
     fn->wifi_nan_register_handler = nan_register_handler;
     fn->wifi_nan_get_version = nan_get_version;
+    fn->wifi_set_packet_filter = wifi_set_packet_filter;
+    fn->wifi_get_packet_filter_capabilities = wifi_get_packet_filter_capabilities;
 
     return WIFI_SUCCESS;
 }
@@ -465,6 +503,12 @@ wifi_error wifi_initialize(wifi_handle *handle)
         //drivers might not support the required vendor command. So, do not
         //consider it as failure of wifi_initialize
         ret = WIFI_SUCCESS;
+    }
+
+    ret = get_firmware_bus_max_size_supported(iface_handle);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to get supported bus size, error : %d", ret);
+        info->firmware_bus_max_size = 1520;
     }
 
     ret = wifi_logger_ring_buffers_init(info);
@@ -1184,6 +1228,146 @@ wifi_error wifi_stop_sending_offloaded_packet(wifi_request_id id,
     if (ret < 0)
         goto cleanup;
 
+cleanup:
+    delete vCommand;
+    return (wifi_error)ret;
+}
+
+static wifi_error wifi_set_packet_filter(wifi_interface_handle iface,
+                                         const u8 *program, u32 len)
+{
+    int ret = WIFI_SUCCESS;
+    struct nlattr *nlData;
+    WifiVendorCommand *vCommand = NULL;
+    u32 current_offset = 0;
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    /* len=0 clears the filters in driver/firmware */
+    if (len != 0 && program == NULL) {
+        ALOGE("%s: No valid program provided. Exit.",
+            __func__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    ret = initialize_vendor_cmd(iface, get_requestid(),
+                                QCA_NL80211_VENDOR_SUBCMD_PACKET_FILTER,
+                                &vCommand);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __FUNCTION__);
+        return (wifi_error)ret;
+    }
+
+    do {
+        /* Add the vendor specific attributes for the NL command. */
+        nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nlData)
+            goto cleanup;
+
+        if (vCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SUB_CMD,
+                QCA_WLAN_SET_PACKET_FILTER) ||
+            vCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_ID,
+                PACKET_FILTER_ID) ||
+            vCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH,
+                len) ||
+            vCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_CURRENT_OFFSET,
+                current_offset)) {
+            ALOGE("%s: failed to put subcmd/program", __FUNCTION__);
+            goto cleanup;
+        }
+
+        if (len) {
+            if(vCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROGRAM,
+                                   (char *)&program[current_offset],
+                                   min(info->firmware_bus_max_size,
+                                   len-current_offset))) {
+                ALOGE("%s: failed to put subcmd", __FUNCTION__);
+                goto cleanup;
+            }
+        }
+
+        vCommand->attr_end(nlData);
+
+        ret = vCommand->requestResponse();
+        if (ret < 0) {
+            ALOGE("%s: requestResponse Error:%d",__func__, ret);
+            goto cleanup;
+        }
+
+        current_offset += min(info->firmware_bus_max_size, len);
+    } while (current_offset < len);
+
+cleanup:
+    delete vCommand;
+    return (wifi_error)ret;
+}
+
+static wifi_error wifi_get_packet_filter_capabilities(
+                wifi_interface_handle handle, u32 *version, u32 *max_len)
+{
+    int ret = 0;
+    struct nlattr *nlData;
+    WifihalGeneric *vCommand = NULL;
+    interface_info *ifaceInfo = getIfaceInfo(handle);
+    wifi_handle wifiHandle = getWifiHandle(handle);
+
+    if (version == NULL || max_len == NULL) {
+        ALOGE("%s: NULL version/max_len pointer provided. Exit.",
+            __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    vCommand = new WifihalGeneric(wifiHandle, 0,
+            OUI_QCA,
+            QCA_NL80211_VENDOR_SUBCMD_PACKET_FILTER);
+    if (vCommand == NULL) {
+        ALOGE("%s: Error vCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    /* Create the message */
+    ret = vCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    ret = vCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (vCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SUB_CMD,
+            QCA_WLAN_GET_PACKET_FILTER_SIZE))
+    {
+        goto cleanup;
+    }
+    vCommand->attr_end(nlData);
+
+    ret = vCommand->requestResponse();
+    if (ret) {
+        ALOGE("%s: requestResponse() error: %d", __FUNCTION__, ret);
+        if (ret == -ENOTSUP) {
+            /* Packet filtering is not supported currently, so return version
+             * and length as 0
+             */
+            ALOGI("Packet filtering is not supprted");
+            *version = 0;
+            *max_len = 0;
+            ret = WIFI_SUCCESS;
+        }
+        goto cleanup;
+    }
+
+    *version = vCommand->getFilterVersion();
+    *max_len = vCommand->getFilterLength();
 cleanup:
     delete vCommand;
     return (wifi_error)ret;
