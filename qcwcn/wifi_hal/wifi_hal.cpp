@@ -351,6 +351,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_get_packet_filter_capabilities = wifi_get_packet_filter_capabilities;
     fn->wifi_nan_get_capabilities = nan_get_capabilities;
     fn->wifi_configure_nd_offload = wifi_configure_nd_offload;
+    fn->wifi_get_driver_memory_dump = wifi_get_driver_memory_dump;
 
     return WIFI_SUCCESS;
 }

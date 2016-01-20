@@ -38,7 +38,9 @@
 #include <stdlib.h>
 
 #define LOGGER_MEMDUMP_FILENAME "/proc/debug/fwdump"
+#define DRIVER_MEMDUMP_FILENAME "/proc/debugdriver/driverdump"
 #define LOGGER_MEMDUMP_CHUNKSIZE (4 * 1024)
+#define DRIVER_MEMDUMP_MAX_FILESIZE (16 * 1024)
 
 char power_events_ring_name[] = "power_events_rb";
 char connectivity_events_ring_name[] = "connectivity_events_rb";
@@ -1031,3 +1033,79 @@ void WifiLoggerCommand::waitForRsp(bool wait)
     mWaitforRsp = wait;
 }
 
+/* Function to get Driver memory dump */
+wifi_error wifi_get_driver_memory_dump(wifi_interface_handle iface,
+                                    wifi_driver_memory_dump_callbacks callback)
+{
+    FILE *fp;
+    size_t fileSize, remaining, readSize;
+    size_t numRecordsRead;
+    char *memBuffer = NULL, *buffer = NULL;
+
+    /* Open File */
+    fp = fopen(DRIVER_MEMDUMP_FILENAME, "r");
+    if (fp == NULL) {
+        ALOGE("Failed to open %s file", DRIVER_MEMDUMP_FILENAME);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    memBuffer = (char *) malloc(DRIVER_MEMDUMP_MAX_FILESIZE);
+    if (memBuffer == NULL) {
+        ALOGE("%s: malloc failed for size %d", __FUNCTION__,
+                    DRIVER_MEMDUMP_MAX_FILESIZE);
+        fclose(fp);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    /* Read the DRIVER_MEMDUMP_MAX_FILESIZE value at once */
+    numRecordsRead = fread(memBuffer, 1, DRIVER_MEMDUMP_MAX_FILESIZE, fp);
+    if (feof(fp))
+        fileSize = numRecordsRead;
+    else if (numRecordsRead == DRIVER_MEMDUMP_MAX_FILESIZE) {
+        ALOGE("%s: Reading only first %zu bytes from file", __FUNCTION__,
+                numRecordsRead);
+        fileSize = numRecordsRead;
+    } else {
+        ALOGE("%s: Read failed for reading at once, ret: %zu. Trying to read in"
+                "chunks", __FUNCTION__, numRecordsRead);
+        /* Lets try to read in chunks */
+        rewind(fp);
+        remaining = DRIVER_MEMDUMP_MAX_FILESIZE;
+        buffer = memBuffer;
+        fileSize = 0;
+        while (remaining) {
+            readSize = 0;
+            if (remaining >= LOGGER_MEMDUMP_CHUNKSIZE)
+                readSize = LOGGER_MEMDUMP_CHUNKSIZE;
+            else
+                readSize = remaining;
+
+            numRecordsRead = fread(buffer, 1, readSize, fp);
+            fileSize += numRecordsRead;
+            if (feof(fp))
+                break;
+            else if (numRecordsRead == readSize) {
+                remaining -= readSize;
+                buffer += readSize;
+                ALOGV("%s: Read successful for size:%zu remaining:%zu",
+                         __FUNCTION__, readSize, remaining);
+            } else {
+                ALOGE("%s: Chunk read failed for size:%zu", __FUNCTION__,
+                        readSize);
+                free(memBuffer);
+                memBuffer = NULL;
+                fclose(fp);
+                return WIFI_ERROR_UNKNOWN;
+            }
+        }
+    }
+    ALOGV("%s filename: %s fileSize: %zu", __FUNCTION__, DRIVER_MEMDUMP_FILENAME,
+            fileSize);
+    /* After successful read, call the callback function*/
+    callback.on_driver_memory_dump(memBuffer, fileSize);
+
+    /* free the allocated memory */
+    free(memBuffer);
+    fclose(fp);
+    return WIFI_SUCCESS;
+}
