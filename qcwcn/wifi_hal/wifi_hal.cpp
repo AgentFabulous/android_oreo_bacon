@@ -75,6 +75,8 @@ static wifi_error wifi_set_packet_filter(wifi_interface_handle iface,
                                          const u8 *program, u32 len);
 static wifi_error wifi_get_packet_filter_capabilities(wifi_interface_handle handle,
                                               u32 *version, u32 *max_len);
+static wifi_error wifi_configure_nd_offload(wifi_interface_handle iface,
+                                            u8 enable);
 
 /* Initialize/Cleanup */
 
@@ -348,6 +350,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_packet_filter = wifi_set_packet_filter;
     fn->wifi_get_packet_filter_capabilities = wifi_get_packet_filter_capabilities;
     fn->wifi_nan_get_capabilities = nan_get_capabilities;
+    fn->wifi_configure_nd_offload = wifi_configure_nd_offload;
 
     return WIFI_SUCCESS;
 }
@@ -1369,6 +1372,45 @@ static wifi_error wifi_get_packet_filter_capabilities(
 
     *version = vCommand->getFilterVersion();
     *max_len = vCommand->getFilterLength();
+cleanup:
+    delete vCommand;
+    return (wifi_error)ret;
+}
+
+
+static wifi_error wifi_configure_nd_offload(wifi_interface_handle iface,
+                                            u8 enable)
+{
+    int ret = WIFI_SUCCESS;
+    struct nlattr *nlData;
+    WifiVendorCommand *vCommand = NULL;
+
+    ret = initialize_vendor_cmd(iface, get_requestid(),
+                                QCA_NL80211_VENDOR_SUBCMD_ND_OFFLOAD,
+                                &vCommand);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __func__);
+        return (wifi_error)ret;
+    }
+
+    ALOGI("ND offload : %s", enable?"Enable":"Disable");
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (vCommand->put_u8(
+            QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_FLAG,
+            enable))
+    {
+        goto cleanup;
+    }
+
+    vCommand->attr_end(nlData);
+
+    ret = vCommand->requestResponse();
+
 cleanup:
     delete vCommand;
     return (wifi_error)ret;
