@@ -43,7 +43,8 @@
 #define PKTLOG_TYPE_RC_FIND         6
 #define PKTLOG_TYPE_RC_UPDATE       7
 #define PKTLOG_TYPE_TX_VIRT_ADDR    8
-#define PKTLOG_TYPE_MAX             9
+#define PKTLOG_TYPE_PKT_STATS       9
+#define PKTLOG_TYPE_MAX             10
 #define BW_OFFSET 8
 #define INVALID_RSSI 255
 

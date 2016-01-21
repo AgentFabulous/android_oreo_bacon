@@ -1667,11 +1667,54 @@ static wifi_error parse_tx_stats(hal_info *info, void *buf,
     return status;
 }
 
+wifi_error write_per_packet_stats_to_rb(hal_info *info, u8 *buf, u16 length)
+{
+    wifi_ring_buffer_entry rb_entry_hdr;
+    struct timeval time;
+    wifi_error status;
+
+    rb_entry_hdr.entry_size = length;
+    rb_entry_hdr.flags = RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
+    rb_entry_hdr.type = ENTRY_TYPE_PKT;
+    gettimeofday(&time, NULL);
+    rb_entry_hdr.timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+
+    /* Write if verbose and handler is set */
+    if (info->rb_infos[PKT_STATS_RB_ID].verbose_level >= 3 &&
+        info->on_ring_buffer_data) {
+        /* Write header and payload separately to avoid
+         * complete payload memcpy */
+        status = ring_buffer_write(&info->rb_infos[PKT_STATS_RB_ID],
+                                   (u8*)&rb_entry_hdr,
+                                   sizeof(wifi_ring_buffer_entry),
+                                   0,
+                                   sizeof(wifi_ring_buffer_entry) + length);
+        if (status != WIFI_SUCCESS) {
+            ALOGE("Failed to write driver prints rb header %d", status);
+            return status;
+        }
+        status = ring_buffer_write(&info->rb_infos[PKT_STATS_RB_ID],
+                                   buf,
+                                   length,
+                                   1,
+                                   length);
+        if (status != WIFI_SUCCESS) {
+            ALOGE("Failed to write PKT stats into the ring buffer");
+        }
+    }
+
+    return WIFI_SUCCESS;
+}
+
 static wifi_error parse_stats_record(hal_info *info,
                                      wh_pktlog_hdr_t *pkt_stats_header)
 {
     wifi_error status;
-    if (pkt_stats_header->log_type == PKTLOG_TYPE_RX_STAT) {
+    if (pkt_stats_header->log_type == PKTLOG_TYPE_PKT_STATS) {
+        status = write_per_packet_stats_to_rb(info,
+                                              (u8 *)(pkt_stats_header + 1),
+                                              pkt_stats_header->size);
+    } else if (pkt_stats_header->log_type == PKTLOG_TYPE_RX_STAT) {
         /* Ignore the event if it doesn't carry RX descriptor */
         if (pkt_stats_header->flags & PKT_INFO_FLG_RX_RXDESC_MASK)
             status = parse_rx_stats(info,
