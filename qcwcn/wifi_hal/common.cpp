@@ -267,6 +267,14 @@ void hexdump(void *buf, u16 len)
     ALOGI("******HexDump End***********");
 }
 
+/* Firmware sends RSSI value without noise floor.
+ * Add noise floor to the same and return absolute values.
+ */
+u8 get_rssi(u8 rssi_wo_noise_floor)
+{
+    return abs((int)rssi_wo_noise_floor - 96);
+}
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

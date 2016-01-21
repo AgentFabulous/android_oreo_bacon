@@ -61,6 +61,7 @@ typedef enum {
     EVENT_WLAN_EAPOL = 0xA8D, /* 96 bytes payload */
     EVENT_WLAN_EXTSCAN_FEATURE_STOP = 0xAA3,
     EVENT_WLAN_EXTSCAN_RESULTS_AVAILABLE = 0xAA4,
+    EVENT_WLAN_BEACON_EVENT = 0xAA6,
     EVENT_WLAN_LOG_COMPLETE = 0xAA7,
 
     EVENT_MAX_ID = 0x0FFF
@@ -427,6 +428,7 @@ typedef struct {
 
 /* EVENT_WLAN_BEACON_RECEIVED */
 typedef struct {
+    u8 bssid[6];
     u32 beacon_rssi;
 } __attribute__((packed)) wlan_beacon_received_payload_type;
 /* End EVENT_WLAN_BEACON_RECEIVED */

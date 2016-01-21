@@ -91,63 +91,60 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
         return WIFI_ERROR_UNKNOWN;
     }
 
-    if ((ring_id == POWER_EVENTS_RB_ID) ||
-        (ring_id == PKT_STATS_RB_ID)) {
-        wifiLoggerCommand = new WifiLoggerCommand(
-                                wifiHandle,
-                                requestId,
-                                OUI_QCA,
-                                QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_START);
+    wifiLoggerCommand = new WifiLoggerCommand(
+                            wifiHandle,
+                            requestId,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_START);
 
-        if (wifiLoggerCommand == NULL) {
-           ALOGE("%s: Error WifiLoggerCommand NULL", __FUNCTION__);
-           return WIFI_ERROR_UNKNOWN;
-        }
-        /* Create the NL message. */
-        ret = wifiLoggerCommand->create();
-
-        if (ret < 0)
-            goto cleanup;
-
-        /* Set the interface Id of the message. */
-        ret = wifiLoggerCommand->set_iface_id(ifaceInfo->name);
-
-        if (ret < 0)
-            goto cleanup;
-
-        /* Add the vendor specific attributes for the NL command. */
-        nlData = wifiLoggerCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-
-        if (!nlData)
-            goto cleanup;
-
-        if (wifiLoggerCommand->put_u32(
-                    QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_RING_ID, ring_id))
-        {
-            goto cleanup;
-        }
-        if (wifiLoggerCommand->put_u32(
-                    QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_VERBOSE_LEVEL,
-                    verbose_level))
-        {
-            goto cleanup;
-        }
-        if (wifiLoggerCommand->put_u32(
-                    QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_FLAGS,
-                    flags))
-        {
-            goto cleanup;
-        }
-
-        wifiLoggerCommand->attr_end(nlData);
-
-        /* Send the msg and wait for a response. */
-        ret = wifiLoggerCommand->requestResponse();
-        if (ret) {
-            ALOGE("%s: Error %d happened. ", __FUNCTION__, ret);
-        }
-
+    if (wifiLoggerCommand == NULL) {
+       ALOGE("%s: Error WifiLoggerCommand NULL", __FUNCTION__);
+       return WIFI_ERROR_UNKNOWN;
     }
+    /* Create the NL message. */
+    ret = wifiLoggerCommand->create();
+
+    if (ret < 0)
+        goto cleanup;
+
+    /* Set the interface Id of the message. */
+    ret = wifiLoggerCommand->set_iface_id(ifaceInfo->name);
+
+    if (ret < 0)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = wifiLoggerCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+
+    if (!nlData)
+        goto cleanup;
+
+    if (wifiLoggerCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_RING_ID, ring_id))
+    {
+        goto cleanup;
+    }
+    if (wifiLoggerCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_VERBOSE_LEVEL,
+                verbose_level))
+    {
+        goto cleanup;
+    }
+    if (wifiLoggerCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_FLAGS,
+                flags))
+    {
+        goto cleanup;
+    }
+
+    wifiLoggerCommand->attr_end(nlData);
+
+    /* Send the msg and wait for a response. */
+    ret = wifiLoggerCommand->requestResponse();
+    if (ret) {
+        ALOGE("%s: Error %d happened. ", __FUNCTION__, ret);
+    }
+
     ALOGV("%s: Logging Started for %s.", __FUNCTION__, buffer_name);
     rb_start_logging(&info->rb_infos[ring_id], verbose_level,
                     flags, max_interval_sec, min_data_size);
