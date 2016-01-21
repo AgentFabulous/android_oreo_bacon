@@ -63,6 +63,7 @@ typedef enum {
     EVENT_WLAN_EXTSCAN_RESULTS_AVAILABLE = 0xAA4,
     EVENT_WLAN_BEACON_EVENT = 0xAA6,
     EVENT_WLAN_LOG_COMPLETE = 0xAA7,
+    EVENT_WLAN_LOW_RESOURCE_FAILURE = 0xABB,
 
     EVENT_MAX_ID = 0x0FFF
 } event_id_enum_type;
@@ -149,6 +150,8 @@ typedef enum
     WLAN_PE_DIAG_ROAM_ASSOC_COMP_EVENT,
     WLAN_PE_DIAG_SCAN_COMP_EVENT,
     WLAN_PE_DIAG_SCAN_RES_FOUND_EVENT,
+    WLAN_PE_DIAG_ASSOC_TIMEOUT,
+    WLAN_PE_DIAG_AUTH_TIMEOUT,
 } wlan_host_diag_event_type;
 
 typedef struct wlan_pe_event {
@@ -448,5 +451,15 @@ typedef struct {
     u8 ucReasonCode;
     u8 fInitiator;
 } __attribute__((packed)) wlan_add_block_ack_failed_payload_type;
+
+typedef enum
+{
+    WIFI_EVENT_MEMORY_FAILURE,
+} resource_failure_type;
+
+typedef struct wlan_low_resource_failure_event
+{
+    resource_failure_type event_sub_type;
+} __attribute__((packed)) wlan_low_resource_failure_event_t;
 
 #endif /* WIFILOGGER_EVENT_DEFS_H */

@@ -127,4 +127,9 @@ typedef struct {
     u32 num_roam_bssid_blacklist;
     u32 num_roam_bssid_preferred_list;
 } __attribute__((packed)) gscan_capabilities_vendor_data_t;
+
+typedef struct
+{
+    resource_failure_type event_sub_type;
+} __attribute__((packed)) resource_failure_vendor_data_t;
 #endif /* __WIFI_HAL_WIFILOGGER_VENDOR_EVENTS_H__ */
