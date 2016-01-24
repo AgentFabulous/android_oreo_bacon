@@ -652,7 +652,7 @@ NanCommand::~NanCommand()
     ALOGV("NanCommand %p destroyed", this);
 }
 
-int NanCommand::handleResponse(WifiEvent reply){
+int NanCommand::handleResponse(WifiEvent &reply){
     ALOGI("skipping a response");
     return NL_SKIP;
 }
@@ -811,7 +811,7 @@ u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv)
         pOutTlv->value = NULL;
     }
 
-    ALOGV("READ TLV value %u, readLen %u", pOutTlv->value, readLen);
+    ALOGV("READ TLV  readLen %u", readLen);
     return readLen;
 }
 

@@ -243,7 +243,7 @@ int NanCommand::getNanMatch(NanMatchInd *event)
         case NAN_TLV_TYPE_POST_NAN_CONNECTIVITY_CAPABILITIES_RECEIVE:
             if (outputTlv.length != sizeof(u32)) {
                 ALOGE("NAN_TLV_TYPE_POST_NAN_CONNECTIVITY_CAPABILITIES_RECEIVE"
-                      "Incorrect size:%d expecting %d", outputTlv.length,
+                      "Incorrect size:%d expecting %zu", outputTlv.length,
                       sizeof(u32));
                 break;
             }
@@ -500,7 +500,7 @@ int NanCommand::getNanTca(NanTCAInd *event)
         switch (outputTlv.type) {
         case NAN_TLV_TYPE_CLUSTER_SIZE_RSP:
             if (outputTlv.length != 2 * sizeof(u32)) {
-                ALOGE("%s: Wrong length %d in Tca Indication expecting %d bytes",
+                ALOGE("%s: Wrong length %d in Tca Indication expecting %zu bytes",
                       __func__, outputTlv.length, 2 * sizeof(u32));
                 break;
             }
@@ -608,12 +608,12 @@ void NanCommand::getNanReceivePostConnectivityCapabilityVal(
     NanReceivePostConnectivityCapability *pRxCapab)
 {
     if (pInValue && pRxCapab) {
-        pRxCapab->is_mesh_supported = (pInValue[0] && (0x01 << 5));
-        pRxCapab->is_ibss_supported = (pInValue[0] && (0x01 << 4));
-        pRxCapab->wlan_infra_field = (pInValue[0] && (0x01 << 3));
-        pRxCapab->is_tdls_supported = (pInValue[0] && (0x01 << 2));
-        pRxCapab->is_wfds_supported = (pInValue[0] && (0x01 << 1));
-        pRxCapab->is_wfd_supported = pInValue[0] && 0x01;
+        pRxCapab->is_mesh_supported = (pInValue[0] & (0x01 << 5));
+        pRxCapab->is_ibss_supported = (pInValue[0] & (0x01 << 4));
+        pRxCapab->wlan_infra_field = (pInValue[0] & (0x01 << 3));
+        pRxCapab->is_tdls_supported = (pInValue[0] & (0x01 << 2));
+        pRxCapab->is_wfds_supported = (pInValue[0] & (0x01 << 1));
+        pRxCapab->is_wfd_supported = pInValue[0] & 0x01;
     }
 }
 

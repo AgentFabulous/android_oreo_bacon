@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <sys/socket.h>
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>

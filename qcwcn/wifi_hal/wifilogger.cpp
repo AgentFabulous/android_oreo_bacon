@@ -169,8 +169,8 @@ wifi_error wifi_get_ring_buffers_status(wifi_interface_handle iface,
     int rb_id;
 
     if ((*num_buffers) < NUM_RING_BUFS) {
-        ALOGE("%s: Input num_buffers:%d cannot be accommodated, "
-              "Total ring buffer num:%d", __FUNCTION__, num_buffers,
+        ALOGE("%s: Input num_buffers:%u cannot be accommodated, "
+              "Total ring buffer num:%d", __FUNCTION__, *num_buffers,
               NUM_RING_BUFS);
         *num_buffers = 0;
         return WIFI_ERROR_OUT_OF_MEMORY;

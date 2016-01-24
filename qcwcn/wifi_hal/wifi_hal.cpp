@@ -523,7 +523,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
 
     info->pkt_stats = (struct pkt_stats_s *)malloc(sizeof(struct pkt_stats_s));
     if (!info->pkt_stats) {
-        ALOGE("%s: malloc Failed for size: %d",
+        ALOGE("%s: malloc Failed for size: %zu",
                 __FUNCTION__, sizeof(struct pkt_stats_s));
         ret = WIFI_ERROR_OUT_OF_MEMORY;
         goto unload;
