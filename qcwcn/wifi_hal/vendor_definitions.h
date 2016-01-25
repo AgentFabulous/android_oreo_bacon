@@ -70,11 +70,11 @@
 #define QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP 63
 /* Roaming */
 #define QCA_NL80211_VENDOR_SUBCMD_ROAM 64
-/* GScan SSID Hotlist */
-#define QCA_NL80211_VENDOR_SUBCMD_GSCAN_SET_SSID_HOTLIST 65
-#define QCA_NL80211_VENDOR_SUBCMD_GSCAN_RESET_SSID_HOTLIST 66
-#define QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_SSID_FOUND 67
-#define QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_SSID_LOST 68
+
+/* APIs corresponding to the sub commands 65-68 are deprecated.
+ * These sub commands are reserved and not supposed to be used
+ * for any other purpose
+ */
 /* PNO */
 #define QCA_NL80211_VENDOR_SUBCMD_PNO_SET_LIST 69
 #define QCA_NL80211_VENDOR_SUBCMD_PNO_SET_PASSPOINT_LIST 70
@@ -790,6 +790,7 @@ enum qca_wlan_vendor_attr_gscan_results
     /* Unsigned 32bit value; a GSCAN Capabilities attribute. */
     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_NUM_WHITELISTED_SSID,
 
+    QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_BUCKETS_SCANNED,
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_MAX =
@@ -941,6 +942,8 @@ enum qca_wlan_epno_type
     QCA_WLAN_PNO
 };
 
+#define EPNO_NO_NETWORKS 0
+
 enum qca_wlan_vendor_attr_pno_config_params {
     QCA_WLAN_VENDOR_ATTR_PNO_INVALID = 0,
     /* NL attributes for data used by
@@ -1003,6 +1006,13 @@ enum qca_wlan_vendor_attr_pno_config_params {
      * cycles in msec
      */
     QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_SCAN_INTERVAL = 15,
+    QCA_WLAN_VENDOR_ATTR_EPNO_MIN5GHZ_RSSI = 16,
+    QCA_WLAN_VENDOR_ATTR_EPNO_MIN24GHZ_RSSI = 17,
+    QCA_WLAN_VENDOR_ATTR_EPNO_INITIAL_SCORE_MAX = 18,
+    QCA_WLAN_VENDOR_ATTR_EPNO_CURRENT_CONNECTION_BONUS = 19,
+    QCA_WLAN_VENDOR_ATTR_EPNO_SAME_NETWORK_BONUS = 20,
+    QCA_WLAN_VENDOR_ATTR_EPNO_SECURE_BONUS = 21,
+    QCA_WLAN_VENDOR_ATTR_EPNO_BAND5GHZ_BONUS = 22,
 
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_PNO_AFTER_LAST,

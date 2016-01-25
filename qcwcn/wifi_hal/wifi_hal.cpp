@@ -270,6 +270,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_nodfs_flag = wifi_set_nodfs_flag;
     fn->wifi_start_logging = wifi_start_logging;
     fn->wifi_set_epno_list = wifi_set_epno_list;
+    fn->wifi_reset_epno_list = wifi_reset_epno_list;
     fn->wifi_set_country_code = wifi_set_country_code;
     fn->wifi_enable_tdls = wifi_enable_tdls;
     fn->wifi_disable_tdls = wifi_disable_tdls;
@@ -288,10 +289,6 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_passpoint_list = wifi_set_passpoint_list;
     fn->wifi_reset_passpoint_list = wifi_reset_passpoint_list;
     fn->wifi_set_bssid_blacklist = wifi_set_bssid_blacklist;
-    fn->wifi_enable_lazy_roam = wifi_enable_lazy_roam;
-    fn->wifi_set_bssid_preference = wifi_set_bssid_preference;
-    fn->wifi_set_gscan_roam_params = wifi_set_gscan_roam_params;
-    fn->wifi_set_ssid_white_list = wifi_set_ssid_white_list;
     fn->wifi_set_lci = wifi_set_lci;
     fn->wifi_set_lcr = wifi_set_lcr;
     fn->wifi_start_sending_offloaded_packet =
