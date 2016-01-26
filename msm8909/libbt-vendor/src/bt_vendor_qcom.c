@@ -52,6 +52,7 @@
 #define CMD_TIMEOUT  0x22
 
 static void wait_for_patch_download(bool is_ant_req);
+static bool is_debug_force_special_bytes(void);
 
 /******************************************************************************
 **  Externs
@@ -1087,13 +1088,19 @@ static void ssr_cleanup(int reason) {
             trig_ssr = 0xEE;
             ret = write (vnd_userial.fd, &trig_ssr, 1);
             ALOGI("Trig_ssr is being sent to BT socket, retval(%d) :errno:  %s", ret, strerror(errno));
-            return;
+
+            if (is_debug_force_special_bytes()) {
+                //Then we should send special byte to crash SOC in WCNSS_Filter, so we do not
+                //need to power off UART here.
+                return;
+            }
         }
+
         /*Close both ANT channel*/
         op(BT_VND_OP_ANT_USERIAL_CLOSE, NULL);
 #endif
 #endif
-        /*Close both ANT channel*/
+        /*Close both BT channel*/
         op(BT_VND_OP_USERIAL_CLOSE, NULL);
         /*CTRL OFF twice to make sure hw
          * turns off*/
@@ -1142,6 +1149,22 @@ void wait_for_patch_download(bool is_ant_req) {
            break;
         }
     }
+}
+
+static bool is_debug_force_special_bytes() {
+    int ret = 0;
+    char value[PROPERTY_VALUE_MAX] = {'\0'};
+    bool enabled = false;
+
+    ret = property_get("wc_transport.force_special_byte", value, NULL);
+
+    if (ret) {
+        enabled = (strcmp(value, "false") ==0) ? false : true;
+        ALOGV("%s: wc_transport.force_special_byte: %s, enabled: %d ",
+            __func__, value, enabled);
+    }
+
+    return enabled;
 }
 
 // Entry point of DLib
