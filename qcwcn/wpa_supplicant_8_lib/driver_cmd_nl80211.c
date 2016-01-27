@@ -169,48 +169,6 @@ int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
 				 const struct wpabuf *proberesp,
 				 const struct wpabuf *assocresp)
 {
-	char *buf;
-	const struct wpabuf *ap_wps_p2p_ie = NULL;
-	char *_cmd = "SET_AP_WPS_P2P_IE";
-	char *pbuf;
-	int ret = 0;
-	int i, buf_len;
-	struct cmd_desc {
-		int cmd;
-		const struct wpabuf *src;
-	} cmd_arr[] = {
-		{0x1, beacon},
-		{0x2, proberesp},
-		{0x4, assocresp},
-		{-1, NULL}
-	};
 
-	wpa_printf(MSG_DEBUG, "%s: Entry", __func__);
-	for (i = 0; cmd_arr[i].cmd != -1; i++) {
-		ap_wps_p2p_ie = cmd_arr[i].src ?
-			cmd_arr[i].src : NULL;
-		if (ap_wps_p2p_ie) {
-			buf_len = strlen(_cmd) + 3 + wpabuf_len(ap_wps_p2p_ie);
-			buf = os_zalloc(buf_len);
-			if (NULL == buf) {
-				wpa_printf(MSG_DEBUG,"%s: Out of space for buf",
-									__func__);
-				ret = -1;
-				break;
-			}
-		} else {
-			continue;
-		}
-		pbuf = buf;
-		pbuf += snprintf(pbuf, buf_len - wpabuf_len(ap_wps_p2p_ie), "%s %d",
-								_cmd, cmd_arr[i].cmd);
-		*pbuf++ = '\0';
-		os_memcpy(pbuf, wpabuf_head(ap_wps_p2p_ie), wpabuf_len(ap_wps_p2p_ie));
-		ret = wpa_driver_nl80211_driver_cmd(priv, buf, buf, buf_len);
-		os_free(buf);
-		if (ret < 0)
-			break;
-	}
-
-	return ret;
+	return 0;
 }
