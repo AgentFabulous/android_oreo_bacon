@@ -107,15 +107,22 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
           pReq->config_scan_params ? (SIZEOF_TLV_HDR + \
           NAN_MAX_SOCIAL_CHANNELS * sizeof(u32)) : 0 \
         ) + \
-       (
+        (
           pReq->config_random_factor_force ? (SIZEOF_TLV_HDR + \
           sizeof(pReq->random_factor_force_val)) : 0 \
-         ) + \
+        ) + \
         (
           pReq->config_hop_count_force ? (SIZEOF_TLV_HDR + \
           sizeof(pReq->hop_count_force_val)) : 0 \
+        ) + \
+        (
+          pReq->config_24g_channel ? (SIZEOF_TLV_HDR + \
+          sizeof(u32)) : 0 \
+        ) + \
+        (
+          pReq->config_5g_channel ? (SIZEOF_TLV_HDR + \
+          sizeof(u32)) : 0 \
         );
-
     pNanEnableReqMsg pFwReq = (pNanEnableReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
         cleanup();
@@ -239,7 +246,16 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
                       sizeof(pReq->hop_count_force_val),
                       (const u8*)&pReq->hop_count_force_val, tlvs);
     }
-
+    if (pReq->config_24g_channel) {
+        tlvs = addTlv(NAN_TLV_TYPE_24G_CHANNEL,
+                      sizeof(u32),
+                      (const u8*)&pReq->channel_24g_val, tlvs);
+    }
+    if (pReq->config_5g_channel) {
+        tlvs = addTlv(NAN_TLV_TYPE_5G_CHANNEL,
+                      sizeof(u32),
+                      (const u8*)&pReq->channel_5g_val, tlvs);
+    }
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
 
@@ -489,6 +505,13 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
     pFwReq->publishServiceReqParams.matchAlg = pReq->publish_match_indicator;
     pFwReq->publishServiceReqParams.count = pReq->publish_count;
     pFwReq->publishServiceReqParams.connmap = pReq->connmap;
+    pFwReq->publishServiceReqParams.pubTerminatedIndDisableFlag =
+                                   (pReq->recv_indication_cfg & BIT_0) ? 1 : 0;
+    pFwReq->publishServiceReqParams.pubMatchExpiredIndDisableFlag =
+                                   (pReq->recv_indication_cfg & BIT_1) ? 1 : 0;
+    pFwReq->publishServiceReqParams.followupRxIndDisableFlag =
+                                   (pReq->recv_indication_cfg & BIT_2) ? 1 : 0;
+
     pFwReq->publishServiceReqParams.reserved2 = 0;
 
     u8* tlvs = pFwReq->ptlv;
@@ -607,6 +630,12 @@ int NanCommand::putNanSubscribe(transaction_id id,
     pFwReq->subscribeServiceReqParams.matchAlg = pReq->subscribe_match_indicator;
     pFwReq->subscribeServiceReqParams.count = pReq->subscribe_count;
     pFwReq->subscribeServiceReqParams.rssiThresholdFlag = pReq->rssi_threshold_flag;
+    pFwReq->subscribeServiceReqParams.subTerminatedIndDisableFlag =
+                                   (pReq->recv_indication_cfg & BIT_0) ? 1 : 0;
+    pFwReq->subscribeServiceReqParams.subMatchExpiredIndDisableFlag =
+                                   (pReq->recv_indication_cfg & BIT_1) ? 1 : 0;
+    pFwReq->subscribeServiceReqParams.followupRxIndDisableFlag =
+                                   (pReq->recv_indication_cfg & BIT_2) ? 1 : 0;
     pFwReq->subscribeServiceReqParams.connmap = pReq->connmap;
     pFwReq->subscribeServiceReqParams.reserved = 0;
 
@@ -724,6 +753,8 @@ int NanCommand::putNanTransmitFollowup(transaction_id id,
         pFwReq->transmitFollowupReqParams.priority = 2;
     }
     pFwReq->transmitFollowupReqParams.window = pReq->dw_or_faw;
+    pFwReq->transmitFollowupReqParams.followupTxRspDisableFlag =
+                                   (pReq->recv_indication_cfg & BIT_0) ? 1 : 0;
     pFwReq->transmitFollowupReqParams.reserved = 0;
 
     u8* tlvs = pFwReq->ptlv;
@@ -1142,3 +1173,33 @@ int NanCommand::calcNanFurtherAvailabilityMapSize(
     return ret;
 }
 
+int NanCommand::putNanCapabilities(transaction_id id)
+{
+    ALOGI("NAN_DISABLE");
+    size_t message_len = sizeof(NanCapabilitiesReqMsg);
+
+    pNanCapabilitiesReqMsg pFwReq = (pNanCapabilitiesReqMsg)malloc(message_len);
+    if (pFwReq == NULL) {
+        cleanup();
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    ALOGI("Message Len %d", message_len);
+    memset (pFwReq, 0, message_len);
+    pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
+    pFwReq->fwHeader.msgId = NAN_MSG_ID_CAPABILITIES_REQ;
+    pFwReq->fwHeader.msgLen = message_len;
+    pFwReq->fwHeader.transactionId = id;
+
+    mVendorData = (char*)pFwReq;
+    mDataLen = message_len;
+
+    int ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+    if (ret < 0) {
+        ALOGE("%s: put_bytes Error:%d",__func__, ret);
+        cleanup();
+        return ret;
+    }
+    hexdump(mVendorData, mDataLen);
+    return ret;
+}

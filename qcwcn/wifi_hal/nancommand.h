@@ -46,7 +46,7 @@ private:
     //Various Functions to get the appropriate indications
     int getNanPublishTerminated(NanPublishTerminatedInd *event);
     int getNanMatch(NanMatchInd *event);
-    int getNanUnMatch(NanUnmatchInd *event);
+    int getNanMatchExpired(NanMatchExpiredInd *event);
     int getNanSubscribeTerminated(NanSubscribeTerminatedInd *event);
     int getNanFollowup(NanFollowupInd *event);
     int getNanDiscEngEvent(NanDiscEngEventInd *event);
@@ -116,6 +116,7 @@ public:
     int putNanTCA(transaction_id id, const NanTCARequest *pReq);
     int putNanBeaconSdfPayload(transaction_id id, const NanBeaconSdfPayloadRequest *pReq);
     int getNanStaParameter(wifi_interface_handle iface, NanStaParameter *pRsp);
+    int putNanCapabilities(transaction_id id);
 };
 #endif /* __WIFH_HAL_NAN_COMMAND_H__ */
 
