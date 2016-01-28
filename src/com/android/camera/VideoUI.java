@@ -333,7 +333,7 @@ public class VideoUI implements PieRenderer.PieListener,
         }
 
         mCameraControls.setPreviewRatio(mAspectRatio, false);
-        layoutPreview((float)ratio);
+        layoutPreview((float) ratio);
     }
 
     private void layoutPreview(float ratio) {
@@ -487,6 +487,10 @@ public class VideoUI implements PieRenderer.PieListener,
 
     public void showSwitcher() {
         mSwitcher.setVisibility(View.VISIBLE);
+    }
+
+    public void setSwitcherIndex() {
+        mSwitcher.setCurrentIndex(ModuleSwitcher.VIDEO_MODULE_INDEX);
     }
 
     public boolean collapseCameraControls() {
