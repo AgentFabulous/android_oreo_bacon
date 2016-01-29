@@ -2050,6 +2050,11 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
 
     /* Check nlmsg_type also to avoid processing unintended msgs */
     if (wnl->nlh.nlmsg_type == ANI_NL_MSG_PUMAC) {
+        if ((wnl->nlh.nlmsg_len <= sizeof(tAniNlHdr)) ||
+            (wnl->nlh.nlmsg_len < (sizeof(tAniNlHdr) + wnl->wmsg.length))) {
+            ALOGE("Received message with insufficent length: %d", wnl->nlh.nlmsg_len);
+            return WIFI_ERROR_UNKNOWN;
+        }
         if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_EVENT_LOG_TYPE) {
             uint32_t diag_host_type;
 
@@ -2117,6 +2122,11 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
             }
         }
     } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_LOG) {
+        if ((wnl->nlh.nlmsg_len <= sizeof(tAniNlHdr)) ||
+            (wnl->nlh.nlmsg_len < (sizeof(tAniNlHdr) + wnl->wmsg.length))) {
+            ALOGE("Received message with insufficent length: %d", wnl->nlh.nlmsg_len);
+            return WIFI_ERROR_UNKNOWN;
+        }
         if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_PRINT_TYPE) {
             process_driver_prints(info, (u8 *)(wnl + 1), wnl->wmsg.length);
         } else if (wnl->wmsg.type == ANI_NL_MSG_LOG_FW_MSG_TYPE) {
@@ -2129,6 +2139,12 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
 
         fw_event_hdr_t *event_hdr =
                           (fw_event_hdr_t *)(buf);
+        if ((wnl->nlh.nlmsg_len <= NLMSG_HDRLEN + sizeof(fw_event_hdr_t)) ||
+            (wnl->nlh.nlmsg_len < (NLMSG_HDRLEN + sizeof(fw_event_hdr_t) +
+                                    event_hdr->length))) {
+            ALOGE("Received message with insufficent length: %d", wnl->nlh.nlmsg_len);
+            return WIFI_ERROR_UNKNOWN;
+        }
         diag_fw_type = event_hdr->diag_type;
         if (diag_fw_type == DIAG_TYPE_FW_MSG) {
             dbglog_slot *slot;
