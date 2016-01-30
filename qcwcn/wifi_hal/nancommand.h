@@ -20,6 +20,8 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include "wifi_hal.h"
+#include "qca-vendor.h"
+#include "vendor_definitions.h"
 
 class NanCommand : public WifiVendorCommand
 {
@@ -89,6 +91,13 @@ private:
                                 char* rspBuf,
                                 NanStatsResponse *pRsp);
 
+    //Function which unparses the data and calls the NotifyResponse
+    int handleNdpResponse(NanResponseType ndpCmdtyp, struct nlattr **tb_vendor);
+    int handleNdpIndication(u32 ndpCmdType, struct nlattr **tb_vendor);
+    int getNdpRequest(struct nlattr **tb_vendor, NanDataPathRequestInd *event);
+    int getNdpConfirm(struct nlattr **tb_vendor, NanDataPathConfirmInd *event);
+    int getNdpEnd(struct nlattr **tb_vendor, NanDataPathEndInd *event);
+    int getNdpScheduleUpdate(struct nlattr **tb_vendor, NanDataPathScheduleUpdateInd *event);
 public:
     NanCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
     static NanCommand* instance(wifi_handle handle);

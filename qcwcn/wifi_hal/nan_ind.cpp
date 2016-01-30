@@ -795,3 +795,184 @@ cleanup:
     mStaParam = NULL;
     return (int)ret;
 }
+
+//Function which calls the necessaryIndication callback
+//based on the indication type
+int NanCommand::handleNdpIndication(u32 ndpCmdType, struct nlattr **tb_vendor)
+{
+    //Based on the message_id in the header determine the Indication type
+    //and call the necessary callback handler
+    int res = 0;
+
+    ALOGI("handleNdpIndication msg_id:%u", ndpCmdType);
+    switch (ndpCmdType) {
+    case QCA_WLAN_VENDOR_ATTR_NDP_DATA_REQUEST_IND:
+        NanDataPathRequestInd ndpRequestInd;
+        memset(&ndpRequestInd, 0, sizeof(ndpRequestInd));
+
+        res = getNdpRequest(tb_vendor, &ndpRequestInd);
+        if (!res && mHandler.EventDataRequest) {
+            (*mHandler.EventDataRequest)(&ndpRequestInd);
+        }
+        break;
+
+    case QCA_WLAN_VENDOR_ATTR_NDP_CONFIRM_IND:
+        NanDataPathConfirmInd ndpConfirmInd;
+        memset(&ndpConfirmInd, 0, sizeof(ndpConfirmInd));
+
+        res = getNdpConfirm(tb_vendor, &ndpConfirmInd);
+        if (!res && mHandler.EventDataConfirm) {
+            (*mHandler.EventDataConfirm)(&ndpConfirmInd);
+        }
+        break;
+
+    case QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_IND:
+        NanDataPathScheduleUpdateInd ndpScheduleUpdateInd;
+        memset(&ndpScheduleUpdateInd, 0, sizeof(ndpScheduleUpdateInd));
+
+        res = getNdpScheduleUpdate(tb_vendor, &ndpScheduleUpdateInd);
+        if (!res && mHandler.EventScheduleUpdate) {
+            (*mHandler.EventScheduleUpdate)(&ndpScheduleUpdateInd);
+        }
+        break;
+
+    case QCA_WLAN_VENDOR_ATTR_NDP_END_IND:
+    {
+        NanDataPathEndInd *ndpEndInd = NULL;
+        u8 num_ndp_ids = 0;
+
+        if ((!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_NUM_INSTANCE_ID]) ||
+            (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID_ARRAY])) {
+            ALOGE("%s: QCA_WLAN_VENDOR_ATTR_NDP not found", __FUNCTION__);
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        num_ndp_ids = nla_get_u8(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_NUM_INSTANCE_ID]);
+        ALOGD("%s: NDP Num Instance Ids : val %d", __FUNCTION__, num_ndp_ids);
+
+        if (num_ndp_ids) {
+            ndpEndInd =
+                (NanDataPathEndInd *)malloc(sizeof(NanDataPathEndInd)+ (sizeof(u32) * num_ndp_ids));
+            if (!ndpEndInd) {
+                ALOGE("%s: ndp_instance_id malloc Failed", __FUNCTION__);
+                return WIFI_ERROR_OUT_OF_MEMORY;
+            }
+            ndpEndInd->num_ndp_instances = num_ndp_ids;
+            nla_memcpy(ndpEndInd->ndp_instance_id,
+                       tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID_ARRAY],
+                       sizeof(u32) * ndpEndInd->num_ndp_instances);
+        }
+        if (mHandler.EventDataEnd) {
+            (*mHandler.EventDataEnd)(ndpEndInd);
+        }
+        free(ndpEndInd);
+        break;
+    }
+    default:
+        ALOGE("handleNdpIndication error invalid ndpCmdType:%u", ndpCmdType);
+        res = (int)WIFI_ERROR_INVALID_REQUEST_ID;
+        break;
+    }
+    return res;
+}
+
+int NanCommand::getNdpRequest(struct nlattr **tb_vendor,
+                              NanDataPathRequestInd *event)
+{
+    u32 len = 0;
+
+    if (event == NULL || tb_vendor == NULL) {
+        ALOGE("%s: Invalid input argument event:%p tb_vendor:%p",
+              __FUNCTION__, event, tb_vendor);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+    if ((!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_INSTANCE_ID]) ||
+        (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_PEER_DISCOVERY_MAC_ADDR]) ||
+        (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID])) {
+        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_NDP not found", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    event->service_instance_id = nla_get_u16(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_INSTANCE_ID]);
+    ALOGD("%s: Service Instance id : val %d", __FUNCTION__, event->service_instance_id);
+
+    len = nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_PEER_DISCOVERY_MAC_ADDR]);
+    len = ((sizeof(event->peer_disc_mac_addr) <= len) ? sizeof(event->peer_disc_mac_addr) : len);
+    memcpy(&event->peer_disc_mac_addr[0], nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_PEER_DISCOVERY_MAC_ADDR]), len);
+
+    event->ndp_instance_id = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID]);
+    ALOGD("%s: Ndp Instance id: %d", __FUNCTION__, event->ndp_instance_id);
+
+    if (tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO_LEN]) {
+        event->app_info.ndp_app_info_len = nla_get_u16(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO_LEN]);
+        if (event->app_info.ndp_app_info_len != 0) {
+            if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO]) {
+                ALOGE("%s: NDP App Info missing", __FUNCTION__);
+                event->app_info.ndp_app_info_len = 0;
+                return WIFI_ERROR_INVALID_ARGS;
+            }
+            len = nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO]);
+            len = ((sizeof(event->app_info.ndp_app_info) <= len) ? sizeof(event->app_info.ndp_app_info) : len);
+            memcpy(&event->app_info.ndp_app_info, nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO]), len);
+        }
+    }
+    return WIFI_SUCCESS;
+}
+
+int NanCommand::getNdpConfirm(struct nlattr **tb_vendor,
+                              NanDataPathConfirmInd *event)
+{
+    u32 len = 0;
+
+    if (event == NULL || tb_vendor == NULL) {
+        ALOGE("%s: Invalid input argument event:%p tb_vendor:%p",
+              __FUNCTION__, event, tb_vendor);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+    if ((!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID]) ||
+        (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_NDI_MAC_ADDR]) ||
+        (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL]) ||
+        (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_RESPONSE_CODE])) {
+        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_NDP not found", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    event->ndp_instance_id = nla_get_u16(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID]);
+    ALOGD("%s: Service Instance id : val %d", __FUNCTION__, event->ndp_instance_id);
+
+    len = nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_NDI_MAC_ADDR]);
+    len = ((sizeof(event->peer_ndi_mac_addr) <= len) ? sizeof(event->peer_ndi_mac_addr) : len);
+    memcpy(&event->peer_ndi_mac_addr[0], nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_NDI_MAC_ADDR]), len);
+
+    event->channel = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL]);
+    ALOGD("%s: Channel %d", __FUNCTION__, event->channel);
+
+    event->rsp_code = (NanDataPathResponseCode)nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_RESPONSE_CODE]);
+    ALOGD("%s: Response code %d", __FUNCTION__, event->rsp_code);
+
+    if (tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO_LEN]) {
+        event->app_info.ndp_app_info_len = nla_get_u16(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO_LEN]);
+        if (event->app_info.ndp_app_info_len != 0) {
+            if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO]) {
+                ALOGE("%s: NDP App Info missing", __FUNCTION__);
+                event->app_info.ndp_app_info_len = 0;
+                return WIFI_ERROR_INVALID_ARGS;
+            }
+            len = nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO]);
+            len = ((sizeof(event->app_info.ndp_app_info) <= len) ? sizeof(event->app_info.ndp_app_info) : len);
+            memcpy(&event->app_info.ndp_app_info, nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO]), len);
+        }
+    }
+    return WIFI_SUCCESS;
+}
+
+int NanCommand::getNdpScheduleUpdate(struct nlattr **tb_vendor,
+                                     NanDataPathScheduleUpdateInd *event)
+{
+    if (event == NULL || tb_vendor == NULL) {
+        ALOGE("%s: Invalid input argument event:%p tb_vendor:%p",
+              __FUNCTION__, event, tb_vendor);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+    return WIFI_SUCCESS;
+}

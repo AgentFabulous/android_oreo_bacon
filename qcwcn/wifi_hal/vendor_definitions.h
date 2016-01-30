@@ -1211,7 +1211,7 @@ enum qca_wlan_vendor_attr_ndp_params
     /* Unsigned 16-bit value indicating a service info */
     QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_INSTANCE_ID,
     /* Unsigned 32-bit value; channel frequency */
-    QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL_SPEC_CHANNEL,
+    QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL,
     /* Interface Discovery MAC address. An array of 6 Unsigned int8 */
     QCA_WLAN_VENDOR_ATTR_NDP_PEER_DISCOVERY_MAC_ADDR,
     /* Interface name on which NDP is being created */
@@ -1226,16 +1226,24 @@ enum qca_wlan_vendor_attr_ndp_params
     QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO,
     /* Unsigned 32-bit value for NDP instance Id */
     QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID,
-    /* Unsigned 32-bit value for schedule update response code accept/reject */
-    QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_RESPONSE_CODE,
+    /* Unsigned 8-bit value for num instance Ids */
+    QCA_WLAN_VENDOR_ATTR_NDP_NUM_INSTANCE_ID,
+    /* Array of instance Ids */
+    QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID_ARRAY,
+    /* Unsigned 32-bit value for initiator/responder ndp response code accept/reject */
+    QCA_WLAN_VENDOR_ATTR_NDP_RESPONSE_CODE,
     /* Unsigned 32-bit value for schedule status success/fail */
     QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_STATUS_CODE,
     /* NDI MAC address. An array of 6 Unsigned int8 */
     QCA_WLAN_VENDOR_ATTR_NDP_NDI_MAC_ADDR,
+    /* Unsigned 32-bit value errors types returned by driver */
+    QCA_WLAN_VENDOR_ATTR_NDP_DRV_RESPONSE_STATUS_TYPE,
+    /* Unsigned 32-bit value error values returned by driver */
+    QCA_WLAN_VENDOR_ATTR_NDP_DRV_RETURN_VALUE,
 
-   /* KEEP LAST */
-   QCA_WLAN_VENDOR_ATTR_NDP_AFTER_LAST,
-   QCA_WLAN_VENDOR_ATTR_NDP_MAX =
+    /* KEEP LAST */
+    QCA_WLAN_VENDOR_ATTR_NDP_AFTER_LAST,
+    QCA_WLAN_VENDOR_ATTR_NDP_MAX =
         QCA_WLAN_VENDOR_ATTR_NDP_AFTER_LAST - 1,
 };
 
