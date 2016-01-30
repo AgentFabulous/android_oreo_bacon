@@ -513,3 +513,48 @@ void NanCommand::handleNanStatsResponse(NanStatsType stats_type,
         ALOGE("Unknown stats_type:%d\n", stats_type);
     }
 }
+
+int NanCommand::handleNdpResponse(NanResponseType ndpCmdType,
+                                  struct nlattr **tb_vendor)
+{
+    //parse the data and call
+    //the response callback handler with the populated
+    //NanResponseMsg
+    NanResponseMsg  rsp_data;
+    transaction_id id;
+
+    memset(&rsp_data, 0, sizeof(rsp_data));
+
+    if ((!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID]) ||
+        (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_DRV_RESPONSE_STATUS_TYPE]) ||
+        (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_DRV_RETURN_VALUE]))
+    {
+        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_NDP not found", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    id = nla_get_u16(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID]);
+    ALOGD("%s: Transaction id : val %d", __FUNCTION__, id);
+    rsp_data.status =
+        (NanStatusType)nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_DRV_RESPONSE_STATUS_TYPE]);
+    ALOGD("%s: Status : status %d", __FUNCTION__, rsp_data.status);
+    rsp_data.value =
+        nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_DRV_RETURN_VALUE]);
+    ALOGD("%s: Value : status %d", __FUNCTION__, rsp_data.value);
+    rsp_data.response_type = ndpCmdType;
+    if (ndpCmdType == NAN_DP_INITIATOR_RESPONSE)
+    {
+        if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID])
+        {
+            ALOGE("%s: QCA_WLAN_VENDOR_ATTR_NDP not found", __FUNCTION__);
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        rsp_data.body.data_request_response.ndp_instance_id =
+        nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID]);
+    }
+    //Call the NotifyResponse Handler
+    if (mHandler.NotifyResponse) {
+        (*mHandler.NotifyResponse)(id, &rsp_data);
+    }
+    return WIFI_SUCCESS;
+}
