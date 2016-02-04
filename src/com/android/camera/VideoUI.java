@@ -254,6 +254,7 @@ public class VideoUI implements PieRenderer.PieListener,
             mBottomMargin = l / 4 - mTopMargin;
         }
         mCameraControls.setMargins(mTopMargin, mBottomMargin);
+        ((ViewGroup)mRootView).removeView(mRecordingTimeRect);
     }
 
     public void cameraOrientationPreviewResize(boolean orientation){
@@ -890,15 +891,13 @@ public class VideoUI implements PieRenderer.PieListener,
             mShutterButton.setImageResource(R.drawable.shutter_button_video_stop);
             hideSwitcher();
             mRecordingTimeView.setText("");
-            mRecordingTimeView.setVisibility(View.VISIBLE);
-            mPauseButton.setVisibility(mIsTimeLapse ? View.GONE : View.VISIBLE);
+            ((ViewGroup)mRootView).addView(mRecordingTimeRect);
         } else {
             mShutterButton.setImageResource(R.drawable.btn_new_shutter_video);
             if (!mController.isVideoCaptureIntent()) {
                 showSwitcher();
             }
-            mRecordingTimeView.setVisibility(View.GONE);
-            mPauseButton.setVisibility(View.GONE);
+            ((ViewGroup)mRootView).removeView(mRecordingTimeRect);
         }
     }
 
