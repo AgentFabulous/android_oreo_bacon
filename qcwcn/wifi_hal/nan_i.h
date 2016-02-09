@@ -950,7 +950,7 @@ typedef struct PACKED
 {
     NanMsgHeader fwHeader;
     /* status of the request */
-    u16 status;
+    u32 status;
     u32 value;
     u32 max_concurrent_nan_clusters;
     u32 max_publishes;
