@@ -53,6 +53,7 @@ LOCAL_SRC_FILES := \
 	rssi_monitor.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
+LOCAL_CLANG := true
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
 
 ifneq ($(wildcard external/libnl),)
@@ -105,6 +106,7 @@ LOCAL_SRC_FILES := \
 	rssi_monitor.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
+LOCAL_CLANG := true
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
 LOCAL_SHARED_LIBRARIES += libdl libhardware_legacy
 

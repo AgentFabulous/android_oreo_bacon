@@ -327,21 +327,19 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
         case QCA_NL80211_VENDOR_SUBCMD_GET_BUS_SIZE:
             {
                 struct nlattr *tb_vendor[
-                        QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX + 1];
-                nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX,
-                        (struct nlattr *)mVendorData,
-                        mDataLen, NULL);
+                        QCA_WLAN_VENDOR_ATTR_DRV_INFO_MAX + 1];
+                nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_DRV_INFO_MAX,
+                          (struct nlattr *)mVendorData, mDataLen, NULL);
 
-                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_BUS_SIZE_MAX])
+                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_DRV_INFO_BUS_SIZE])
                 {
-                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_BUS_SIZE_MAX"
+                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_DRV_INFO_BUS_SIZE"
                           " not found", __FUNCTION__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 firmware_bus_max_size = nla_get_u32(
-                       tb_vendor[QCA_WLAN_VENDOR_ATTR_BUS_SIZE_MAX]);
+                       tb_vendor[QCA_WLAN_VENDOR_ATTR_DRV_INFO_BUS_SIZE]);
                 ALOGI("Max BUS size Supported: %d", firmware_bus_max_size);
-
             }
             break;
         default :

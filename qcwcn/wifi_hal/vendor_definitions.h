@@ -1309,4 +1309,17 @@ enum qca_wlan_vendor_attr_nd_offload
         QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_AFTER_LAST - 1,
 
 };
+
+enum qca_wlan_vendor_drv_info
+{
+    QCA_WLAN_VENDOR_ATTR_DRV_INFO_INVALID = 0,
+
+    QCA_WLAN_VENDOR_ATTR_DRV_INFO_BUS_SIZE,
+
+    /* keep last */
+    QCA_WLAN_VENDOR_ATTR_DRV_INFO_AFTER_LAST,
+    QCA_WLAN_VENDOR_ATTR_DRV_INFO_MAX =
+        QCA_WLAN_VENDOR_ATTR_DRV_INFO_AFTER_LAST - 1,
+
+};
 #endif

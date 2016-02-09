@@ -39,7 +39,7 @@
 #include "wifilogger_vendor_tag_defs.h"
 #include "pkt_stats.h"
 
-#define MAX_CONNECTIVITY_EVENTS 16 // should match the value in wifi_logger.h
+#define MAX_CONNECTIVITY_EVENTS 18 // should match the value in wifi_logger.h
 static event_remap_t events[MAX_CONNECTIVITY_EVENTS] = {
     {WLAN_PE_DIAG_ASSOC_REQ_EVENT, WIFI_EVENT_ASSOCIATION_REQUESTED},
     {WLAN_PE_DIAG_AUTH_COMP_EVENT, WIFI_EVENT_AUTH_COMPLETE},
@@ -57,6 +57,8 @@ static event_remap_t events[MAX_CONNECTIVITY_EVENTS] = {
     {WLAN_PE_DIAG_ROAM_ASSOC_START_EVENT, WIFI_EVENT_ROAM_ASSOC_STARTED},
     {WLAN_PE_DIAG_ROAM_ASSOC_COMP_EVENT, WIFI_EVENT_ROAM_ASSOC_COMPLETE},
     {WLAN_PE_DIAG_SWITCH_CHL_REQ_EVENT, WIFI_EVENT_CHANNEL_SWITCH_ANOUNCEMENT},
+    {WLAN_PE_DIAG_ASSOC_TIMEOUT, WIFI_EVENT_ASSOC_TIMEOUT},
+    {WLAN_PE_DIAG_AUTH_TIMEOUT, WIFI_EVENT_AUTH_TIMEOUT},
 };
 
 tlv_log* addLoggerTlv(u16 type, u16 length, u8* value, tlv_log *pOutTlv)
@@ -1170,6 +1172,50 @@ static void process_wlan_log_complete_event(hal_info *info,
     }
 }
 
+
+static void process_wlan_low_resource_failure(hal_info *info,
+                                              u8* buf,
+                                              u16 length)
+{
+    wifi_ring_buffer_driver_connectivity_event *pConnectEvent;
+    wlan_low_resource_failure_event_t *pWlanResourceEvent;
+    resource_failure_vendor_data_t cap_vendor_data;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    u8 out_buf[RING_BUF_ENTRY_SIZE];
+    int tot_len = sizeof(wifi_ring_buffer_driver_connectivity_event);
+    tlv_log *pTlv;
+    wifi_error status;
+
+    pWlanResourceEvent = (wlan_low_resource_failure_event_t *)buf;
+    pRingBufferEntry = (wifi_ring_buffer_entry *)&out_buf[0];
+    memset(pRingBufferEntry, 0, RING_BUF_ENTRY_SIZE);
+    pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
+                     (pRingBufferEntry + 1);
+
+    pConnectEvent->event = WIFI_EVENT_MEM_ALLOC_FAILURE;
+    memset(&cap_vendor_data, 0, sizeof(resource_failure_vendor_data_t));
+
+    if (length > sizeof(resource_failure_vendor_data_t)) {
+        ALOGE("Received resource failure event of size : %d, whereas expected"
+              " size is <= %zu bytes", length,
+              sizeof(resource_failure_vendor_data_t));
+        return;
+    }
+    memcpy(&cap_vendor_data, pWlanResourceEvent, length);
+
+    pTlv = &pConnectEvent->tlvs[0];
+    pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                        sizeof(resource_failure_vendor_data_t),
+                        (u8 *)&cap_vendor_data, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(resource_failure_vendor_data_t);
+
+    status = update_connectivity_ring_buf(info, pRingBufferEntry, tot_len);
+    if (status != WIFI_SUCCESS) {
+        ALOGE("Failed to write resource failure event into ring buffer");
+    }
+}
+
+
 static wifi_error update_stats_to_ring_buf(hal_info *info,
                       u8 *rb_entry, u32 size)
 {
@@ -1880,6 +1926,9 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                         break;
                     case EVENT_WLAN_LOG_COMPLETE:
                         process_wlan_log_complete_event(info, buf, event_hdr->length);
+                        break;
+                    case EVENT_WLAN_LOW_RESOURCE_FAILURE:
+                        process_wlan_low_resource_failure(info, buf, event_hdr->length);
                         break;
                     default:
                         return WIFI_SUCCESS;

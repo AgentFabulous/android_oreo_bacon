@@ -1923,11 +1923,6 @@ int GScanCommand:: gscan_get_cached_results(
                      cached_results[i].scan_id, j, numScanResults);
            }
 
-           if (!cached_results[i].results) {
-               ALOGE("%s: NULL cached_results[%d].results"
-                     ". Abort.", __FUNCTION__, i);
-               return WIFI_ERROR_OUT_OF_MEMORY;
-           }
 #ifdef QC_HAL_DEBUG
            ALOGE("%s: scan_id %d ", __FUNCTION__,
             cached_results[i].scan_id);
@@ -2057,13 +2052,12 @@ int GScanCommand:: gscan_get_cached_results(
                         tb3[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT_SD]);
 #ifdef QC_HAL_DEBUG
                     /* Enable these prints for debugging if needed. */
-                    ALOGD("%s: ts  %lld ", __FUNCTION__,
+                    ALOGD("%s: ts  %" PRId64, __FUNCTION__,
                         cached_results[i].results[j].ts);
                     ALOGD("%s: SSID  %s ", __FUNCTION__,
                         cached_results[i].results[j].ssid);
-                    ALOGD("%s: ", __FUNCTION__,
-                        "BSSID: %02x:%02x:%02x:%02x:%02x:%02x \n",
-                        cached_results[i].results[j].bssid[0],
+                    ALOGD("%s: BSSID: %02x:%02x:%02x:%02x:%02x:%02x \n",
+                        __FUNCTION__, cached_results[i].results[j].bssid[0],
                         cached_results[i].results[j].bssid[1],
                         cached_results[i].results[j].bssid[2],
                         cached_results[i].results[j].bssid[3],
@@ -2073,9 +2067,9 @@ int GScanCommand:: gscan_get_cached_results(
                         cached_results[i].results[j].channel);
                     ALOGD("%s: rssi  %d ", __FUNCTION__,
                         cached_results[i].results[j].rssi);
-                    ALOGD("%s: rtt  %lld ", __FUNCTION__,
+                    ALOGD("%s: rtt  %" PRId64, __FUNCTION__,
                         cached_results[i].results[j].rtt);
-                    ALOGD("%s: rtt_sd  %lld ", __FUNCTION__,
+                    ALOGD("%s: rtt_sd  %" PRId64, __FUNCTION__,
                         cached_results[i].results[j].rtt_sd);
 #endif
                     /* Increment loop index for next record */

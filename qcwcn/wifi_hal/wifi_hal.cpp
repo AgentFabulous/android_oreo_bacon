@@ -354,6 +354,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_get_packet_filter_capabilities = wifi_get_packet_filter_capabilities;
     fn->wifi_nan_get_capabilities = nan_get_capabilities;
     fn->wifi_configure_nd_offload = wifi_configure_nd_offload;
+    fn->wifi_get_driver_memory_dump = wifi_get_driver_memory_dump;
 
     return WIFI_SUCCESS;
 }
@@ -526,7 +527,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
 
     info->pkt_stats = (struct pkt_stats_s *)malloc(sizeof(struct pkt_stats_s));
     if (!info->pkt_stats) {
-        ALOGE("%s: malloc Failed for size: %d",
+        ALOGE("%s: malloc Failed for size: %zu",
                 __FUNCTION__, sizeof(struct pkt_stats_s));
         ret = WIFI_ERROR_OUT_OF_MEMORY;
         goto unload;
