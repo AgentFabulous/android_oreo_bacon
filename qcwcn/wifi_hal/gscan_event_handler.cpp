@@ -343,7 +343,7 @@ wifi_error GScanCommandEventHandler::gscan_parse_hotlist_ap_results(
             nla_get_u32(
             tb2[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT_SD]);
 
-        ALOGE("gscan_parse_hotlist_ap_results: ts  %lld ", results[i].ts);
+        ALOGE("gscan_parse_hotlist_ap_results: ts %" PRId64, results[i].ts);
         ALOGE("gscan_parse_hotlist_ap_results: SSID  %s ",
             results[i].ssid) ;
         ALOGE("gscan_parse_hotlist_ap_results: "
@@ -353,8 +353,8 @@ wifi_error GScanCommandEventHandler::gscan_parse_hotlist_ap_results(
         ALOGE("gscan_parse_hotlist_ap_results: channel %d ",
             results[i].channel);
         ALOGE("gscan_parse_hotlist_ap_results: rssi %d ", results[i].rssi);
-        ALOGE("gscan_parse_hotlist_ap_results: rtt %lld ", results[i].rtt);
-        ALOGE("gscan_parse_hotlist_ap_results: rtt_sd %lld ",
+        ALOGE("gscan_parse_hotlist_ap_results: rtt %" PRId64, results[i].rtt);
+        ALOGE("gscan_parse_hotlist_ap_results: rtt_sd %" PRId64,
             results[i].rtt_sd);
         /* Increment loop index for next record */
         i++;
@@ -454,7 +454,7 @@ static wifi_error gscan_get_significant_change_results(u32 num_results,
             return WIFI_ERROR_INVALID_ARGS;
         }
         ALOGI("gscan_get_significant_change_results: before reading the RSSI "
-            "list: num_rssi:%d, size_of_rssi:%d, total size:%d, ",
+            "list: num_rssi:%d, size_of_rssi:%zu, total size:%zu, ",
             results[i]->num_rssi,
             sizeof(wifi_rssi), results[i]->num_rssi * sizeof(wifi_rssi));
 
@@ -594,7 +594,7 @@ wifi_error GScanCommandEventHandler::gscan_parse_hotlist_ssid_results(
             nla_get_u32(
             tb2[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT_SD]);
 
-        ALOGD("gscan_parse_hotlist_ssid_results: ts  %lld ", results[i].ts);
+        ALOGD("gscan_parse_hotlist_ssid_results: ts  %" PRId64, results[i].ts);
         ALOGD("gscan_parse_hotlist_ssid_results: SSID  %s ",
             results[i].ssid) ;
         ALOGD("gscan_parse_hotlist_ssid_results: "
@@ -604,8 +604,8 @@ wifi_error GScanCommandEventHandler::gscan_parse_hotlist_ssid_results(
         ALOGD("gscan_parse_hotlist_ssid_results: channel %d ",
             results[i].channel);
         ALOGD("gscan_parse_hotlist_ssid_results: rssi %d ", results[i].rssi);
-        ALOGD("gscan_parse_hotlist_ssid_results: rtt %lld ", results[i].rtt);
-        ALOGD("gscan_parse_hotlist_ssid_results: rtt_sd %lld ",
+        ALOGD("gscan_parse_hotlist_ssid_results: rtt %" PRId64, results[i].rtt);
+        ALOGD("gscan_parse_hotlist_ssid_results: rtt_sd %" PRId64,
             results[i].rtt_sd);
         /* Increment loop index for next record */
         i++;
@@ -824,7 +824,7 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_result(
                      QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_DATA]),
                  mPasspointNetworkFoundResult->ie_length);
 
-             ALOGD("%s: ts  %lld ", __FUNCTION__,
+             ALOGD("%s: ts  %" PRId64, __FUNCTION__,
                  mPasspointNetworkFoundResult->ts);
              ALOGD("%s: SSID  %s ", __FUNCTION__,
                  mPasspointNetworkFoundResult->ssid);
@@ -840,11 +840,11 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_result(
                  mPasspointNetworkFoundResult->channel);
              ALOGD("%s: rssi  %d ", __FUNCTION__,
                  mPasspointNetworkFoundResult->rssi);
-             ALOGD("%s: rtt  %lld ", __FUNCTION__,
+             ALOGD("%s: rtt  %" PRId64, __FUNCTION__,
                  mPasspointNetworkFoundResult->rtt);
-             ALOGD("%s: rtt_sd  %lld ", __FUNCTION__,
+             ALOGD("%s: rtt_sd  %" PRId64, __FUNCTION__,
                  mPasspointNetworkFoundResult->rtt_sd);
-             ALOGD("%s: ie_length  %lld ", __FUNCTION__,
+             ALOGD("%s: ie_length  %u ", __FUNCTION__,
                  mPasspointNetworkFoundResult->ie_length);
              ALOGD("%s: ie_data", __FUNCTION__);
              hexdump(mPasspointNetworkFoundResult->ie_data,
@@ -1026,10 +1026,8 @@ wifi_error GScanCommandEventHandler::gscan_parse_pno_network_results(
             QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_BEACON_PERIOD])
         {
             ALOGE("gscan_parse_pno_network_results: "
-                "RESULTS_SCAN_RESULT_BEACON_PERIOD not found",
-                __FUNCTION__);
+                "RESULTS_SCAN_RESULT_BEACON_PERIOD not found");
             return WIFI_ERROR_INVALID_ARGS;
-            break;
         }
         results[i].beacon_period =
             nla_get_u16(
@@ -1042,16 +1040,15 @@ wifi_error GScanCommandEventHandler::gscan_parse_pno_network_results(
                 ])
         {
             ALOGE("gscan_parse_pno_network_results: "
-                "RESULTS_SCAN_RESULT_CAPABILITY not found", __FUNCTION__);
+                "RESULTS_SCAN_RESULT_CAPABILITY not found");
             return WIFI_ERROR_INVALID_ARGS;
-            break;
         }
         results[i].capability =
             nla_get_u16(
             tb2[
             QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_CAPABILITY]);
 
-        ALOGD("gscan_parse_pno_network_results: ts  %lld ", results[i].ts);
+        ALOGD("gscan_parse_pno_network_results: ts  %" PRId64, results[i].ts);
         ALOGD("gscan_parse_pno_network_results: SSID  %s ",
             results[i].ssid) ;
         ALOGD("gscan_parse_pno_network_results: "
@@ -1061,8 +1058,8 @@ wifi_error GScanCommandEventHandler::gscan_parse_pno_network_results(
         ALOGD("gscan_parse_pno_network_results: channel %d ",
             results[i].channel);
         ALOGD("gscan_parse_pno_network_results: rssi %d ", results[i].rssi);
-        ALOGD("gscan_parse_pno_network_results: rtt %lld ", results[i].rtt);
-        ALOGD("gscan_parse_pno_network_results: rtt_sd %lld ",
+        ALOGD("gscan_parse_pno_network_results: rtt %" PRId64, results[i].rtt);
+        ALOGD("gscan_parse_pno_network_results: rtt_sd %" PRId64,
             results[i].rtt_sd);
         /* Increment loop index for next record */
         i++;
@@ -1321,7 +1318,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                            QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_BUCKETS_SCANNED]);
             }
 #ifdef QC_HAL_DEBUG
-            ALOGD("handleEvent:FULL_SCAN_RESULTS: ts  %lld ", result->ts);
+            ALOGD("handleEvent:FULL_SCAN_RESULTS: ts  %" PRId64, result->ts);
             ALOGD("handleEvent:FULL_SCAN_RESULTS: SSID  %s ", result->ssid) ;
             ALOGD("handleEvent:FULL_SCAN_RESULTS: "
                 "BSSID: %02x:%02x:%02x:%02x:%02x:%02x \n",
@@ -1330,8 +1327,8 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             ALOGD("handleEvent:FULL_SCAN_RESULTS: channel %d ",
                 result->channel);
             ALOGD("handleEvent:FULL_SCAN_RESULTS: rssi  %d ", result->rssi);
-            ALOGD("handleEvent:FULL_SCAN_RESULTS: rtt  %lld ", result->rtt);
-            ALOGD("handleEvent:FULL_SCAN_RESULTS: rtt_sd  %lld ",
+            ALOGD("handleEvent:FULL_SCAN_RESULTS: rtt  %" PRId64, result->rtt);
+            ALOGD("handleEvent:FULL_SCAN_RESULTS: rtt_sd  %" PRId64,
                 result->rtt_sd);
             ALOGD("handleEvent:FULL_SCAN_RESULTS: beacon period  %d ",
                 result->beacon_period);

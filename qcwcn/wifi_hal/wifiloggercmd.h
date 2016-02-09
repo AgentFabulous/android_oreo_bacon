@@ -27,7 +27,7 @@
  */
 
 #ifndef __WIFI_HAL_WIFILOGGER_COMMAND_H__
-#define __WIFH_HAL_WIFILOGGER_COMMAND_H__
+#define __WIFI_HAL_WIFILOGGER_COMMAND_H__
 
 #include "common.h"
 #include "cpp_bindings.h"
@@ -112,4 +112,4 @@ void send_alert(hal_info *info, int reason_code);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-#endif /* __WIFH_HAL_WIFILOGGER_COMMAND_H__ */
+#endif /* __WIFI_HAL_WIFILOGGER_COMMAND_H__ */
