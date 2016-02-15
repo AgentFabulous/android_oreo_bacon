@@ -44,7 +44,8 @@
 #define PKTLOG_TYPE_RC_UPDATE       7
 #define PKTLOG_TYPE_TX_VIRT_ADDR    8
 #define PKTLOG_TYPE_PKT_STATS       9
-#define PKTLOG_TYPE_MAX             10
+#define PKTLOG_TYPE_PKT_DUMP        10
+#define PKTLOG_TYPE_MAX             11
 #define BW_OFFSET 8
 #define INVALID_RSSI 255
 
@@ -369,5 +370,54 @@ typedef struct drv_msg_s
         } __attribute__((packed)) pkt_stats_event;
     } u;
 } __attribute__((packed)) drv_msg_t;
+
+typedef enum {
+    START_MONITOR = 1,
+    STOP_MONITOR,
+    TX_MGMT_PKT,
+    TX_DATA_PKT,
+    RX_MGMT_PKT,
+    RX_DATA_PKT,
+} pktdump_event_type;
+
+typedef struct {
+    u8 status;
+    u8 type;
+    u32 driver_ts;
+    u16 fw_ts;
+} __attribute__((packed)) pktdump_hdr;
+
+typedef struct {
+    frame_type payload_type;
+    u32 driver_timestamp_usec;
+    u32 firmware_timestamp_usec;
+    size_t frame_len;
+    char *frame_content;
+} frame_info_i;
+
+typedef struct {
+    // Prefix of MD5 hash of |frame_inf.frame_content|. If frame
+    // content is not provided, prefix of MD5 hash over the same data
+    // that would be in frame_content, if frame content were provided.
+    char md5_prefix[MD5_PREFIX_LEN];  // Prefix of MD5 hash of packet bytes
+    wifi_tx_packet_fate fate;
+    frame_info_i frame_inf;
+} wifi_tx_report_i;
+
+typedef struct {
+    // Prefix of MD5 hash of |frame_inf.frame_content|. If frame
+    // content is not provided, prefix of MD5 hash over the same data
+    // that would be in frame_content, if frame content were provided.
+    char md5_prefix[MD5_PREFIX_LEN];
+    wifi_rx_packet_fate fate;
+    frame_info_i frame_inf;
+} wifi_rx_report_i;
+
+typedef struct {
+    wifi_tx_report_i tx_fate_stats[MAX_FATE_LOG_LEN];
+    size_t n_tx_stats_collected;
+    wifi_rx_report_i rx_fate_stats[MAX_FATE_LOG_LEN];
+    size_t n_rx_stats_collected;
+} packet_fate_monitor_info;
 
 #endif

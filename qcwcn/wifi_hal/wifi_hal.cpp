@@ -358,6 +358,9 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_configure_nd_offload = wifi_configure_nd_offload;
     fn->wifi_get_driver_memory_dump = wifi_get_driver_memory_dump;
     fn->wifi_get_wake_reason_stats = wifi_get_wake_reason_stats;
+    fn->wifi_start_pkt_fate_monitoring = wifi_start_pkt_fate_monitoring;
+    fn->wifi_get_tx_pkt_fates = wifi_get_tx_pkt_fates;
+    fn->wifi_get_rx_pkt_fates = wifi_get_rx_pkt_fates;
 
     return WIFI_SUCCESS;
 }
@@ -642,6 +645,11 @@ static void internal_cleaned_up_handler(wifi_handle handle)
     if (info->exit_sockets[1] >= 0) {
         close(info->exit_sockets[1]);
         info->exit_sockets[1] = -1;
+    }
+
+    if (info->pkt_fate_stats) {
+        free(info->pkt_fate_stats);
+        info->pkt_fate_stats = NULL;
     }
 
     (*cleaned_up_handler)(handle);

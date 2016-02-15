@@ -600,6 +600,165 @@ wifi_error wifi_reset_alert_handler(wifi_request_id id,
     return WIFI_SUCCESS;
 }
 
+
+/**
+    API to start packet fate monitoring.
+    - Once stared, monitoring should remain active until HAL is unloaded.
+    - When HAL is unloaded, all packet fate buffers should be cleared.
+*/
+wifi_error wifi_start_pkt_fate_monitoring(wifi_interface_handle iface)
+{
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (info->fate_monitoring_enabled == true) {
+        ALOGD("Packet monitoring is already enabled");
+        return WIFI_SUCCESS;
+    }
+
+    info->pkt_fate_stats = (packet_fate_monitor_info *) malloc (
+                                              sizeof(packet_fate_monitor_info));
+    if (info->pkt_fate_stats == NULL) {
+        ALOGE("Failed to allocate memory for : %zu bytes",
+              sizeof(packet_fate_monitor_info));
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+    memset(info->pkt_fate_stats, 0, sizeof(packet_fate_monitor_info));
+
+    info->fate_monitoring_enabled = true;
+
+    return WIFI_SUCCESS;
+}
+
+
+/**
+    API to retrieve fates of outbound packets.
+    - HAL implementation should fill |tx_report_bufs| with fates of
+      _first_ min(n_requested_fates, actual packets) frames
+      transmitted for the most recent association. The fate reports
+      should follow the same order as their respective packets.
+    - Packets reported by firmware, but not recognized by driver
+      should be included.  However, the ordering of the corresponding
+      reports is at the discretion of HAL implementation.
+    - Framework may call this API multiple times for the same association.
+    - Framework will ensure |n_requested_fates <= MAX_FATE_LOG_LEN|.
+    - Framework will allocate and free the referenced storage.
+*/
+wifi_error wifi_get_tx_pkt_fates(wifi_interface_handle iface,
+                                 wifi_tx_report *tx_report_bufs,
+                                 size_t n_requested_fates,
+                                 size_t *n_provided_fates)
+{
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+    wifi_tx_report_i *tx_fate_stats = &info->pkt_fate_stats->tx_fate_stats[0];
+    size_t i;
+
+    if (info->fate_monitoring_enabled != true) {
+        ALOGE("Packet monitoring is not yet triggered");
+        return WIFI_ERROR_UNINITIALIZED;
+    }
+
+    *n_provided_fates = min(n_requested_fates,
+                            info->pkt_fate_stats->n_tx_stats_collected);
+
+    for (i=0; i < *n_provided_fates; i++) {
+        memcpy(tx_report_bufs[i].md5_prefix,
+                    tx_fate_stats[i].md5_prefix, MD5_PREFIX_LEN);
+        tx_report_bufs[i].fate = tx_fate_stats[i].fate;
+        tx_report_bufs[i].frame_inf.payload_type =
+            tx_fate_stats[i].frame_inf.payload_type;
+        tx_report_bufs[i].frame_inf.driver_timestamp_usec =
+            tx_fate_stats[i].frame_inf.driver_timestamp_usec;
+        tx_report_bufs[i].frame_inf.firmware_timestamp_usec =
+            tx_fate_stats[i].frame_inf.firmware_timestamp_usec;
+        tx_report_bufs[i].frame_inf.frame_len =
+            tx_fate_stats[i].frame_inf.frame_len;
+
+        if (tx_report_bufs[i].frame_inf.payload_type == FRAME_TYPE_ETHERNET_II)
+            memcpy(tx_report_bufs[i].frame_inf.frame_content.ethernet_ii_bytes,
+                   tx_fate_stats[i].frame_inf.frame_content,
+                   min(tx_fate_stats[i].frame_inf.frame_len,
+                       MAX_FRAME_LEN_ETHERNET));
+        else if (tx_report_bufs[i].frame_inf.payload_type ==
+                                                         FRAME_TYPE_80211_MGMT)
+            memcpy(
+                tx_report_bufs[i].frame_inf.frame_content.ieee_80211_mgmt_bytes,
+                tx_fate_stats[i].frame_inf.frame_content,
+                min(tx_fate_stats[i].frame_inf.frame_len,
+                    MAX_FRAME_LEN_ETHERNET));
+        else
+            ALOGE("Unknown format packet");
+        free (tx_fate_stats[i].frame_inf.frame_content);
+    }
+
+    return WIFI_SUCCESS;
+}
+
+/**
+    API to retrieve fates of inbound packets.
+    - HAL implementation should fill |rx_report_bufs| with fates of
+      _first_ min(n_requested_fates, actual packets) frames
+      received for the most recent association. The fate reports
+      should follow the same order as their respective packets.
+    - Packets reported by firmware, but not recognized by driver
+      should be included.  However, the ordering of the corresponding
+      reports is at the discretion of HAL implementation.
+    - Framework may call this API multiple times for the same association.
+    - Framework will ensure |n_requested_fates <= MAX_FATE_LOG_LEN|.
+    - Framework will allocate and free the referenced storage.
+*/
+wifi_error wifi_get_rx_pkt_fates(wifi_interface_handle iface,
+                                 wifi_rx_report *rx_report_bufs,
+                                 size_t n_requested_fates,
+                                 size_t *n_provided_fates)
+{
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+    wifi_rx_report_i *rx_fate_stats = &info->pkt_fate_stats->rx_fate_stats[0];
+    size_t i;
+
+    if (info->fate_monitoring_enabled != true) {
+        ALOGE("Packet monitoring is not yet triggered");
+        return WIFI_ERROR_UNINITIALIZED;
+    }
+
+    *n_provided_fates = min(n_requested_fates,
+                            info->pkt_fate_stats->n_rx_stats_collected);
+
+    for (i=0; i < *n_provided_fates; i++) {
+        memcpy(rx_report_bufs[i].md5_prefix,
+                    rx_fate_stats[i].md5_prefix, MD5_PREFIX_LEN);
+        rx_report_bufs[i].fate = rx_fate_stats[i].fate;
+        rx_report_bufs[i].frame_inf.payload_type =
+            rx_fate_stats[i].frame_inf.payload_type;
+        rx_report_bufs[i].frame_inf.driver_timestamp_usec =
+            rx_fate_stats[i].frame_inf.driver_timestamp_usec;
+        rx_report_bufs[i].frame_inf.firmware_timestamp_usec =
+            rx_fate_stats[i].frame_inf.firmware_timestamp_usec;
+        rx_report_bufs[i].frame_inf.frame_len =
+            rx_fate_stats[i].frame_inf.frame_len;
+
+        if (rx_report_bufs[i].frame_inf.payload_type == FRAME_TYPE_ETHERNET_II)
+            memcpy(rx_report_bufs[i].frame_inf.frame_content.ethernet_ii_bytes,
+                   rx_fate_stats[i].frame_inf.frame_content,
+                   min(rx_fate_stats[i].frame_inf.frame_len,
+                   MAX_FRAME_LEN_ETHERNET));
+        else if (rx_report_bufs[i].frame_inf.payload_type ==
+                                                         FRAME_TYPE_80211_MGMT)
+            memcpy(
+                rx_report_bufs[i].frame_inf.frame_content.ieee_80211_mgmt_bytes,
+                rx_fate_stats[i].frame_inf.frame_content,
+                min(rx_fate_stats[i].frame_inf.frame_len,
+                    MAX_FRAME_LEN_ETHERNET));
+        else
+            ALOGE("Unknown format packet");
+        free (rx_fate_stats[i].frame_inf.frame_content);
+    }
+
+    return WIFI_SUCCESS;
+}
+
 WifiLoggerCommand::WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
 {
