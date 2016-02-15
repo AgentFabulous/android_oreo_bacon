@@ -1800,6 +1800,147 @@ wifi_error write_per_packet_stats_to_rb(hal_info *info, u8 *buf, u16 length)
     return WIFI_SUCCESS;
 }
 
+static wifi_error parse_tx_pkt_fate_stats(hal_info *info, u8 *buf, u16 size)
+{
+    pktdump_hdr *log = (pktdump_hdr *)buf;
+    wifi_tx_report_i *pkt_fate_stats;
+
+    if (info->pkt_fate_stats->n_tx_stats_collected >= MAX_FATE_LOG_LEN) {
+        ALOGD("Only %u events are expected, don't process this event",
+              MAX_FATE_LOG_LEN);
+        return WIFI_SUCCESS;
+    }
+
+    pkt_fate_stats = &info->pkt_fate_stats->tx_fate_stats[
+                                   info->pkt_fate_stats->n_tx_stats_collected];
+
+    pkt_fate_stats->fate = (wifi_tx_packet_fate)log->status;
+    if (log->type == TX_MGMT_PKT)
+        pkt_fate_stats->frame_inf.payload_type = FRAME_TYPE_80211_MGMT;
+    else
+        pkt_fate_stats->frame_inf.payload_type = FRAME_TYPE_ETHERNET_II;
+
+    pkt_fate_stats->frame_inf.driver_timestamp_usec =
+                                            (wifi_tx_packet_fate)log->driver_ts;
+    pkt_fate_stats->frame_inf.firmware_timestamp_usec =
+                                            (wifi_tx_packet_fate)log->fw_ts;
+    pkt_fate_stats->frame_inf.frame_len = size - sizeof(pktdump_hdr);
+    pkt_fate_stats->frame_inf.frame_content =
+             (char *)malloc(pkt_fate_stats->frame_inf.frame_len * sizeof(char));
+    if (pkt_fate_stats->frame_inf.frame_content) {
+        memcpy(pkt_fate_stats->frame_inf.frame_content,
+               buf + sizeof(pktdump_hdr), pkt_fate_stats->frame_inf.frame_len);
+    } else {
+        ALOGE("Failed to allocate mem for Tx frame_content for packet: %d",
+              info->pkt_fate_stats->n_tx_stats_collected);
+        pkt_fate_stats->frame_inf.frame_len = 0;
+    }
+
+    info->pkt_fate_stats->n_tx_stats_collected++;
+
+    return WIFI_SUCCESS;
+}
+
+
+static wifi_error parse_rx_pkt_fate_stats(hal_info *info, u8 *buf, u16 size)
+{
+    pktdump_hdr *log = (pktdump_hdr *)buf;
+    wifi_rx_report_i *pkt_fate_stats;
+
+    if (info->pkt_fate_stats->n_rx_stats_collected >= MAX_FATE_LOG_LEN) {
+        ALOGD("Only %u events are expected, don't process this event",
+              MAX_FATE_LOG_LEN);
+        return WIFI_SUCCESS;
+    }
+
+    pkt_fate_stats = &info->pkt_fate_stats->rx_fate_stats[
+                                   info->pkt_fate_stats->n_rx_stats_collected];
+
+    pkt_fate_stats->fate = (wifi_rx_packet_fate)log->status;
+    if (log->type == RX_MGMT_PKT)
+        pkt_fate_stats->frame_inf.payload_type = FRAME_TYPE_80211_MGMT;
+    else
+        pkt_fate_stats->frame_inf.payload_type = FRAME_TYPE_ETHERNET_II;
+
+    pkt_fate_stats->frame_inf.driver_timestamp_usec =
+                                            (wifi_rx_packet_fate)log->driver_ts;
+    pkt_fate_stats->frame_inf.firmware_timestamp_usec =
+                                            (wifi_rx_packet_fate)log->fw_ts;
+    pkt_fate_stats->frame_inf.frame_len = size - sizeof(pktdump_hdr);
+    pkt_fate_stats->frame_inf.frame_content =
+             (char *)malloc(pkt_fate_stats->frame_inf.frame_len * sizeof(char));
+    if (pkt_fate_stats->frame_inf.frame_content) {
+        memcpy(pkt_fate_stats->frame_inf.frame_content,
+               buf + sizeof(pktdump_hdr), pkt_fate_stats->frame_inf.frame_len);
+    } else {
+        ALOGE("Failed to allocate mem for Rx frame_content for packet: %d",
+              info->pkt_fate_stats->n_rx_stats_collected);
+        pkt_fate_stats->frame_inf.frame_len = 0;
+    }
+
+    info->pkt_fate_stats->n_rx_stats_collected++;
+
+    return WIFI_SUCCESS;
+}
+
+
+static wifi_error trigger_fate_stats(hal_info *info, u8 *buf, u16 size)
+{
+    int i;
+    packet_fate_monitor_info *pkt_fate_stats = info->pkt_fate_stats;
+
+    for (i=0; i<MAX_FATE_LOG_LEN; i++) {
+        if (pkt_fate_stats->tx_fate_stats[i].frame_inf.frame_content) {
+            free (pkt_fate_stats->tx_fate_stats[i].frame_inf.frame_content);
+            pkt_fate_stats->tx_fate_stats[i].frame_inf.frame_content = NULL;
+        }
+
+        if (pkt_fate_stats->rx_fate_stats[i].frame_inf.frame_content) {
+            free (pkt_fate_stats->rx_fate_stats[i].frame_inf.frame_content);
+            pkt_fate_stats->rx_fate_stats[i].frame_inf.frame_content = NULL;
+        }
+    }
+    memset(pkt_fate_stats, 0, sizeof(packet_fate_monitor_info));
+
+    return WIFI_SUCCESS;
+}
+
+
+static wifi_error report_fate_stats(hal_info *info, u8 *buf, u16 size)
+{
+    ALOGI("Fate Tx-Rx: Packet fate stats stop received");
+    return WIFI_SUCCESS;
+}
+
+
+static wifi_error parse_pkt_fate_stats(hal_info *info, u8 *buf, u16 size)
+{
+    pktdump_hdr *hdr = (pktdump_hdr *)buf;
+
+    switch (hdr->type)
+    {
+        case START_MONITOR:
+            trigger_fate_stats(info, buf, size);
+        break;
+        case STOP_MONITOR:
+            report_fate_stats(info, buf, size);
+        break;
+        case TX_MGMT_PKT:
+        case TX_DATA_PKT:
+            parse_tx_pkt_fate_stats(info, buf, size);
+        break;
+        case RX_MGMT_PKT:
+        case RX_DATA_PKT:
+            parse_rx_pkt_fate_stats(info, buf, size);
+        break;
+        default:
+            ALOGE("Unsupported type : %d", hdr->type);
+            return WIFI_ERROR_INVALID_ARGS;
+    }
+    return WIFI_SUCCESS;
+}
+
+
 static wifi_error parse_stats_record(hal_info *info,
                                      wh_pktlog_hdr_t *pkt_stats_header)
 {
@@ -1816,6 +1957,15 @@ static wifi_error parse_stats_record(hal_info *info,
                                     pkt_stats_header->size);
         else
             status = WIFI_SUCCESS;
+    } else if (pkt_stats_header->log_type == PKTLOG_TYPE_PKT_DUMP) {
+        if (info->fate_monitoring_enabled) {
+            status = parse_pkt_fate_stats(info,
+                                          (u8 *)(pkt_stats_header + 1),
+                                          pkt_stats_header->size);
+        } else {
+            ALOGD("Packet fate monitoring is not enabled");
+            status = WIFI_SUCCESS;
+        }
     } else {
         status = parse_tx_stats(info,
                                 (u8 *)(pkt_stats_header + 1),
