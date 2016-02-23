@@ -1180,7 +1180,7 @@ int QCamera2HardwareInterface::openCamera()
     //check if video size 4k x 2k support is enabled
     property_get("persist.camera.4k2k.enable", value, "0");
     enable_4k2k = 1; //atoi(value) > 0 ? 1 : 0;
-    ALOGD("%s: enable_4k2k is %d", __func__, enable_4k2k);
+    //ALOGD("%s: enable_4k2k is %d", __func__, enable_4k2k);
     if (!enable_4k2k) {
        //if the 4kx2k size exists in the supported preview size or
        //supported video size remove it
@@ -1309,6 +1309,79 @@ int QCamera2HardwareInterface::closeCamera()
     return rc;
 }
 
+#define CAM0_PIC_TBL_SIZE 19
+static cam_dimension_t new_pic_sizes_cam0[CAM0_PIC_TBL_SIZE] = {
+    {4208, 3120},
+    {4160, 3120},
+    {4160, 2340},
+    {4000, 3000},
+    {4096, 2160},
+    {3200, 2400},
+    {3200, 1800},
+    {2592, 1944},
+    {2048, 1536},
+    {1920, 1080},
+    {1600, 1200},
+    {1280, 768},
+    {1280, 720},
+    {1024, 768},
+    {800, 600},
+    {800, 480},
+    {720, 480},
+    {640, 480},
+    {320, 240}
+};
+
+#define CAM0_VID_TBL_SIZE 9
+static cam_dimension_t new_vid_sizes_cam0[CAM0_VID_TBL_SIZE] = {
+    {4096, 2160},
+    {3840, 2160},
+    {2560, 1440},
+    {1920, 1080},
+    {1280, 720},
+    {800, 480},
+    {720, 480},
+    {640, 480},
+    {320, 240}
+};
+
+#define CAM0_PRVW_TBL_SIZE 9
+static cam_dimension_t new_prvw_sizes_cam0[CAM0_PRVW_TBL_SIZE] = {
+    {4096, 2160},
+    {3840, 2160},
+    {2560, 1440},
+    {1920, 1080},
+    {1440, 1080},
+    {1280, 720},
+    {720, 480},
+    {640, 480},
+    {320, 240}
+};
+
+#define CAM1_VID_TBL_SIZE 8
+static cam_dimension_t new_vid_sizes_cam1[CAM1_VID_TBL_SIZE] = {
+    {2560, 1440},
+    {1920, 1080},
+    {1280, 720},
+    {864, 480},
+    {800, 480},
+    {720, 480},
+    {640, 480},
+    {320, 240}
+};
+
+#define CAM1_PRVW_TBL_SIZE 8
+static cam_dimension_t new_prvw_sizes_cam1[CAM1_PRVW_TBL_SIZE] = {
+    {2560, 1440},
+    {1920, 1080},
+    {1440, 1080},
+    {1280, 720},
+    {720, 480},
+    {640, 480},
+    {576, 432},
+    {320, 240}
+};
+
 #define DATA_PTR(MEM_OBJ,INDEX) MEM_OBJ->getPtr( INDEX )
 
 /*===========================================================================
@@ -1327,6 +1400,7 @@ int QCamera2HardwareInterface::initCapabilities(int cameraId,mm_camera_vtbl_t *c
 {
     int rc = NO_ERROR;
     QCameraHeapMemory *capabilityHeap = NULL;
+    int i, x;
 
     /* Allocate memory for capability buffer */
     capabilityHeap = new QCameraHeapMemory(QCAMERA_ION_USE_CACHE);
@@ -1360,6 +1434,49 @@ int QCamera2HardwareInterface::initCapabilities(int cameraId,mm_camera_vtbl_t *c
     }
     memcpy(gCamCapability[cameraId], DATA_PTR(capabilityHeap,0),
                                         sizeof(cam_capability_t));
+
+    // Inject modified video/preview size tables
+    if (gCamCapability[cameraId]->position == CAM_POSITION_BACK) {
+        for (i = 0; i < CAM0_PIC_TBL_SIZE; i++)
+            gCamCapability[cameraId]->picture_sizes_tbl[i] = new_pic_sizes_cam0[i];
+        gCamCapability[cameraId]->picture_sizes_tbl_cnt = CAM0_PIC_TBL_SIZE;
+
+        for (i = 0; i < CAM0_VID_TBL_SIZE; i++)
+            gCamCapability[cameraId]->video_sizes_tbl[i] = new_vid_sizes_cam0[i];
+        gCamCapability[cameraId]->video_sizes_tbl_cnt = CAM0_VID_TBL_SIZE;
+
+        for (i = 0; i < CAM0_VID_TBL_SIZE; i++)
+            gCamCapability[cameraId]->livesnapshot_sizes_tbl[i] = new_vid_sizes_cam0[i];
+        gCamCapability[cameraId]->livesnapshot_sizes_tbl_cnt = CAM0_VID_TBL_SIZE;
+
+        for (i = 0; i < CAM0_PRVW_TBL_SIZE; i++)
+            gCamCapability[cameraId]->preview_sizes_tbl[i] = new_prvw_sizes_cam0[i];
+        gCamCapability[cameraId]->preview_sizes_tbl_cnt = CAM0_PRVW_TBL_SIZE;
+
+        // Add 90FPS HFR mode up to 720p
+        x = CAM_HFR_MODE_90FPS;
+        gCamCapability[cameraId]->hfr_tbl[x].mode = (cam_hfr_mode_t)x;
+        gCamCapability[cameraId]->hfr_tbl[x].dim = (cam_dimension_t){1280, 720};
+        gCamCapability[cameraId]->hfr_tbl[x].frame_skip = 0;
+        gCamCapability[cameraId]->hfr_tbl[x].livesnapshot_sizes_tbl_cnt =
+                                        gCamCapability[cameraId]->hfr_tbl[CAM_HFR_MODE_120FPS].livesnapshot_sizes_tbl_cnt;
+        for (i = 0; i < gCamCapability[cameraId]->hfr_tbl[x].livesnapshot_sizes_tbl_cnt; i++)
+            gCamCapability[cameraId]->hfr_tbl[x].livesnapshot_sizes_tbl[i] =
+                                        gCamCapability[cameraId]->hfr_tbl[CAM_HFR_MODE_60FPS].livesnapshot_sizes_tbl[i];
+        gCamCapability[cameraId]->hfr_tbl_cnt = 3;
+    } else if (gCamCapability[cameraId]->position == CAM_POSITION_FRONT) {
+        for (i = 0; i < CAM1_VID_TBL_SIZE; i++)
+            gCamCapability[cameraId]->video_sizes_tbl[i] = new_vid_sizes_cam1[i];
+        gCamCapability[cameraId]->video_sizes_tbl_cnt = CAM1_VID_TBL_SIZE;
+
+        for (i = 0; i < CAM1_PRVW_TBL_SIZE; i++)
+            gCamCapability[cameraId]->preview_sizes_tbl[i] = new_prvw_sizes_cam1[i];
+        gCamCapability[cameraId]->preview_sizes_tbl_cnt = CAM1_PRVW_TBL_SIZE;
+
+        for (i = 0; i < CAM1_VID_TBL_SIZE; i++)
+            gCamCapability[cameraId]->livesnapshot_sizes_tbl[i] = new_vid_sizes_cam1[i];
+        gCamCapability[cameraId]->livesnapshot_sizes_tbl_cnt = CAM1_VID_TBL_SIZE;
+    }
 
     //copy the preview sizes and video sizes lists because they
     //might be changed later
