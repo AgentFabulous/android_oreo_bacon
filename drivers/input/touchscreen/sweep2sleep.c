@@ -1,9 +1,9 @@
 /*
  * Sweep2Wake driver for OnePlus One Bacon with multiple gestures support
  * 
- * Author: andip71, 10.12.2014
+ * Author: andip71, 24.02.2016
  * 
- * Version 1.0.0
+ * Version 1.1.0
  *
  * Credits for initial implementation to Dennis Rassmann <showp1984@gmail.com>
  * 
@@ -29,6 +29,7 @@
 #include <linux/input.h>
 #include <linux/lcd_notify.h>
 #include <linux/hrtimer.h>
+#include <linux/jiffies.h>
 
 
 /*****************************************/
@@ -37,8 +38,8 @@
 
 #define DRIVER_AUTHOR "andip71 (Lord Boeffla)"
 #define DRIVER_DESCRIPTION "Sweep2sleep for OnePlus One bacon"
-#define DRIVER_VERSION "1.0.0"
-#define LOGTAG "s2s: "
+#define DRIVER_VERSION "1.1.0"
+#define LOGTAG "Boeffla s2s: "
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
@@ -50,10 +51,31 @@ MODULE_LICENSE("GPLv2");
 /* general defaults */
 /*****************************************/
 
-#define BANKS_MAX				4
 #define STATIC_BANKS			2
 #define DYNAMIC_BANKS			1
+#define BANKS_MAX				4
+
 #define S2S_Y_BUTTONLIMIT     	1900
+
+#define STATUSBAR_Y_MIN			0
+#define STATUSBAR_Y_MAX			80
+#define STATUSBAR_DT_TIME_MS	800
+
+#define BIT_STATIC_GESTURE_1	0x0001
+#define BIT_STATIC_GESTURE_2	0x0002
+#define BIT_STATIC_GESTURE_3	0x0004
+#define BIT_STATIC_GESTURE_4	0x0008
+#define BIT_DYNAMIC_GESTURE_1	0x0010
+#define BIT_DYNAMIC_GESTURE_2	0x0020
+#define BIT_DYNAMIC_GESTURE_3	0x0040
+#define BIT_DYNAMIC_GESTURE_4	0x0080
+#define BIT_STATUSBAR_DTSLEEP	0x0100
+
+#define IMPLEMENTED_FUNCTIONS	BIT_STATIC_GESTURE_1 +\
+								BIT_STATIC_GESTURE_2 +\
+								BIT_DYNAMIC_GESTURE_1
+								
+#define INPUT_DEV_NAME			"synaptics-rmi-ts"
 
 
 // Gestures - static definitions
@@ -108,6 +130,7 @@ static int debug = 0;
 static int pwrkey_dur = 60;
 static int touch_x = 0;
 static int touch_y = 0;
+static int statusBarWithinTime = 0;
 
 static bool touch_x_called = false;
 static bool touch_y_called = false;
@@ -133,6 +156,7 @@ static struct input_dev * sweep2sleep_pwrdev;
 static DEFINE_MUTEX(pwrkeyworklock);
 static struct workqueue_struct *s2s_input_wq;
 static struct work_struct s2s_input_work;
+static struct delayed_work statusBarTimer;
 
 
 /*****************************************/
@@ -168,6 +192,14 @@ static void sweep2sleep_pwrtrigger(void)
 }
 
 
+// status bar timer work
+static void statusBarTimer_work(struct work_struct *work)
+{
+	// reset timer active flag
+	statusBarWithinTime = 0;
+}
+
+
 /* Reset sweep2sleep */
 static void sweep2sleep_reset(void) 
 {
@@ -188,6 +220,32 @@ static void sweep2sleep_reset(void)
 		dynamic_barrier2[i] = false;
 	}
 
+}
+
+
+/* Handling for double tap on status bar */
+static void doubleTapStatusBar(int x, int y)
+{
+	if (debug)
+		pr_info(LOGTAG"doubleTapStatusBar x: %d, y: %d, timer flag: %d\n", x, y, statusBarWithinTime);
+	
+	// if we are not on status bar or screen is off, exit
+	if ((y < STATUSBAR_Y_MIN) || (y > STATUSBAR_Y_MAX) || (scr_suspended))
+		return;
+	
+	// if last tap was still within the active time limit, switch off
+	// screen and reset the flag; otherwise restart timer
+	if (statusBarWithinTime)
+	{
+		sweep2sleep_pwrtrigger();
+		statusBarWithinTime = 0;
+	}
+	else
+	{
+		cancel_delayed_work_sync(&statusBarTimer);
+		schedule_delayed_work(&statusBarTimer, msecs_to_jiffies(STATUSBAR_DT_TIME_MS));
+		statusBarWithinTime = 1;
+	}
 }
 
 
@@ -326,6 +384,10 @@ static void s2s_input_event(struct input_handle *handle, unsigned int type,
 		if (debug)
 			pr_info(LOGTAG"sweep ABS_MT_TRACKING_ID\n");
 		
+		// double tap to status bar to sleep
+		if (s2s & BIT_STATUSBAR_DTSLEEP)
+			doubleTapStatusBar(touch_x, touch_y);
+		
 		// only reset due to finger taken off when not on soft keys
 		// (on soft keys it is normal as it interrupts the touch screen area)
 		if (touch_y < S2S_Y_BUTTONLIMIT)
@@ -360,7 +422,7 @@ static void s2s_input_event(struct input_handle *handle, unsigned int type,
 /* input filter function */
 static int input_dev_filter(struct input_dev *dev) 
 {
-	if (strstr(dev->name, "touch") || strstr(dev->name, "synaptics-rmi-ts")) 
+	if (strstr(dev->name, "touch") || strstr(dev->name, INPUT_DEV_NAME)) 
 		return 0;
 
 	return 1;
@@ -473,9 +535,12 @@ static ssize_t sweep2sleep_store(struct device *dev,
 
 	if (ret != 1)
 		return -EINVAL;
+
+	// validate against implemented functions
+	val &= IMPLEMENTED_FUNCTIONS;
 		
 	// store if valid data
-	if (((val >= 0x00) && (val <= 0xFF)))
+	if (((val >= 0x00) && (val <= 0xFFFF)))
 	{
 		s2s = val;
 
@@ -492,6 +557,16 @@ static ssize_t sweep2sleep_store(struct device *dev,
 
 static DEVICE_ATTR(sweep2sleep, (S_IWUSR|S_IRUGO),
 	sweep2sleep_show, sweep2sleep_store);
+
+
+static ssize_t sweep2sleep_implemented_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", IMPLEMENTED_FUNCTIONS);
+}
+
+static DEVICE_ATTR(sweep2sleep_implemented, (S_IWUSR|S_IRUGO),
+	sweep2sleep_implemented_show, NULL);
 
 
 static ssize_t debug_show(struct device *dev,
@@ -609,6 +684,16 @@ static int __init sweep2sleep_init(void)
 		pr_warn(LOGTAG"%s: sysfs_create_file failed for sweep2sleep_version\n", __func__);
 		goto err4;
 	}
+
+	rc = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2sleep_implemented.attr);
+	if (rc) 
+	{
+		pr_warn(LOGTAG"%s: sysfs_create_file failed for sweep2sleep_implemented\n", __func__);
+		goto err4;
+	}
+
+	// Initialize delayed work for status bar timer
+	INIT_DELAYED_WORK_DEFERRABLE(&statusBarTimer, statusBarTimer_work);
 	
 	return 0;
 
