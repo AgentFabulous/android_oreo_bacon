@@ -20,9 +20,6 @@ ifeq ($(BOARD_HAVE_BLUETOOTH_QCOM),true)
 
 include $(CLEAR_VARS)
 
-# b/24172208 many files do not compile with clang/llvm yet.
-LOCAL_CLANG := false
-
 BDROID_DIR:= system/bt
 
 LOCAL_SRC_FILES := \

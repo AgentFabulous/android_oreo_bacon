@@ -1031,7 +1031,7 @@ static void ssr_cleanup(void) {
 
     if ((btSocType = get_bt_soc_type()) < 0) {
         ALOGE("%s: Failed to detect BT SOC Type", __FUNCTION__);
-        return -1;
+        return;
     }
 
     if (btSocType == BT_SOC_ROME) {
