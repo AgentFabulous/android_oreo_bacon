@@ -314,7 +314,7 @@ cleanup:
 /**
  * Get available WiFi channel to enable RTT responder on.
  */
-wifi_error wifi_rtt_get_available_channnel(wifi_interface_handle iface,
+wifi_error wifi_rtt_get_available_channel(wifi_interface_handle iface,
                                            wifi_channel_info* channel)
 {
     int ret = WIFI_SUCCESS;
