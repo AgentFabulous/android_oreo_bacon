@@ -267,7 +267,7 @@ enum rb_status rb_write (void *ctx, u8 *buf, size_t length, int overwrite,
                         rbc->rd_buf_no++;
                         if (rbc->rd_buf_no == rbc->max_num_bufs) {
                             rbc->rd_buf_no = 0;
-                            ALOGD("Pushing read to the start of ring buffer");
+                            ALOGV("Pushing read to the start of ring buffer");
                         }
                         /* the previous buffer might have little more empty room
                          * after overwriting the remaining bytes
@@ -295,7 +295,7 @@ enum rb_status rb_write (void *ctx, u8 *buf, size_t length, int overwrite,
             rbc->bufs[rbc->wr_buf_no].last_wr_index = rbc->cur_wr_buf_idx;
             rbc->wr_buf_no++;
             if (rbc->wr_buf_no == rbc->max_num_bufs) {
-                ALOGD("Write rolling over to the start of ring buffer");
+                ALOGV("Write rolling over to the start of ring buffer");
                 rbc->wr_buf_no = 0;
             }
             /* Reset the write index to zero as this is a new buffer */
@@ -402,7 +402,7 @@ size_t rb_read (void *ctx, u8 *buf, size_t max_length)
             }
             rbc->rd_buf_no++;
             if (rbc->rd_buf_no == rbc->max_num_bufs) {
-                ALOGD("Read rolling over to the start of ring buffer");
+                ALOGV("Read rolling over to the start of ring buffer");
                 rbc->rd_buf_no = 0;
             }
             /* Reset the read index as this is a new buffer */
@@ -497,7 +497,7 @@ u8 *rb_get_read_buf(void *ctx, size_t *length)
         rbc->bufs[rbc->rd_buf_no].full = 0;
         rbc->rd_buf_no++;
         if (rbc->rd_buf_no == rbc->max_num_bufs) {
-            ALOGD("Read rolling over to the start of ring buffer");
+            ALOGV("Read rolling over to the start of ring buffer");
             rbc->rd_buf_no = 0;
         }
     } else {
