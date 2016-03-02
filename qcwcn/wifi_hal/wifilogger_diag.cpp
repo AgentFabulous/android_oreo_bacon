@@ -1831,7 +1831,7 @@ static wifi_error parse_tx_pkt_fate_stats(hal_info *info, u8 *buf, u16 size)
         memcpy(pkt_fate_stats->frame_inf.frame_content,
                buf + sizeof(pktdump_hdr), pkt_fate_stats->frame_inf.frame_len);
     } else {
-        ALOGE("Failed to allocate mem for Tx frame_content for packet: %d",
+        ALOGE("Failed to allocate mem for Tx frame_content for packet: %zu",
               info->pkt_fate_stats->n_tx_stats_collected);
         pkt_fate_stats->frame_inf.frame_len = 0;
     }
@@ -1873,7 +1873,7 @@ static wifi_error parse_rx_pkt_fate_stats(hal_info *info, u8 *buf, u16 size)
         memcpy(pkt_fate_stats->frame_inf.frame_content,
                buf + sizeof(pktdump_hdr), pkt_fate_stats->frame_inf.frame_len);
     } else {
-        ALOGE("Failed to allocate mem for Rx frame_content for packet: %d",
+        ALOGE("Failed to allocate mem for Rx frame_content for packet: %zu",
               info->pkt_fate_stats->n_rx_stats_collected);
         pkt_fate_stats->frame_inf.frame_len = 0;
     }
