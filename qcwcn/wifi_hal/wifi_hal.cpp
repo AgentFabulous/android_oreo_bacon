@@ -1269,15 +1269,15 @@ static wifi_error wifi_set_packet_filter(wifi_interface_handle iface,
         return WIFI_ERROR_INVALID_ARGS;
     }
 
-    ret = initialize_vendor_cmd(iface, get_requestid(),
-                                QCA_NL80211_VENDOR_SUBCMD_PACKET_FILTER,
-                                &vCommand);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: Initialization failed", __FUNCTION__);
-        return (wifi_error)ret;
-    }
-
     do {
+        ret = initialize_vendor_cmd(iface, get_requestid(),
+                                    QCA_NL80211_VENDOR_SUBCMD_PACKET_FILTER,
+                                    &vCommand);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: Initialization failed", __FUNCTION__);
+            return (wifi_error)ret;
+        }
+
         /* Add the vendor specific attributes for the NL command. */
         nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
         if (!nlData)
@@ -1317,11 +1317,16 @@ static wifi_error wifi_set_packet_filter(wifi_interface_handle iface,
             goto cleanup;
         }
 
+        /* destroy the object after sending each fragment to driver */
+        delete vCommand;
+        vCommand = NULL;
+
         current_offset += min(info->firmware_bus_max_size, len);
     } while (current_offset < len);
 
 cleanup:
-    delete vCommand;
+    if (vCommand)
+        delete vCommand;
     return (wifi_error)ret;
 }
 
