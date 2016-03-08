@@ -132,7 +132,7 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 			else if (os_strcasecmp(cmd, "P2P_SET_NOA") == 0)
 				wpa_printf(MSG_DEBUG, "%s: P2P: %s ", __func__, buf);
 			else
-				wpa_printf(MSG_DEBUG, "%s %s len = %d, %d", __func__, buf, ret, buf_len);
+				wpa_printf(MSG_DEBUG, "%s %s len = %d, %lu", __func__, buf, ret, buf_len);
 			wpa_driver_notify_country_change(drv->ctx, cmd);
 		}
 	}
