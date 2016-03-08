@@ -135,6 +135,8 @@ typedef struct hal_info_s {
     /* mutex for the alert_handler access*/
     pthread_mutex_t ah_lock;
     u32 firmware_bus_max_size;
+    bool fate_monitoring_enabled;
+    packet_fate_monitor_info *pkt_fate_stats;
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);
