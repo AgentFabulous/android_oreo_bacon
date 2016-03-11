@@ -331,8 +331,6 @@ const char QCameraParameters::KEY_SELECTED_AUTO_SCENE[] = "selected-auto-scene";
 static const char* portrait = "portrait";
 static const char* landscape = "landscape";
 
-static int32_t mExposureTime = 0;
-
 const cam_dimension_t QCameraParameters::THUMBNAIL_SIZES_MAP[] = {
     { 512, 288 }, //1.777778
     { 480, 288 }, //1.666667
@@ -658,7 +656,8 @@ QCameraParameters::QCameraParameters()
       m_bOptiZoomOn(false),
       m_bHfrMode(false),
       mHfrMode(CAM_HFR_MODE_OFF),
-      m_bDisplayFrame(true)
+      m_bDisplayFrame(true),
+      mExposureTime(0)
 {
     char value[PROPERTY_VALUE_MAX];
 #ifndef DISABLE_DEBUG_LOG
@@ -735,7 +734,8 @@ QCameraParameters::QCameraParameters(const String8 &params)
     m_bChromaFlashOn(false),
     m_bOptiZoomOn(false),
     m_bHfrMode(false),
-    mHfrMode(CAM_HFR_MODE_OFF)
+    mHfrMode(CAM_HFR_MODE_OFF),
+    mExposureTime(0)
 {
     memset(&m_LiveSnapshotSize, 0, sizeof(m_LiveSnapshotSize));
     m_pTorch = NULL;

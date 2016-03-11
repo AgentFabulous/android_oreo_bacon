@@ -840,6 +840,7 @@ private:
     bool m_bHfrMode;
     int32_t mHfrMode;
     bool m_bDisplayFrame;
+    int32_t mExposureTime;
 };
 
 }; // namespace qcamera
