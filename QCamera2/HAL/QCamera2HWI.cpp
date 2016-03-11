@@ -1435,6 +1435,11 @@ int QCamera2HardwareInterface::initCapabilities(int cameraId,mm_camera_vtbl_t *c
     memcpy(gCamCapability[cameraId], DATA_PTR(capabilityHeap,0),
                                         sizeof(cam_capability_t));
 
+    // Re-order HDR exposure sequence to prevent screen flash on last frame
+    gCamCapability[cameraId]->hdr_bracketing_setting.exp_val.values[0] = -6;
+    gCamCapability[cameraId]->hdr_bracketing_setting.exp_val.values[1] = 6;
+    gCamCapability[cameraId]->hdr_bracketing_setting.exp_val.values[2] = 0;
+
     // Inject modified video/preview size tables
     if (gCamCapability[cameraId]->position == CAM_POSITION_BACK) {
         for (i = 0; i < CAM0_PIC_TBL_SIZE; i++)
