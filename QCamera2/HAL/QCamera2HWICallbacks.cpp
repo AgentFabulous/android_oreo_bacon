@@ -975,6 +975,55 @@ void QCamera2HardwareInterface::snapshot_raw_stream_cb_routine(mm_camera_super_b
     ALOGD("[KPI Perf] %s : END", __func__);
 }
 
+/***** Antishake algorithm (using ISO) *****/
+#define EXP_TIME_HIGH_THRESH 0.033333f // Aim below this exposure time
+#define EXP_TIME_LOW_THRESH 0.016666f // Aim at or above this exposure time
+
+void QCamera2HardwareInterface::processAntishakeAlgo(QCamera2HardwareInterface *pme,
+                                                    float curr_exp_time,
+                                                    int32_t curr_iso_value)
+{
+    /* Don't process antishake in camcorder mode */
+    if (!pme->mParameters.getRecordingHintValue()) {
+        int32_t old_iso = pme->mParameters.getPrvwIsoMode();
+        int32_t new_iso;
+
+        if (curr_exp_time >= EXP_TIME_HIGH_THRESH) {
+            float calc_iso = curr_exp_time * (float)curr_iso_value / EXP_TIME_HIGH_THRESH;
+
+            if (calc_iso < ISO_VAL_200 && (old_iso != ISO_VAL_200))
+                new_iso = CAM_ISO_MODE_200;
+            else if (calc_iso < ISO_VAL_400 && (old_iso != ISO_VAL_400))
+                new_iso = CAM_ISO_MODE_400;
+            else if (calc_iso < ISO_VAL_800 && (old_iso != ISO_VAL_800))
+                new_iso = CAM_ISO_MODE_800;
+            else if (calc_iso < ISO_VAL_1600 && (old_iso != ISO_VAL_1600))
+                new_iso = CAM_ISO_MODE_1600;
+            else if (calc_iso < ISO_VAL_3200 && (old_iso != ISO_VAL_3200))
+                new_iso = CAM_ISO_MODE_3200;
+            else
+                new_iso = CAM_ISO_MODE_AUTO;
+
+            pme->mParameters.setPrvwIsoMode(new_iso);
+        } else if (curr_exp_time < EXP_TIME_LOW_THRESH) {
+            float calc_iso = curr_exp_time * (float)curr_iso_value / EXP_TIME_LOW_THRESH;
+
+            if (calc_iso > ISO_VAL_1600 && (old_iso != ISO_VAL_1600))
+                new_iso = CAM_ISO_MODE_1600;
+            else if (calc_iso > ISO_VAL_800 && (old_iso != ISO_VAL_800))
+                new_iso = CAM_ISO_MODE_800;
+            else if (calc_iso > ISO_VAL_400 && (old_iso != ISO_VAL_400))
+                new_iso = CAM_ISO_MODE_400;
+            else if (calc_iso > ISO_VAL_200 && (old_iso != ISO_VAL_200))
+                new_iso = CAM_ISO_MODE_200;
+            else
+                new_iso = CAM_ISO_MODE_AUTO;
+
+            pme->mParameters.setPrvwIsoMode(new_iso);
+        }
+    }
+}
+
 /*===========================================================================
  * FUNCTION   : metadata_stream_cb_routine
  *
@@ -1157,6 +1206,11 @@ void QCamera2HardwareInterface::metadata_stream_cb_routine(mm_camera_super_buf_t
     if(pMetaData->is_ae_params_valid) {
         pme->mExifParams.ae_params = pMetaData->ae_params;
         pme->mFlashNeeded = pMetaData->ae_params.flash_needed;
+
+        /* Antishake algorithm (using ISO) */
+        pme->processAntishakeAlgo(pme,
+                            pMetaData->ae_params.exp_time,
+                            pMetaData->ae_params.iso_value);
     }
     if(pMetaData->is_awb_params_valid) {
         pme->mExifParams.awb_params = pMetaData->awb_params;

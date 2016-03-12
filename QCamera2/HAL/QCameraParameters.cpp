@@ -657,7 +657,9 @@ QCameraParameters::QCameraParameters()
       m_bHfrMode(false),
       mHfrMode(CAM_HFR_MODE_OFF),
       m_bDisplayFrame(true),
-      mExposureTime(0)
+      mExposureTime(0),
+      mPrvwIsoMode(0),
+      mManualIso(CAM_ISO_MODE_AUTO)
 {
     char value[PROPERTY_VALUE_MAX];
 #ifndef DISABLE_DEBUG_LOG
@@ -735,7 +737,9 @@ QCameraParameters::QCameraParameters(const String8 &params)
     m_bOptiZoomOn(false),
     m_bHfrMode(false),
     mHfrMode(CAM_HFR_MODE_OFF),
-    mExposureTime(0)
+    mExposureTime(0),
+    mPrvwIsoMode(0),
+    mManualIso(CAM_ISO_MODE_AUTO)
 {
     memset(&m_LiveSnapshotSize, 0, sizeof(m_LiveSnapshotSize));
     m_pTorch = NULL;
@@ -3653,6 +3657,87 @@ int32_t QCameraParameters::setMobicat(const QCameraParameters& )
     return ret;
 }
 
+void QCameraParameters::setPrvwIsoMode(int32_t isoValue)
+{
+    int32_t expTimeUs, zslValue;
+
+    // Anti-shake algo doesn't work when ZSL is off
+    if (!m_bZslMode)
+        isoValue = CAM_ISO_MODE_AUTO;
+
+    // Place precedence on user-set ISO
+    if (mManualIso != CAM_ISO_MODE_AUTO)
+        isoValue = mManualIso;
+
+    if (mPrvwIsoMode == isoValue)
+        return;
+
+    mPrvwIsoMode = isoValue;
+
+    // Our proprietary libraries have weird conditions regarding
+    // manual ISO, so the following steps are needed in order to set
+    // a manual ISO
+
+    // First, ZSL needs to be turned off from backend if it's enabled
+    if (m_bZslMode) {
+        zslValue = 0;
+        AddSetParmEntryToBatch(m_pParamBuf,
+                                  CAM_INTF_PARM_ZSL_MODE,
+                                  sizeof(zslValue),
+                                  &zslValue);
+    }
+
+    // Next, send non-zero, valid manual exposure time to backend
+    // in order to halt the auto-exposure algorithm
+    expTimeUs = m_pCapability->min_exposure_time;
+    AddSetParmEntryToBatch(m_pParamBuf,
+                              CAM_INTF_PARM_EXPOSURE_TIME,
+                              sizeof(expTimeUs),
+                              &expTimeUs);
+
+    // Next, send manual ISO setting to backend. Now that the
+    // AE algorithm is halted, the ISO setting will not be ignored
+    AddSetParmEntryToBatch(m_pParamBuf,
+                              CAM_INTF_PARM_ISO,
+                              sizeof(isoValue),
+                              &isoValue);
+
+    // Next, restore user-set manual exposure time
+    AddSetParmEntryToBatch(m_pParamBuf,
+                              CAM_INTF_PARM_EXPOSURE_TIME,
+                              sizeof(mExposureTime),
+                              &mExposureTime);
+
+    // Finally, re-enable ZSL if it was originally turned on
+    if (m_bZslMode) {
+        zslValue = 1;
+        AddSetParmEntryToBatch(m_pParamBuf,
+                                  CAM_INTF_PARM_ZSL_MODE,
+                                  sizeof(zslValue),
+                                  &zslValue);
+    }
+
+    commitParameters();
+}
+
+int32_t QCameraParameters::getPrvwIsoMode()
+{
+    if (mPrvwIsoMode == CAM_ISO_MODE_100)
+        return ISO_VAL_100;
+    else if (mPrvwIsoMode == CAM_ISO_MODE_200)
+        return ISO_VAL_200;
+    else if (mPrvwIsoMode == CAM_ISO_MODE_400)
+        return ISO_VAL_400;
+    else if (mPrvwIsoMode == CAM_ISO_MODE_800)
+        return ISO_VAL_800;
+    else if (mPrvwIsoMode == CAM_ISO_MODE_1600)
+        return ISO_VAL_1600;
+    else if (mPrvwIsoMode == CAM_ISO_MODE_3200)
+        return ISO_VAL_3200;
+    else
+        return ISO_VAL_AUTO;
+}
+
 /*===========================================================================
  * FUNCTION   : updateParameters
  *
@@ -5212,6 +5297,8 @@ int32_t  QCameraParameters::setISOValue(const char *isoValue)
         if (value != NAME_NOT_FOUND) {
             int32_t expTimeUs;
             int32_t zslValue;
+
+            mManualIso = value;
 
             ALOGV("%s: Setting ISO value %s", __func__, isoValue);
             updateParamEntry(KEY_QC_ISO_MODE, isoValue);
