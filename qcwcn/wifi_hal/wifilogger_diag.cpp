@@ -1831,7 +1831,7 @@ static wifi_error parse_tx_pkt_fate_stats(hal_info *info, u8 *buf, u16 size)
         memcpy(pkt_fate_stats->frame_inf.frame_content,
                buf + sizeof(pktdump_hdr), pkt_fate_stats->frame_inf.frame_len);
     } else {
-        ALOGE("Failed to allocate mem for Tx frame_content for packet: %d",
+        ALOGE("Failed to allocate mem for Tx frame_content for packet: %zu",
               info->pkt_fate_stats->n_tx_stats_collected);
         pkt_fate_stats->frame_inf.frame_len = 0;
     }
@@ -1873,7 +1873,7 @@ static wifi_error parse_rx_pkt_fate_stats(hal_info *info, u8 *buf, u16 size)
         memcpy(pkt_fate_stats->frame_inf.frame_content,
                buf + sizeof(pktdump_hdr), pkt_fate_stats->frame_inf.frame_len);
     } else {
-        ALOGE("Failed to allocate mem for Rx frame_content for packet: %d",
+        ALOGE("Failed to allocate mem for Rx frame_content for packet: %zu",
               info->pkt_fate_stats->n_rx_stats_collected);
         pkt_fate_stats->frame_inf.frame_len = 0;
     }
@@ -2051,8 +2051,9 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
     /* Check nlmsg_type also to avoid processing unintended msgs */
     if (wnl->nlh.nlmsg_type == ANI_NL_MSG_PUMAC) {
         if ((wnl->nlh.nlmsg_len <= sizeof(tAniNlHdr)) ||
-            (wnl->nlh.nlmsg_len < (sizeof(tAniNlHdr) + wnl->wmsg.length))) {
-            ALOGE("Received message with insufficent length: %d", wnl->nlh.nlmsg_len);
+            (wnl->nlh.nlmsg_len < (sizeof(tAniNlHdr) + ntohs(wnl->wmsg.length)))) {
+            ALOGE("Received UMAC message with insufficent length: %d",
+                  wnl->nlh.nlmsg_len);
             return WIFI_ERROR_UNKNOWN;
         }
         if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_EVENT_LOG_TYPE) {
@@ -2124,7 +2125,8 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
     } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_LOG) {
         if ((wnl->nlh.nlmsg_len <= sizeof(tAniNlHdr)) ||
             (wnl->nlh.nlmsg_len < (sizeof(tAniNlHdr) + wnl->wmsg.length))) {
-            ALOGE("Received message with insufficent length: %d", wnl->nlh.nlmsg_len);
+            ALOGE("Received LOG message with insufficent length: %d",
+                  wnl->nlh.nlmsg_len);
             return WIFI_ERROR_UNKNOWN;
         }
         if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_PRINT_TYPE) {
@@ -2142,7 +2144,8 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
         if ((wnl->nlh.nlmsg_len <= NLMSG_HDRLEN + sizeof(fw_event_hdr_t)) ||
             (wnl->nlh.nlmsg_len < (NLMSG_HDRLEN + sizeof(fw_event_hdr_t) +
                                     event_hdr->length))) {
-            ALOGE("Received message with insufficent length: %d", wnl->nlh.nlmsg_len);
+            ALOGE("Received CNSS_DIAG message with insufficent length: %d",
+                  wnl->nlh.nlmsg_len);
             return WIFI_ERROR_UNKNOWN;
         }
         diag_fw_type = event_hdr->diag_type;
