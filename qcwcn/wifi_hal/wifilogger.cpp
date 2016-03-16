@@ -686,10 +686,12 @@ wifi_error wifi_get_tx_pkt_fates(wifi_interface_handle iface,
                 tx_report_bufs[i].frame_inf.frame_content.ieee_80211_mgmt_bytes,
                 tx_fate_stats[i].frame_inf.frame_content,
                 min(tx_fate_stats[i].frame_inf.frame_len,
-                    MAX_FRAME_LEN_ETHERNET));
+                    MAX_FRAME_LEN_80211_MGMT));
         else
-            ALOGE("Unknown format packet");
-        free (tx_fate_stats[i].frame_inf.frame_content);
+            /* Currently framework is interested only two types(
+             * FRAME_TYPE_ETHERNET_II and FRAME_TYPE_80211_MGMT) of packets, so
+             * ignore the all other types of packets received from driver */
+            ALOGI("Unknown format packet");
     }
 
     return WIFI_SUCCESS;
@@ -750,10 +752,12 @@ wifi_error wifi_get_rx_pkt_fates(wifi_interface_handle iface,
                 rx_report_bufs[i].frame_inf.frame_content.ieee_80211_mgmt_bytes,
                 rx_fate_stats[i].frame_inf.frame_content,
                 min(rx_fate_stats[i].frame_inf.frame_len,
-                    MAX_FRAME_LEN_ETHERNET));
+                    MAX_FRAME_LEN_80211_MGMT));
         else
-            ALOGE("Unknown format packet");
-        free (rx_fate_stats[i].frame_inf.frame_content);
+            /* Currently framework is interested only two types(
+             * FRAME_TYPE_ETHERNET_II and FRAME_TYPE_80211_MGMT) of packets, so
+             * ignore the all other types of packets received from driver */
+            ALOGI("Unknown format packet");
     }
 
     return WIFI_SUCCESS;
