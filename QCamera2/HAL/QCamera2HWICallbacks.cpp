@@ -983,44 +983,46 @@ void QCamera2HardwareInterface::processAntishakeAlgo(QCamera2HardwareInterface *
                                                     float curr_exp_time,
                                                     int32_t curr_iso_value)
 {
+    int32_t new_iso, old_iso;
+
     /* Don't process antishake in camcorder mode */
-    if (!pme->mParameters.getRecordingHintValue()) {
-        int32_t old_iso = pme->mParameters.getPrvwIsoMode();
-        int32_t new_iso;
+    if (pme->mParameters.getRecordingHintValue())
+        return;
 
-        if (curr_exp_time >= EXP_TIME_HIGH_THRESH) {
-            float calc_iso = curr_exp_time * (float)curr_iso_value / EXP_TIME_HIGH_THRESH;
+    old_iso = pme->mParameters.getPrvwIsoMode();
 
-            if (calc_iso < ISO_VAL_200 && (old_iso != ISO_VAL_200))
-                new_iso = CAM_ISO_MODE_200;
-            else if (calc_iso < ISO_VAL_400 && (old_iso != ISO_VAL_400))
-                new_iso = CAM_ISO_MODE_400;
-            else if (calc_iso < ISO_VAL_800 && (old_iso != ISO_VAL_800))
-                new_iso = CAM_ISO_MODE_800;
-            else if (calc_iso < ISO_VAL_1600 && (old_iso != ISO_VAL_1600))
-                new_iso = CAM_ISO_MODE_1600;
-            else if (calc_iso < ISO_VAL_3200 && (old_iso != ISO_VAL_3200))
-                new_iso = CAM_ISO_MODE_3200;
-            else
-                new_iso = CAM_ISO_MODE_AUTO;
+    if (curr_exp_time >= EXP_TIME_HIGH_THRESH) {
+        float calc_iso = curr_exp_time * (float)curr_iso_value / EXP_TIME_HIGH_THRESH;
 
-            pme->mParameters.setPrvwIsoMode(new_iso);
-        } else if (curr_exp_time < EXP_TIME_LOW_THRESH) {
-            float calc_iso = curr_exp_time * (float)curr_iso_value / EXP_TIME_LOW_THRESH;
+        if (calc_iso < ISO_VAL_200 && (old_iso != ISO_VAL_200))
+            new_iso = CAM_ISO_MODE_200;
+        else if (calc_iso < ISO_VAL_400 && (old_iso != ISO_VAL_400))
+            new_iso = CAM_ISO_MODE_400;
+        else if (calc_iso < ISO_VAL_800 && (old_iso != ISO_VAL_800))
+            new_iso = CAM_ISO_MODE_800;
+        else if (calc_iso < ISO_VAL_1600 && (old_iso != ISO_VAL_1600))
+            new_iso = CAM_ISO_MODE_1600;
+        else if (calc_iso < ISO_VAL_3200 && (old_iso != ISO_VAL_3200))
+            new_iso = CAM_ISO_MODE_3200;
+        else
+            new_iso = CAM_ISO_MODE_AUTO;
 
-            if (calc_iso > ISO_VAL_1600 && (old_iso != ISO_VAL_1600))
-                new_iso = CAM_ISO_MODE_1600;
-            else if (calc_iso > ISO_VAL_800 && (old_iso != ISO_VAL_800))
-                new_iso = CAM_ISO_MODE_800;
-            else if (calc_iso > ISO_VAL_400 && (old_iso != ISO_VAL_400))
-                new_iso = CAM_ISO_MODE_400;
-            else if (calc_iso > ISO_VAL_200 && (old_iso != ISO_VAL_200))
-                new_iso = CAM_ISO_MODE_200;
-            else
-                new_iso = CAM_ISO_MODE_AUTO;
+        pme->mParameters.setPrvwIsoMode(new_iso);
+    } else if (curr_exp_time < EXP_TIME_LOW_THRESH) {
+        float calc_iso = curr_exp_time * (float)curr_iso_value / EXP_TIME_LOW_THRESH;
 
-            pme->mParameters.setPrvwIsoMode(new_iso);
-        }
+        if (calc_iso > ISO_VAL_1600 && (old_iso != ISO_VAL_1600))
+            new_iso = CAM_ISO_MODE_1600;
+        else if (calc_iso > ISO_VAL_800 && (old_iso != ISO_VAL_800))
+            new_iso = CAM_ISO_MODE_800;
+        else if (calc_iso > ISO_VAL_400 && (old_iso != ISO_VAL_400))
+            new_iso = CAM_ISO_MODE_400;
+        else if (calc_iso > ISO_VAL_200 && (old_iso != ISO_VAL_200))
+            new_iso = CAM_ISO_MODE_200;
+        else
+            new_iso = CAM_ISO_MODE_AUTO;
+
+        pme->mParameters.setPrvwIsoMode(new_iso);
     }
 }
 
