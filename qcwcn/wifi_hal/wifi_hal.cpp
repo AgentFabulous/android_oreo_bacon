@@ -462,6 +462,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
     }
 
     pthread_mutex_init(&info->cb_lock, NULL);
+    pthread_mutex_init(&info->pkt_fate_stats_lock, NULL);
 
     *handle = (wifi_handle) info;
 
@@ -654,6 +655,7 @@ static void internal_cleaned_up_handler(wifi_handle handle)
 
     (*cleaned_up_handler)(handle);
     pthread_mutex_destroy(&info->cb_lock);
+    pthread_mutex_destroy(&info->pkt_fate_stats_lock);
     free(info);
 
     ALOGI("Internal cleanup completed");
