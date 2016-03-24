@@ -1820,10 +1820,8 @@ static wifi_error parse_tx_pkt_fate_stats(hal_info *info, u8 *buf, u16 size)
     else
         pkt_fate_stats->frame_inf.payload_type = FRAME_TYPE_ETHERNET_II;
 
-    pkt_fate_stats->frame_inf.driver_timestamp_usec =
-                                            (wifi_tx_packet_fate)log->driver_ts;
-    pkt_fate_stats->frame_inf.firmware_timestamp_usec =
-                                            (wifi_tx_packet_fate)log->fw_ts;
+    pkt_fate_stats->frame_inf.driver_timestamp_usec = log->driver_ts;
+    pkt_fate_stats->frame_inf.firmware_timestamp_usec = log->fw_ts;
     pkt_fate_stats->frame_inf.frame_len = size - sizeof(pktdump_hdr);
     pkt_fate_stats->frame_inf.frame_content =
              (char *)malloc(pkt_fate_stats->frame_inf.frame_len * sizeof(char));
@@ -1862,10 +1860,8 @@ static wifi_error parse_rx_pkt_fate_stats(hal_info *info, u8 *buf, u16 size)
     else
         pkt_fate_stats->frame_inf.payload_type = FRAME_TYPE_ETHERNET_II;
 
-    pkt_fate_stats->frame_inf.driver_timestamp_usec =
-                                            (wifi_rx_packet_fate)log->driver_ts;
-    pkt_fate_stats->frame_inf.firmware_timestamp_usec =
-                                            (wifi_rx_packet_fate)log->fw_ts;
+    pkt_fate_stats->frame_inf.driver_timestamp_usec = log->driver_ts;
+    pkt_fate_stats->frame_inf.firmware_timestamp_usec = log->fw_ts;
     pkt_fate_stats->frame_inf.frame_len = size - sizeof(pktdump_hdr);
     pkt_fate_stats->frame_inf.frame_content =
              (char *)malloc(pkt_fate_stats->frame_inf.frame_len * sizeof(char));
