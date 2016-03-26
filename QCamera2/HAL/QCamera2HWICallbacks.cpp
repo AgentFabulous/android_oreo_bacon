@@ -998,12 +998,6 @@ void QCamera2HardwareInterface::processAntishakeAlgo(QCamera2HardwareInterface *
             new_iso = CAM_ISO_MODE_200;
         else if (calc_iso < ISO_VAL_400 && (old_iso != ISO_VAL_400))
             new_iso = CAM_ISO_MODE_400;
-        else if (calc_iso < ISO_VAL_800 && (old_iso != ISO_VAL_800))
-            new_iso = CAM_ISO_MODE_800;
-        else if (calc_iso < ISO_VAL_1600 && (old_iso != ISO_VAL_1600))
-            new_iso = CAM_ISO_MODE_1600;
-        else if (calc_iso < ISO_VAL_3200 && (old_iso != ISO_VAL_3200))
-            new_iso = CAM_ISO_MODE_3200;
         else
             new_iso = CAM_ISO_MODE_AUTO;
 
@@ -1011,13 +1005,7 @@ void QCamera2HardwareInterface::processAntishakeAlgo(QCamera2HardwareInterface *
     } else if (curr_exp_time < EXP_TIME_LOW_THRESH) {
         float calc_iso = curr_exp_time * (float)curr_iso_value / EXP_TIME_LOW_THRESH;
 
-        if (calc_iso > ISO_VAL_1600 && (old_iso != ISO_VAL_1600))
-            new_iso = CAM_ISO_MODE_1600;
-        else if (calc_iso > ISO_VAL_800 && (old_iso != ISO_VAL_800))
-            new_iso = CAM_ISO_MODE_800;
-        else if (calc_iso > ISO_VAL_400 && (old_iso != ISO_VAL_400))
-            new_iso = CAM_ISO_MODE_400;
-        else if (calc_iso > ISO_VAL_200 && (old_iso != ISO_VAL_200))
+        if (calc_iso > ISO_VAL_200 && (old_iso != ISO_VAL_200))
             new_iso = CAM_ISO_MODE_200;
         else
             new_iso = CAM_ISO_MODE_AUTO;
