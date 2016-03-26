@@ -2644,8 +2644,6 @@ public class VideoModule implements CameraModule,
         }
         // Keep preview size up to date.
         mParameters = mCameraDevice.getParameters();
-
-        mFocusManager.setPreviewSize(videoWidth, videoHeight);
     }
 
     @Override
