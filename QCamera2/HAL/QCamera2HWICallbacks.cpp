@@ -986,8 +986,10 @@ void QCamera2HardwareInterface::processAntishakeAlgo(QCamera2HardwareInterface *
     int32_t new_iso, old_iso;
 
     /* Don't process antishake in camcorder mode */
-    if (pme->mParameters.getRecordingHintValue())
+    if (pme->mParameters.getRecordingHintValue()) {
+        pme->mParameters.setPrvwIsoMode(CAM_ISO_MODE_AUTO);
         return;
+    }
 
     old_iso = pme->mParameters.getPrvwIsoMode();
 

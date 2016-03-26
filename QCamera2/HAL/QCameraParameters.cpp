@@ -3666,7 +3666,7 @@ void QCameraParameters::setPrvwIsoMode(int32_t isoValue)
         isoValue = CAM_ISO_MODE_AUTO;
 
     // Place precedence on user-set ISO
-    if (mManualIso != CAM_ISO_MODE_AUTO)
+    if (mManualIso != CAM_ISO_MODE_AUTO && !m_bRecordingHint)
         isoValue = mManualIso;
 
     if (mPrvwIsoMode == isoValue)
