@@ -54,6 +54,8 @@
 #include <linux/state_notifier.h>
 #endif /*CONFIG_STATE_NOTIFIER*/
 
+#define ENABLE_PWM_MODE 0
+
 static struct lm3630_chip_data *lm3630_pchip;
 
 struct lm3630_chip_data {
@@ -78,6 +80,7 @@ static int lm3630_chip_init(struct lm3630_chip_data *pchip)
 	unsigned int reg_val;
 	struct lm3630_platform_data *pdata = pchip->pdata;
 
+#if ENABLE_PWM_MODE
 	/*pwm control */
 	reg_val = ((pdata->pwm_active & 0x01) << 2) | (pdata->pwm_ctrl & 0x03);
 	ret = regmap_update_bits(pchip->regmap, REG_CONFIG, 0x07, reg_val);
@@ -91,6 +94,9 @@ static int lm3630_chip_init(struct lm3630_chip_data *pchip)
         		goto out;
         }
     //}
+#else
+	regmap_update_bits(pchip->regmap, REG_CONFIG, 0x01, 0x00);
+#endif
 
 #ifdef CONGIF_OPPO_CMCC_OPTR
     reg_val = 0x12; /* For 13077 CMCC */
@@ -488,9 +494,6 @@ static int lm3630_probe(struct i2c_client *client,
 	}
 /* OPPO zhanglong add 2013-08-30 for ftm test LCD backlight end */
 #endif //CONFIG_MACH_OPPO
-
-	/* Always enable PWM mode */
-	regmap_update_bits(lm3630_pchip->regmap, REG_CONFIG, 0x01, 0x01);
 
 	return 0;
 
