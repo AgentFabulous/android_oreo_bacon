@@ -1052,6 +1052,12 @@ public class VideoModule implements CameraModule,
             mDesiredPreviewWidth = optimalSize.width;
             mDesiredPreviewHeight = optimalSize.height;
         }
+
+        if ((mProfile.videoFrameWidth * mProfile.videoFrameHeight) == (1280 * 720)) {
+            mDesiredPreviewWidth = mProfile.videoFrameWidth;
+            mDesiredPreviewHeight = mProfile.videoFrameHeight;
+        }
+
         mUI.setPreviewSize(mDesiredPreviewWidth, mDesiredPreviewHeight);
         Log.v(TAG, "mDesiredPreviewWidth=" + mDesiredPreviewWidth +
                 ". mDesiredPreviewHeight=" + mDesiredPreviewHeight);
