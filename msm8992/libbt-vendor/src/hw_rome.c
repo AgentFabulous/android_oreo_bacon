@@ -126,6 +126,8 @@ int get_vs_hci_event(unsigned char *rsp)
     unsigned int soc_id = 0;
     unsigned int productid = 0;
     unsigned short patchversion = 0;
+    char build_label[255];
+    int build_lbl_len;
 
     if( (rsp[EVENTCODE_OFFSET] == VSEVENT_CODE) || (rsp[EVENTCODE_OFFSET] == EVT_CMD_COMPLETE))
         ALOGI("%s: Received HCI-Vendor Specific event", __FUNCTION__);
@@ -218,6 +220,19 @@ int get_vs_hci_event(unsigned char *rsp)
                         break;
                     }
             break;
+            case HCI_VS_GET_BUILD_VER_EVT:
+                build_lbl_len = rsp[5];
+                memcpy (build_label, &rsp[6], build_lbl_len);
+                *(build_label+build_lbl_len) = '\0';
+
+                ALOGI("BT SoC FW SU Build info: %s, %d", build_label, build_lbl_len);
+                if (NULL != (btversionfile = fopen(BT_VERSION_FILEPATH, "a+b"))) {
+                    fprintf(btversionfile, "Bluetooth Contoller SU Build info  : %s\n", build_label);
+                    fclose(btversionfile);
+                } else {
+                    ALOGI("Failed to dump  FW SU build info. Errno:%d", errno);
+                }
+            break;
         }
         break;
 
@@ -301,7 +316,7 @@ int read_vs_hci_event(int fd, unsigned char* buf, int size)
     while (count < 3) {
             r = read(fd, buf + count, 3 - count);
             if ((r <= 0) || (buf[1] != 0xFF )) {
-                ALOGE("It is not VS event !!");
+                ALOGE("It is not VS event !! ret: %d, EVT: %d", r, buf[1]);
                 return -1;
             }
             count += r;
@@ -452,6 +467,16 @@ void frame_hci_cmd_pkt(
             segtNo, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5]);
             offset = (segtNo * MAX_SIZE_PER_TLV_SEGMENT);
             memcpy(&cmd[6], (pdata_buffer + offset), size);
+            break;
+        case EDL_GET_BUILD_INFO:
+            ALOGD("%s: Sending EDL_GET_BUILD_INFO", __FUNCTION__);
+            ALOGD("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
+                segtNo, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]);
+            break;
+        case EDL_GET_BOARD_ID:
+            ALOGD("%s: Sending EDL_GET_BOARD_ID", __FUNCTION__);
+            ALOGD("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
+                segtNo, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]);
             break;
         default:
             ALOGE("%s: Unknown EDL CMD !!!", __FUNCTION__);
@@ -834,18 +859,6 @@ int rome_get_tlv_file(char *file_path)
         ALOGI("Product ID\t\t\t : 0x%04x\n", ptlv_header->tlv.patch.prod_id);
         ALOGI("Rom Build Version\t\t : 0x%04x\n", ptlv_header->tlv.patch.build_ver);
         ALOGI("Patch Version\t\t : 0x%04x\n", ptlv_header->tlv.patch.patch_ver);
-        if (fw_su_info ) {
-            FILE *btversionfile = 0;
-            if (NULL != (btversionfile = fopen(BT_VERSION_FILEPATH, "a+b"))) {
-                fprintf(btversionfile, "Bluetooth Controller FW SU Version : 0x%04x (%s-%05d)\n",
-                    ptlv_header->tlv.patch.patch_ver,
-                    fw_su_info,
-                    (ptlv_header->tlv.patch.patch_ver - fw_su_offset )
-                    );
-                fclose(btversionfile);
-            }
-        }
-
         ALOGI("Reserved\t\t\t : 0x%x\n", ptlv_header->tlv.patch.reserved2);
         ALOGI("Patch Entry Address\t\t : 0x%x\n", (ptlv_header->tlv.patch.patch_entry_addr));
         ALOGI("====================================================");
@@ -1363,6 +1376,36 @@ error:
 
 }
 
+int rome_get_build_info_req(int fd)
+{
+    int size, err = 0;
+    unsigned char cmd[HCI_MAX_CMD_SIZE];
+    unsigned char rsp[HCI_MAX_EVENT_SIZE];
+
+    /* Frame the HCI CMD to be sent to the Controller */
+    frame_hci_cmd_pkt(cmd, EDL_GET_BUILD_INFO, 0,
+    -1, EDL_PATCH_CMD_LEN);
+
+    /* Total length of the packet to be sent to the Controller */
+    size = (HCI_CMD_IND + HCI_COMMAND_HDR_SIZE + EDL_PATCH_CMD_LEN);
+
+    /* Send HCI Command packet to Controller */
+    err = hci_send_vs_cmd(fd, (unsigned char *)cmd, rsp, size);
+    if ( err != size) {
+        ALOGE("Failed to send get build info cmd to the SoC!");
+        goto error;
+    }
+
+    err = read_hci_event(fd, rsp, HCI_MAX_EVENT_SIZE);
+    if ( err < 0) {
+        ALOGE("%s: Failed to get build info", __FUNCTION__);
+        goto error;
+    }
+error:
+    return err;
+
+}
+
 
 int rome_set_baudrate_req(int fd)
 {
@@ -1674,7 +1717,7 @@ error:
 }
 
 
-static void enable_controller_log (int fd)
+void enable_controller_log (int fd)
 {
    int ret = 0;
    /* VS command to enable controller logging to the HOST. By default it is disabled */
@@ -1829,14 +1872,13 @@ download:
                 goto error;
             }
             ALOGI("%s: Download TLV file successfully ", __FUNCTION__);
-            /* This function sends a vendor specific command to enable/disable
-             * controller logs on need. Once the command is received to the SOC,
-             * It would start sending cotroller's print strings and LMP RX/TX
-             * packets to the HOST (over the UART) which will be logged in QXDM.
-             * The property 'enablebtsoclog' used to send this command on BT init
-             * sequence.
-             */
-            enable_controller_log(fd);
+
+            /* Get SU FM label information */
+            if((err = rome_get_build_info_req(fd)) <0){
+                ALOGI("%s: Fail to get Rome FW SU Build info (0x%x)", __FUNCTION__, err);
+                //Ignore the failure of ROME FW SU label information
+                err = 0;
+            }
 
             /* Disable internal LDO to use external LDO instead*/
             err = disable_internal_ldo(fd);
