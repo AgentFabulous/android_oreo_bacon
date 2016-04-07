@@ -78,6 +78,7 @@
 #define EDL_SET_BAUDRATE_CMD_OCF        (0x48)
 #define EDL_WIPOWER_VS_CMD_OCF          (0x1f)
 #define HCI_VS_GET_ADDON_FEATURES_SUPPORT   (0x1d)
+#define EDL_GET_BOARD_ID              (0x23)
 
 /* VS Commands */
 #define VSC_SET_BAUDRATE_REQ_LEN        (1)
@@ -90,6 +91,7 @@
 #define EDL_PATCH_SET_REQ_CMD               (0x16)
 #define EDL_PATCH_ATCH_REQ_CMD            (0x17)
 #define EDL_PATCH_VER_REQ_CMD               (0x19)
+#define EDL_GET_BUILD_INFO                  (0x20)
 #define EDL_PATCH_TLV_REQ_CMD               (0x1E)
 #define EDL_WIP_QUERY_CHARGING_STATUS_CMD   (0x1D)
 #define EDL_WIP_START_HANDOFF_TO_HOST_CMD   (0x1E)
@@ -104,7 +106,8 @@
 #define EDL_WIP_QUERY_CHARGING_STATUS_EVT    (0x18)
 #define EDL_WIP_START_HANDOFF_TO_HOST_EVENT  (0x19)
 #define HCI_VS_GET_ADDON_FEATURES_EVENT      (0x1B)
-
+#define EDL_BOARD_ID_RESPONSE                (0x23)
+#define HCI_VS_GET_BUILD_VER_EVT             (0x05)
 
 /* Status Codes of HCI CMD execution*/
 #define HCI_CMD_SUCCESS                     (0x0)
