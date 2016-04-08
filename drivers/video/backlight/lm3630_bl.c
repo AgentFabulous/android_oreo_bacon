@@ -54,7 +54,7 @@
 #include <linux/state_notifier.h>
 #endif /*CONFIG_STATE_NOTIFIER*/
 
-#define ENABLE_PWM_MODE 0
+#define DISABLE_PWM_MODE 1
 
 static struct lm3630_chip_data *lm3630_pchip;
 
@@ -73,6 +73,10 @@ struct lm3630_chip_data {
 static int pre_brightness=0;
 #endif
 
+#if DISABLE_PWM_MODE
+static bool pwm_mode_off;
+#endif
+
 /* initialize chip */
 static int lm3630_chip_init(struct lm3630_chip_data *pchip)
 {
@@ -80,7 +84,6 @@ static int lm3630_chip_init(struct lm3630_chip_data *pchip)
 	unsigned int reg_val;
 	struct lm3630_platform_data *pdata = pchip->pdata;
 
-#if ENABLE_PWM_MODE
 	/*pwm control */
 	reg_val = ((pdata->pwm_active & 0x01) << 2) | (pdata->pwm_ctrl & 0x03);
 	ret = regmap_update_bits(pchip->regmap, REG_CONFIG, 0x07, reg_val);
@@ -94,9 +97,6 @@ static int lm3630_chip_init(struct lm3630_chip_data *pchip)
         		goto out;
         }
     //}
-#else
-	regmap_update_bits(pchip->regmap, REG_CONFIG, 0x01, 0x00);
-#endif
 
 #ifdef CONGIF_OPPO_CMCC_OPTR
     reg_val = 0x12; /* For 13077 CMCC */
@@ -271,6 +271,14 @@ static int lm3630_intr_config(struct lm3630_chip_data *pchip)
 #endif /* CONFIG_MACH_OPPO */
 		if (ret < 0)
 			goto out;
+
+#if DISABLE_PWM_MODE
+	if (!pwm_mode_off) {
+		pwm_mode_off = true;
+		regmap_update_bits(pchip->regmap, REG_CONFIG, 0x01, 0x00);
+	}
+#endif
+
 	return bl_level;
 out:
 	dev_err(pchip->dev, "i2c failed to access REG_CTRL\n");
