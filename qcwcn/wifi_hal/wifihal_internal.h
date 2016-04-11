@@ -38,7 +38,7 @@
 
 #define WIFIHAL_LOWI_MAJOR_VERSION      2
 #define WIFIHAL_LOWI_MINOR_VERSION      1
-#define WIFIHAL_LOWI_MICRO_VERSION      0
+#define WIFIHAL_LOWI_MICRO_VERSION      1
 
 /* LOWI supported capabilities bit masks */
 #define ONE_SIDED_RANGING_SUPPORTED   0x00000001
@@ -129,24 +129,24 @@ typedef struct
                             wifi_lcr_information *lcr);
 
   /**
-   * Get available WiFi channel to enable RTT responder on.
+   * Get RTT responder information e.g. WiFi channel to enable responder on.
    */
-  wifi_error (*rtt_get_available_channnel)(wifi_interface_handle iface,
-                                           wifi_channel_info* channel);
+  wifi_error (*rtt_get_responder_info)(wifi_interface_handle iface,
+                                       wifi_rtt_responder *responder_info);
 
   /**
    * Enable RTT responder mode.
    * channel_hint - hint of the channel information where RTT responder should
    *                be enabled on.
    * max_duration_seconds - timeout of responder mode.
-   * channel_used - channel used for RTT responder, NULL if responder is not
-   *                enabled.
+   * responder_info - responder information e.g. channel used for RTT responder,
+   *                  NULL if responder is not enabled.
    */
   wifi_error (*enable_responder)(wifi_request_id id,
                                  wifi_interface_handle iface,
                                  wifi_channel_info channel_hint,
                                  unsigned max_duration_seconds,
-                                 wifi_channel_info* channel_used);
+                                 wifi_rtt_responder *responder_info);
 
   /**
    * Disable RTT responder mode.

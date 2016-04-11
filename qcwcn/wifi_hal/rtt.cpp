@@ -301,17 +301,18 @@ cleanup:
     return (wifi_error)ret;
 }
 
-/**
- * Get available WiFi channel to enable RTT responder on.
+/*
+ * Get RTT responder information e.g. WiFi channel to enable responder on.
  */
-wifi_error wifi_rtt_get_available_channel(wifi_interface_handle iface,
-                                           wifi_channel_info* channel)
+wifi_error wifi_rtt_get_responder_info(wifi_interface_handle iface,
+                                      wifi_rtt_responder *responder_info)
 {
     int ret = WIFI_SUCCESS;
     lowi_cb_table_t *lowiWifiHalApi = NULL;
 
-    if (iface == NULL || channel == NULL) {
-        ALOGE("%s: iface : %p channel : %p", __FUNCTION__, iface, channel);
+    if (iface == NULL || responder_info == NULL) {
+        ALOGE("%s: iface : %p responder_info : %p", __FUNCTION__, iface,
+               responder_info);
         return WIFI_ERROR_INVALID_ARGS;
     }
 
@@ -319,14 +320,14 @@ wifi_error wifi_rtt_get_available_channel(wifi_interface_handle iface,
     lowiWifiHalApi = getLowiCallbackTable(
                     ONE_SIDED_RANGING_SUPPORTED|DUAL_SIDED_RANGING_SUPPORED);
     if (lowiWifiHalApi == NULL ||
-        lowiWifiHalApi->rtt_get_available_channnel == NULL) {
+        lowiWifiHalApi->rtt_get_responder_info == NULL) {
         ALOGE("%s: getLowiCallbackTable returned NULL or "
             "the function pointer is NULL. Exit.", __FUNCTION__);
         ret = WIFI_ERROR_NOT_SUPPORTED;
         goto cleanup;
     }
 
-    ret = lowiWifiHalApi->rtt_get_available_channnel(iface, channel);
+    ret = lowiWifiHalApi->rtt_get_responder_info(iface, responder_info);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: returned error:%d. Exit.",
               __FUNCTION__, ret);
@@ -342,20 +343,20 @@ cleanup:
  * channel_hint - hint of the channel information where RTT responder should
  *                be enabled on.
  * max_duration_seconds - timeout of responder mode.
- * channel_used - channel used for RTT responder, NULL if responder is not
- *                enabled.
+ * responder_info - responder information e.g. channel used for RTT responder,
+ *                  NULL if responder is not enabled.
  */
 wifi_error wifi_enable_responder(wifi_request_id id,
                                  wifi_interface_handle iface,
                                  wifi_channel_info channel_hint,
                                  unsigned max_duration_seconds,
-                                 wifi_channel_info* channel_used)
+                                 wifi_rtt_responder *responder_info)
 {
     int ret = WIFI_SUCCESS;
     lowi_cb_table_t *lowiWifiHalApi = NULL;
 
-    if (iface == NULL || channel_used == NULL) {
-        ALOGE("%s: iface : %p channel : %p", __FUNCTION__, iface, channel_used);
+    if (iface == NULL || responder_info == NULL) {
+        ALOGE("%s: iface : %p responder_info : %p", __FUNCTION__, iface, responder_info);
         return WIFI_ERROR_INVALID_ARGS;
     }
 
@@ -372,7 +373,7 @@ wifi_error wifi_enable_responder(wifi_request_id id,
 
     ret = lowiWifiHalApi->enable_responder(id, iface, channel_hint,
                                            max_duration_seconds,
-                                           channel_used);
+                                           responder_info);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: returned error:%d. Exit.",
               __FUNCTION__, ret);
