@@ -1760,7 +1760,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             scanEvent = (wifi_scan_event) nla_get_u8(tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_EVENT_TYPE]);
 
-            ALOGI("%s: Scan event type: %d\n", __FUNCTION__, scanEvent);
+            ALOGV("%s: Scan event type: %d\n", __FUNCTION__, scanEvent);
             /* Send the results if no more result fragments are expected. */
             (*mHandler.on_scan_event)(reqId, scanEvent);
         }
@@ -1801,7 +1801,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             }
             numResults = nla_get_u32(tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE]);
-            ALOGI("%s: number of results:%d", __FUNCTION__, numResults);
+            ALOGV("%s: number of results:%d", __FUNCTION__, numResults);
 
             /* Get the memory size of previous fragments, if any. */
             sizeOfObtainedResults = mPnoNetworkFoundNumResults *
@@ -1832,7 +1832,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             memset((u8 *)mPnoNetworkFoundResults + sizeOfObtainedResults, 0,
                     resultsBufSize - sizeOfObtainedResults);
 
-            ALOGI("%s: Num of AP FOUND results = %d. \n", __FUNCTION__,
+            ALOGV("%s: Num of AP FOUND results = %d. \n", __FUNCTION__,
                                             mPnoNetworkFoundNumResults);
 
             /* To support fragmentation from firmware, monitor the

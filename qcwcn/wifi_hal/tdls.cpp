@@ -73,7 +73,7 @@ TdlsCommand* TdlsCommand::instance(wifi_handle handle)
         {
             /* upper layer must have cleaned up the handle and reinitialized,
                so we need to update the same */
-            ALOGI("Handle different, update the handle");
+            ALOGV("Handle different, update the handle");
             mTdlsCommandInstance->mInfo = (hal_info *)handle;
         }
     }
@@ -115,7 +115,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                         (struct nlattr *)mVendorData,
                         mDataLen, NULL);
 
-                ALOGI("QCA_NL80211_VENDOR_SUBCMD_TDLS_STATE Received");
+                ALOGV("QCA_NL80211_VENDOR_SUBCMD_TDLS_STATE Received");
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_MAC_ADDR])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_MAC_ADDR not found",
@@ -126,7 +126,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                   (u8 *)nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_MAC_ADDR]),
                   nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_MAC_ADDR]));
 
-                ALOGI(MAC_ADDR_STR, MAC_ADDR_ARRAY(addr));
+                ALOGV(MAC_ADDR_STR, MAC_ADDR_ARRAY(addr));
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATE])
                 {
@@ -136,7 +136,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                 }
                 status.state = (wifi_tdls_state)
                     get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATE]);
-                ALOGI("TDLS: State New : %d ", status.state);
+                ALOGV("TDLS: State New : %d ", status.state);
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_REASON])
                 {
@@ -146,7 +146,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                 }
                 status.reason = (wifi_tdls_reason)
                     get_s32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_REASON]);
-                ALOGI("TDLS: Reason : %d ", status.reason);
+                ALOGV("TDLS: Reason : %d ", status.reason);
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_CHANNEL])
                 {
@@ -156,7 +156,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                 }
                 status.channel =
                     get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_CHANNEL]);
-                ALOGI("TDLS: channel : %d ", status.channel);
+                ALOGV("TDLS: channel : %d ", status.channel);
 
                 if (!tb_vendor[
                         QCA_WLAN_VENDOR_ATTR_TDLS_GLOBAL_OPERATING_CLASS])
@@ -167,7 +167,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                 }
                 status.global_operating_class = get_u32(
                    tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GLOBAL_OPERATING_CLASS]);
-                ALOGI("TDLS: global_operating_class: %d ",
+                ALOGV("TDLS: global_operating_class: %d ",
                         status.global_operating_class);
 
                 if (mHandler.on_tdls_state_changed)
@@ -203,7 +203,7 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                         (struct nlattr *)mVendorData,
                         mDataLen, NULL);
 
-                ALOGI("QCA_NL80211_VENDOR_SUBCMD_TDLS_GET_STATUS Received");
+                ALOGV("QCA_NL80211_VENDOR_SUBCMD_TDLS_GET_STATUS Received");
                 memset(&mTDLSgetStatusRspParams, 0, sizeof(wifi_tdls_status));
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_STATE])
@@ -214,7 +214,7 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                 }
                 mTDLSgetStatusRspParams.state = (wifi_tdls_state)get_u32(
                         tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_STATE]);
-                ALOGI("TDLS: State : %u ", mTDLSgetStatusRspParams.state);
+                ALOGV("TDLS: State : %u ", mTDLSgetStatusRspParams.state);
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_REASON])
                 {
@@ -224,7 +224,7 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                 }
                 mTDLSgetStatusRspParams.reason = (wifi_tdls_reason)get_s32(
                         tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_REASON]);
-                ALOGI("TDLS: Reason : %d ", mTDLSgetStatusRspParams.reason);
+                ALOGV("TDLS: Reason : %d ", mTDLSgetStatusRspParams.reason);
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_CHANNEL])
                 {
@@ -234,7 +234,7 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                 }
                 mTDLSgetStatusRspParams.channel = get_u32(tb_vendor[
                         QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_CHANNEL]);
-                ALOGI("TDLS: channel : %d ", mTDLSgetStatusRspParams.channel);
+                ALOGV("TDLS: channel : %d ", mTDLSgetStatusRspParams.channel);
 
                 if (!tb_vendor[
                   QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_GLOBAL_OPERATING_CLASS])
@@ -247,7 +247,7 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                 mTDLSgetStatusRspParams.global_operating_class =
                   get_u32(tb_vendor[
                   QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_GLOBAL_OPERATING_CLASS]);
-                ALOGI("TDLS: global_operating_class: %d ",
+                ALOGV("TDLS: global_operating_class: %d ",
                         mTDLSgetStatusRspParams.global_operating_class);
             }
             break;
@@ -333,14 +333,14 @@ void TdlsCommand::getCapsRspParams(wifi_tdls_capabilities *caps)
         !!(mTDLSgetCaps.tdlsSupportedFeatures & IS_PER_MAC_TDLS_SUPPORTED);
     caps->is_off_channel_tdls_supported =
         !!(mTDLSgetCaps.tdlsSupportedFeatures & IS_OFF_CHANNEL_TDLS_SUPPORTED);
-    ALOGI("TDLS capabilities:");
-    ALOGI("max_concurrent_tdls_session_numChannel : %d\n",
+    ALOGV("TDLS capabilities:");
+    ALOGV("max_concurrent_tdls_session_numChannel : %d\n",
             caps->max_concurrent_tdls_session_num);
-    ALOGI("is_global_tdls_supported : %d\n",
+    ALOGV("is_global_tdls_supported : %d\n",
             caps->is_global_tdls_supported);
-    ALOGI("is_per_mac_tdls_supported : %d\n",
+    ALOGV("is_per_mac_tdls_supported : %d\n",
             caps->is_per_mac_tdls_supported);
-    ALOGI("is_off_channel_tdls_supported : %d \n",
+    ALOGV("is_off_channel_tdls_supported : %d \n",
             caps->is_off_channel_tdls_supported);
 }
 
