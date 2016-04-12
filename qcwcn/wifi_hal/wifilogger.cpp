@@ -1029,7 +1029,6 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
                    string terminated with '\0' */
                 len = (len > mVersionLen)? (mVersionLen - 1) : len;
                 memcpy(mVersion, nla_data(tb_vendor[version]), len);
-                ALOGD("%s: WLAN version len : %d", __FUNCTION__, len);
                 ALOGD("%s: WLAN %s version : %s ", __FUNCTION__,
                       version_type, mVersion);
             }

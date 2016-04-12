@@ -202,7 +202,6 @@ WifihalGeneric::WifihalGeneric(wifi_handle handle, int id, u32 vendor_id,
                                   u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
 {
-    ALOGD("WifihalGeneric %p constructed", this);
     /* Initialize the member data variables here */
     mSet = 0;
     mSetSizeMax = 0;
@@ -215,7 +214,6 @@ WifihalGeneric::WifihalGeneric(wifi_handle handle, int id, u32 vendor_id,
 
 WifihalGeneric::~WifihalGeneric()
 {
-    ALOGD("WifihalGeneric %p destructor", this);
 }
 
 int WifihalGeneric::requestResponse()

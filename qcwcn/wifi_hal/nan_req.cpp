@@ -1012,8 +1012,6 @@ int NanCommand::requestEvent()
     while (res > 0)
         nl_recvmsgs(mInfo->cmd_sock, cb);
 
-    ALOGD("%s: Command invoked return value:%d",__func__, res);
-
 out:
     //free the VendorData
     if (mVendorData) {
