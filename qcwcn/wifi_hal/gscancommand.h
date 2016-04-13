@@ -125,7 +125,7 @@ public:
     virtual void setNumChannelsPtr(int *num_channels);
     virtual int allocRspParams(eGScanRspRarams cmd);
     virtual void freeRspParams(eGScanRspRarams cmd);
-    virtual void getGetCapabilitiesRspParams(
+    virtual wifi_error getGetCapabilitiesRspParams(
                     wifi_gscan_capabilities *capabilities);
     virtual wifi_error copyCachedScanResults(int *numResults,
                                              wifi_cached_scan_results *cached_results);

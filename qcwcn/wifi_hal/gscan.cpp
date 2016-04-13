@@ -260,7 +260,11 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
         goto cleanup;
     }
 
-    gScanCommand->getGetCapabilitiesRspParams(capabilities);
+    ret = gScanCommand->getGetCapabilitiesRspParams(capabilities);
+    if (ret != 0) {
+        ALOGE("%s: invalid capabilities received:%d",__FUNCTION__, ret);
+        goto cleanup;
+    }
 
 cleanup:
     gScanCommand->freeRspParams(eGScanGetCapabilitiesRspParams);
@@ -2727,17 +2731,24 @@ wifi_error GScanCommand::copyCachedScanResults(
     return ret;
 }
 
-void GScanCommand::getGetCapabilitiesRspParams(
+wifi_error GScanCommand::getGetCapabilitiesRspParams(
                                         wifi_gscan_capabilities *capabilities)
 {
     if (mGetCapabilitiesRspParams && capabilities)
     {
+        if (mGetCapabilitiesRspParams->capabilities.max_scan_buckets == 0) {
+            ALOGE("%s: max_scan_buckets is 0", __FUNCTION__);
+            return WIFI_ERROR_NOT_AVAILABLE;
+        }
         memcpy(capabilities,
             &mGetCapabilitiesRspParams->capabilities,
             sizeof(wifi_gscan_capabilities));
     } else {
-        ALOGV("%s: mGetCapabilitiesRspParams is NULL", __FUNCTION__);
+        ALOGE("%s: mGetCapabilitiesRspParams is NULL", __FUNCTION__);
+        return WIFI_ERROR_NOT_AVAILABLE;
     }
+
+    return WIFI_SUCCESS;
 }
 
 void GScanCommand::setMaxChannels(int max_channels) {
