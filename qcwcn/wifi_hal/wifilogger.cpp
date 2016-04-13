@@ -625,7 +625,9 @@ wifi_error wifi_start_pkt_fate_monitoring(wifi_interface_handle iface)
     }
     memset(info->pkt_fate_stats, 0, sizeof(packet_fate_monitor_info));
 
+    pthread_mutex_lock(&info->pkt_fate_stats_lock);
     info->fate_monitoring_enabled = true;
+    pthread_mutex_unlock(&info->pkt_fate_stats_lock);
 
     return WIFI_SUCCESS;
 }
@@ -651,13 +653,16 @@ wifi_error wifi_get_tx_pkt_fates(wifi_interface_handle iface,
 {
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
-    wifi_tx_report_i *tx_fate_stats = &info->pkt_fate_stats->tx_fate_stats[0];
+    wifi_tx_report_i *tx_fate_stats;
     size_t i;
 
     if (info->fate_monitoring_enabled != true) {
         ALOGE("Packet monitoring is not yet triggered");
         return WIFI_ERROR_UNINITIALIZED;
     }
+    pthread_mutex_lock(&info->pkt_fate_stats_lock);
+
+    tx_fate_stats = &info->pkt_fate_stats->tx_fate_stats[0];
 
     *n_provided_fates = min(n_requested_fates,
                             info->pkt_fate_stats->n_tx_stats_collected);
@@ -693,6 +698,7 @@ wifi_error wifi_get_tx_pkt_fates(wifi_interface_handle iface,
              * ignore the all other types of packets received from driver */
             ALOGI("Unknown format packet");
     }
+    pthread_mutex_unlock(&info->pkt_fate_stats_lock);
 
     return WIFI_SUCCESS;
 }
@@ -717,13 +723,16 @@ wifi_error wifi_get_rx_pkt_fates(wifi_interface_handle iface,
 {
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
-    wifi_rx_report_i *rx_fate_stats = &info->pkt_fate_stats->rx_fate_stats[0];
+    wifi_rx_report_i *rx_fate_stats;
     size_t i;
 
     if (info->fate_monitoring_enabled != true) {
         ALOGE("Packet monitoring is not yet triggered");
         return WIFI_ERROR_UNINITIALIZED;
     }
+    pthread_mutex_lock(&info->pkt_fate_stats_lock);
+
+    rx_fate_stats = &info->pkt_fate_stats->rx_fate_stats[0];
 
     *n_provided_fates = min(n_requested_fates,
                             info->pkt_fate_stats->n_rx_stats_collected);
@@ -759,6 +768,7 @@ wifi_error wifi_get_rx_pkt_fates(wifi_interface_handle iface,
              * ignore the all other types of packets received from driver */
             ALOGI("Unknown format packet");
     }
+    pthread_mutex_unlock(&info->pkt_fate_stats_lock);
 
     return WIFI_SUCCESS;
 }
