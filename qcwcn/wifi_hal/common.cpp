@@ -362,10 +362,6 @@ wifi_error fetchLowiCbTableAndCapabilities(lowi_cb_table_t **lowi_wifihal_api,
             retVal = WIFI_ERROR_NOT_SUPPORTED;
             goto cleanup;
         }
-        else {
-            ALOGI("%s: Version Check passed:%d", __FUNCTION__,
-                  versionCheck);
-        }
     }
     else {
         ALOGI("%s: lowi_wifihal_get_lowi_version not present",
@@ -439,12 +435,9 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities)
             lowiSupportedCapabilities);
         return NULL;
     }
-    ALOGI("%s: Returning valid LowiWifiHalApi instance:%p",
-          __FUNCTION__, LowiWifiHalApi);
     return LowiWifiHalApi;
 
 cleanup:
-    ALOGI("%s: Cleaning up Lowi due to failure. Return NULL", __FUNCTION__);
     if (LowiWifiHalApi && LowiWifiHalApi->destroy) {
         ret = LowiWifiHalApi->destroy();
     }

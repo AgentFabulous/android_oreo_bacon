@@ -367,8 +367,6 @@ static wifi_error gscan_get_significant_change_results(u32 num_results,
     u32 len = 0;
     struct nlattr *scanResultsInfo;
 
-    ALOGI("gscan_get_significant_change_results: starting counter: %d", i);
-
     for (scanResultsInfo = (struct nlattr *) nla_data(tb_vendor[
             QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST]),
             rem = nla_len(tb_vendor[
@@ -400,10 +398,6 @@ static wifi_error gscan_get_significant_change_results(u32 num_results,
             tb2[
         QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SIGNIFICANT_CHANGE_RESULT_BSSID]),
             len);
-        ALOGI("\nsignificant_change_result:%d, BSSID:"
-            "%02x:%02x:%02x:%02x:%02x:%02x \n", i, results[i]->bssid[0],
-            results[i]->bssid[1], results[i]->bssid[2], results[i]->bssid[3],
-            results[i]->bssid[4], results[i]->bssid[5]);
 
         if (!
             tb2[
@@ -418,8 +412,6 @@ static wifi_error gscan_get_significant_change_results(u32 num_results,
             nla_get_u32(
             tb2[
         QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SIGNIFICANT_CHANGE_RESULT_CHANNEL]);
-        ALOGI("significant_change_result:%d, channel:%d.\n",
-            i, results[i]->channel);
 
         if (!
             tb2[
@@ -434,9 +426,6 @@ static wifi_error gscan_get_significant_change_results(u32 num_results,
             nla_get_u32(
             tb2[
         QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SIGNIFICANT_CHANGE_RESULT_NUM_RSSI]);
-        ALOGI("gscan_get_significant_change_results: "
-            "significant_change_result:%d, num_rssi:%d.\n",
-            i, results[i]->num_rssi);
 
         if (!
             tb2[
@@ -447,10 +436,6 @@ static wifi_error gscan_get_significant_change_results(u32 num_results,
                 "SIGNIFICANT_CHANGE_RESULT_RSSI_LIST not found");
             return WIFI_ERROR_INVALID_ARGS;
         }
-        ALOGI("gscan_get_significant_change_results: before reading the RSSI "
-            "list: num_rssi:%d, size_of_rssi:%zu, total size:%zu, ",
-            results[i]->num_rssi,
-            sizeof(wifi_rssi), results[i]->num_rssi * sizeof(wifi_rssi));
 
         memcpy(&(results[i]->rssi[0]),
             nla_data(
@@ -478,7 +463,6 @@ wifi_error GScanCommandEventHandler::gscan_parse_hotlist_ssid_results(
     struct nlattr *scanResultsInfo;
     int rem = 0;
     u32 len = 0;
-    ALOGI("gscan_parse_hotlist_ssid_results: starting counter: %d", i);
 
     for (scanResultsInfo = (struct nlattr *) nla_data(tb_vendor[
             QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST]),
@@ -614,7 +598,6 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_result(
     u32 resultsBufSize = 0;
     u32 len = 0;
     int rem = 0;
-    ALOGI("%s: Entering", __FUNCTION__);
 
     for (scanResultsInfo = (struct nlattr *) nla_data(tb_vendor[
             QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_RESULT_LIST]),
@@ -858,8 +841,6 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_result(
             nla_get_u32(
                 tb2[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ANQP_LEN]);
-        ALOGI("%s: PNO_RESULTS_PASSPOINT_MATCH_ANQP_LEN = %d",
-              __FUNCTION__, mPasspointAnqpLen);
 
         if (!mPasspointAnqpLen)
         {

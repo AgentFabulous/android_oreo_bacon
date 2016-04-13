@@ -367,7 +367,6 @@ wifi_error wifi_enable_tdls(wifi_interface_handle iface,
     wifi_handle handle = getWifiHandle(iface);
     pTdlsCommand = TdlsCommand::instance(handle);
 
-    ALOGI("%s: Enter", __FUNCTION__);
     if (pTdlsCommand == NULL) {
         ALOGE("%s: Error TdlsCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
@@ -427,7 +426,6 @@ wifi_error wifi_enable_tdls(wifi_interface_handle iface,
     }
 
 cleanup:
-    ALOGI("%s: Exit", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -448,7 +446,6 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
     wifi_handle handle = getWifiHandle(iface);
     pTdlsCommand = TdlsCommand::instance(handle);
 
-    ALOGI("%s: Enter", __FUNCTION__);
     if (pTdlsCommand == NULL) {
         ALOGE("%s: Error TdlsCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
@@ -482,7 +479,6 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
     }
 
 cleanup:
-    ALOGI("%s: Exit", __FUNCTION__);
     delete pTdlsCommand;
     return (wifi_error)ret;
 }
@@ -500,7 +496,6 @@ wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
     wifi_handle handle = getWifiHandle(iface);
     pTdlsCommand = TdlsCommand::instance(handle);
 
-    ALOGI("%s: Enter", __FUNCTION__);
     if (pTdlsCommand == NULL) {
         ALOGE("%s: Error TdlsCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
@@ -534,7 +529,6 @@ wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
     pTdlsCommand->getStatusRspParams(status);
 
 cleanup:
-    ALOGI("%s: Exit", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -544,7 +538,6 @@ wifi_error wifi_get_tdls_capabilities(wifi_interface_handle iface,
 {
     int ret = 0;
     TdlsCommand *pTdlsCommand;
-    ALOGI("%s: Enter", __FUNCTION__);
 
     if (capabilities == NULL) {
         ALOGE("%s: capabilities is NULL", __FUNCTION__);
@@ -578,7 +571,6 @@ wifi_error wifi_get_tdls_capabilities(wifi_interface_handle iface,
     pTdlsCommand->getCapsRspParams(capabilities);
 
 cleanup:
-    ALOGI("%s: Exit", __FUNCTION__);
     if (ret < 0)
         memset(capabilities, 0, sizeof(wifi_tdls_capabilities));
     delete pTdlsCommand;

@@ -1173,7 +1173,6 @@ int NanCommand::calcNanFurtherAvailabilityMapSize(
 
 int NanCommand::putNanCapabilities(transaction_id id)
 {
-    ALOGI("NAN_DISABLE");
     size_t message_len = sizeof(NanCapabilitiesReqMsg);
 
     pNanCapabilitiesReqMsg pFwReq = (pNanCapabilitiesReqMsg)malloc(message_len);
@@ -1182,7 +1181,6 @@ int NanCommand::putNanCapabilities(transaction_id id)
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
     memset (pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_CAPABILITIES_REQ;

@@ -32,7 +32,6 @@ int NanCommand::handleNanIndication()
     u16 msg_id;
     int res = 0;
 
-    ALOGI("handleNanIndication called %p", this);
     msg_id = getIndicationType();
 
     ALOGI("handleNanIndication msg_id:%u", msg_id);

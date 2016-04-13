@@ -208,7 +208,6 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
      * Generate it randomly.
      */
     requestId = get_requestid();
-    ALOGI("%s: RequestId:%d", __FUNCTION__, requestId);
 
     if (capabilities == NULL) {
         ALOGE("%s: NULL capabilities pointer provided. Exit.",
@@ -532,7 +531,6 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
     if (gScanStartCmdEventHandler == NULL ||
         gScanStartCmdEventHandler->isEventHandlingEnabled() == false) {
         ALOGE("%s: GSCAN isn't running or already stopped. "
@@ -626,8 +624,6 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
             "returned: %d. Exit.", __FUNCTION__, ret);
         return (wifi_error)ret;
     }
-
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set bssid
      * hotlist was made earlier. If set_bssid_hotlist() is called while
@@ -802,7 +798,6 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     if (gScanSetBssidHotlistCmdEventHandler == NULL ||
         (gScanSetBssidHotlistCmdEventHandler->isEventHandlingEnabled() ==
@@ -901,8 +896,6 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
             "returned: %d. Exit.", __FUNCTION__, ret);
         return (wifi_error)ret;
     }
-
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set significant
      * change list was made earlier. If set_significant_change() is called while
@@ -1089,8 +1082,6 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
-
     if (gScanSetSignificantChangeCmdEventHandler == NULL ||
         (gScanSetSignificantChangeCmdEventHandler->isEventHandlingEnabled() ==
         false)) {
@@ -1195,7 +1186,6 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver. */
     /* Generate it randomly */
     requestId = get_requestid();
-    ALOGI("%s: RequestId:%d", __FUNCTION__, requestId);
 
     if (results == NULL || num == NULL) {
         ALOGE("%s: NULL pointer provided. Exit.",
@@ -2126,8 +2116,6 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
-
     /* Wi-Fi HAL doesn't need to check if a similar request to set ePNO
      * list was made earlier. If wifi_set_epno_list() is called while
      * another one is running, the request will be sent down to driver and
@@ -2387,8 +2375,6 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
-
     /* Wi-Fi HAL doesn't need to check if a similar request to set ePNO
      * passpoint list was made earlier. If wifi_set_passpoint_list() is called
      * while another one is running, the request will be sent down to driver and
@@ -2554,8 +2540,6 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
-
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     if (gScanPnoSetPasspointListCmdEventHandler == NULL ||
         (gScanPnoSetPasspointListCmdEventHandler->isEventHandlingEnabled() ==
@@ -2796,8 +2780,6 @@ wifi_error wifi_set_bssid_blacklist(wifi_request_id id,
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
-
-    ALOGI("%s: RequestId:%d", __FUNCTION__, id);
 
     for (i = 0; i < params.num_bssid; i++) {
         ALOGI("BSSID: %d : %02x:%02x:%02x:%02x:%02x:%02x", i,

@@ -188,7 +188,6 @@ wifiEventHandler::~wifiEventHandler()
 
 int wifiEventHandler::handleEvent(WifiEvent &event)
 {
-    ALOGI("wifiEventHandler::handleEvent");
     struct genlmsghdr *gnlh = event.header();
     mSubcmd = gnlh->cmd;
     nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
