@@ -296,7 +296,6 @@ public:
     {
         mIfaceInfo = NULL;
         mInfo = getHalInfo(handle);
-        // ALOGD("WifiCommand %p created, mInfo = %p, mIfaceInfo = %p", this, mInfo, mIfaceInfo);
     }
 
     WifiCommand(wifi_interface_handle iface, wifi_request_id id)
@@ -304,11 +303,9 @@ public:
     {
         mIfaceInfo = getIfaceInfo(iface);
         mInfo = getHalInfo(iface);
-        // ALOGD("WifiCommand %p created, mInfo = %p, mIfaceInfo = %p", this, mInfo, mIfaceInfo);
     }
 
     virtual ~WifiCommand() {
-        // ALOGD("WifiCommand %p destroyed", this);
     }
 
     wifi_request_id id() {
