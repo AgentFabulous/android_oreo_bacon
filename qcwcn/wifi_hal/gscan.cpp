@@ -1541,7 +1541,7 @@ int GScanCommand::handleResponse(WifiEvent &reply) {
                     );
             /* If this is not for us, just ignore it. */
             if (id != mRequestId) {
-                ALOGE("%s: Event has Req. ID:%d <> ours:%d",
+                ALOGV("%s: Event has Req. ID:%d <> ours:%d",
                     __FUNCTION__, id, mRequestId);
                 break;
             }
@@ -1559,7 +1559,7 @@ int GScanCommand::handleResponse(WifiEvent &reply) {
              */
             numResults = nla_get_u32(tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE]);
-            ALOGE("%s: num Cached results in this fragment:%d",
+            ALOGV("%s: num Cached results in this fragment:%d",
                        __FUNCTION__, numResults);
 
             if (!mGetCachedResultsRspParams) {
@@ -1599,7 +1599,7 @@ int GScanCommand::handleResponse(WifiEvent &reply) {
             firstScanIdInPatch = nla_get_u32(tbVendor[
                     QCA_WLAN_VENDOR_ATTR_GSCAN_CACHED_RESULTS_SCAN_ID]);
 
-            ALOGE("More data: %d, firstScanIdInPatch: %d, lastProcessedScanId: %d",
+            ALOGV("More data: %d, firstScanIdInPatch: %d, lastProcessedScanId: %d",
                 mGetCachedResultsRspParams->more_data, firstScanIdInPatch,
                 mGetCachedResultsRspParams->lastProcessedScanId);
 
@@ -1817,7 +1817,7 @@ int GScanCommand:: gscan_get_cached_results(
     int rem = 0, remResults = 0;
     u32 len = 0, numScanResults = 0;
     u32 i = mGetCachedResultsRspParams->cachedResultsStartingIndex;
-    ALOGE("%s: starting counter: %d", __FUNCTION__, i);
+    ALOGV("%s: starting counter: %d", __FUNCTION__, i);
 
     for (scanResultsInfo = (struct nlattr *) nla_data(tb_vendor[
                QCA_WLAN_VENDOR_ATTR_GSCAN_CACHED_RESULTS_LIST]),
@@ -2072,7 +2072,7 @@ int GScanCommand:: gscan_get_cached_results(
                         j, MAX_AP_CACHE_PER_SCAN, i);
                 }
            }
-           ALOGE("%s: cached_results[%d].num_results: %d ", __FUNCTION__,
+           ALOGV("%s: cached_results[%d].num_results: %d ", __FUNCTION__,
             i, cached_results[i].num_results);
            /* Increment loop index for next cached scan result record */
            i++;
