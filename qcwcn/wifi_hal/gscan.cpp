@@ -1470,16 +1470,15 @@ int GScanCommand::handleResponse(WifiEvent &reply) {
                     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CHANNELS],
                     sizeof(wifi_channel) * (*mNumChannelsPtr));
             }
-
-            ALOGD("%s: Get valid channels response received.",
-                __FUNCTION__);
-            ALOGD("%s: Num channels : %d",
-                __FUNCTION__, *mNumChannelsPtr);
-            ALOGD("%s: List of valid channels are: ", __FUNCTION__);
-            for(i = 0; i < *mNumChannelsPtr; i++)
-            {
-                ALOGD("%u", *(mChannels + i));
+            char buf[100];
+            size_t len = 0;
+            for (i = 0; i < *mNumChannelsPtr && len < sizeof(buf); i++) {
+                 len +=  snprintf(buf + len, sizeof(buf)-len, "%u ",
+                                  *(mChannels + i));
             }
+            ALOGV("%s: Num Channels %d: List of valid channels are: %s",
+                  __FUNCTION__, *mNumChannelsPtr, buf);
+
         }
         break;
         case QCA_NL80211_VENDOR_SUBCMD_GSCAN_GET_CAPABILITIES:

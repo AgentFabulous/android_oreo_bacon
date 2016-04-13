@@ -360,6 +360,8 @@ static wifi_error gscan_get_significant_change_results(u32 num_results,
     int j;
     int rem = 0;
     u32 len = 0;
+    char rssi_buf[1024]; //TODO: sizeof buf
+    int rem_size;
     struct nlattr *scanResultsInfo;
 
     for (scanResultsInfo = (struct nlattr *) nla_data(tb_vendor[
@@ -438,9 +440,20 @@ static wifi_error gscan_get_significant_change_results(u32 num_results,
         QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SIGNIFICANT_CHANGE_RESULT_RSSI_LIST]
             ), results[i]->num_rssi * sizeof(wifi_rssi));
 
-        for (j = 0; j < results[i]->num_rssi; j++)
-            ALOGI("     significant_change_result: %d, rssi[%d]:%d, ",
-            i, j, results[i]->rssi[j]);
+        ALOGV("significant_change_result:%d, BSSID:"
+            "%02x:%02x:%02x:%02x:%02x:%02x channel:%d  num_rssi:%d ",
+            i, results[i]->bssid[0], results[i]->bssid[1], results[i]->bssid[2],
+            results[i]->bssid[3], results[i]->bssid[4], results[i]->bssid[5],
+            results[i]->channel, results[i]->num_rssi);
+
+        rem_size = sizeof(rssi_buf);
+        char *dst = rssi_buf;
+        for (j = 0; j < results[i]->num_rssi && rem_size > 0; j++) {
+            len = snprintf(dst, rem_size, "rssi[%d]:%d, ", j, results[i]->rssi[j]);
+            dst += len;
+            rem_size -= len;
+        }
+        ALOGV("RSSI LIST: %s", rssi_buf);
 
         /* Increment loop index to prase next record. */
         i++;
