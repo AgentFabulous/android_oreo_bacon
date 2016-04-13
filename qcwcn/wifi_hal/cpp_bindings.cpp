@@ -744,7 +744,7 @@ WifiVendorCommand::WifiVendorCommand(wifi_handle handle,
 
 WifiVendorCommand::~WifiVendorCommand()
 {
-    ALOGV("~WifiVendorCommand %p destroyed", this);
+    //ALOGV("~WifiVendorCommand %p destroyed", this);
     //mVendorData is not destroyed here. Assumption
     //is that VendorData is specific to each Vendor and they
     //are responsible for owning the same.
