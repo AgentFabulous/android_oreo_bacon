@@ -612,7 +612,7 @@ wifi_error wifi_start_pkt_fate_monitoring(wifi_interface_handle iface)
     hal_info *info = getHalInfo(wifiHandle);
 
     if (info->fate_monitoring_enabled == true) {
-        ALOGD("Packet monitoring is already enabled");
+        ALOGV("Packet monitoring is already enabled");
         return WIFI_SUCCESS;
     }
 
@@ -1027,7 +1027,7 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
                    string terminated with '\0' */
                 len = (len > mVersionLen)? (mVersionLen - 1) : len;
                 memcpy(mVersion, nla_data(tb_vendor[version]), len);
-                ALOGD("%s: WLAN %s version : %s ", __FUNCTION__,
+                ALOGV("%s: WLAN %s version : %s ", __FUNCTION__,
                       version_type, mVersion);
             }
         }

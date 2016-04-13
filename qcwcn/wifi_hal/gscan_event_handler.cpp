@@ -867,7 +867,7 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_result(
                  QCA_WLAN_VENDOR_ATTR_GSCAN_PNO_RESULTS_PASSPOINT_MATCH_ANQP]),
                mPasspointAnqpLen);
 
-        ALOGD("%s: ANQP LEN:%d, ANQP IE:", __FUNCTION__, mPasspointAnqpLen);
+        ALOGV("%s: ANQP LEN:%d, ANQP IE:", __FUNCTION__, mPasspointAnqpLen);
         hexdump((char*)mPasspointAnqp, mPasspointAnqpLen);
 
         /* expecting only one result break out after the first loop */
@@ -1055,7 +1055,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
 
     if (mEventHandlingEnabled == false)
     {
-        ALOGD("%s:Discarding event: %d",
+        ALOGV("%s:Discarding event: %d",
               __FUNCTION__, mSubcmd);
         return NL_SKIP;
     }
@@ -1349,7 +1349,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             }
 
             /* Invoke the callback func to report the number of results. */
-            ALOGD("%s: Calling on_scan_event handler", __FUNCTION__);
+            ALOGV("%s: Calling on_scan_event handler", __FUNCTION__);
             (*mHandler.on_scan_event)(id, WIFI_SCAN_THRESHOLD_NUM_SCANS);
         }
         break;
@@ -1379,7 +1379,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             }
             numResults = nla_get_u32(tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE]);
-            ALOGD("%s: number of results:%d", __FUNCTION__, numResults);
+            ALOGV("%s: number of results:%d", __FUNCTION__, numResults);
 
             /* Get the memory size of previous fragments, if any. */
             sizeOfObtainedResults = mHotlistApFoundNumResults *
@@ -1410,7 +1410,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             memset((u8 *)mHotlistApFoundResults + sizeOfObtainedResults, 0,
                     resultsBufSize - sizeOfObtainedResults);
 
-            ALOGD("%s: Num of AP FOUND results = %d. \n", __FUNCTION__,
+            ALOGV("%s: Num of AP FOUND results = %d. \n", __FUNCTION__,
                                             mHotlistApFoundNumResults);
 
             /* To support fragmentation from firmware, monitor the
@@ -1432,9 +1432,9 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                     __FUNCTION__, mHotlistApFoundMoreData);
             }
 
-            ALOGD("%s: Extract hotlist_ap_found results.\n", __FUNCTION__);
+            ALOGV("%s: Extract hotlist_ap_found results.\n", __FUNCTION__);
             startingIndex = mHotlistApFoundNumResults - numResults;
-            ALOGD("%s: starting_index:%d",
+            ALOGV("%s: starting_index:%d",
                 __FUNCTION__, startingIndex);
             ret = gscan_parse_hotlist_ap_results(numResults,
                                                 mHotlistApFoundResults,
@@ -1482,7 +1482,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             }
             numResults = nla_get_u32(tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE]);
-            ALOGD("%s: number of results:%d", __FUNCTION__, numResults);
+            ALOGV("%s: number of results:%d", __FUNCTION__, numResults);
 
             /* Get the memory size of previous fragments, if any. */
             sizeOfObtainedResults = mHotlistApLostNumResults *
@@ -1513,7 +1513,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             memset((u8 *)mHotlistApLostResults + sizeOfObtainedResults, 0,
                     resultsBufSize - sizeOfObtainedResults);
 
-            ALOGD("%s: Num of AP Lost results = %d. \n", __FUNCTION__,
+            ALOGV("%s: Num of AP Lost results = %d. \n", __FUNCTION__,
                                             mHotlistApLostNumResults);
 
             /* To support fragmentation from firmware, monitor the
@@ -1535,9 +1535,9 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                     __FUNCTION__, mHotlistApLostMoreData);
             }
 
-            ALOGD("%s: Extract hotlist_ap_Lost results.\n", __FUNCTION__);
+            ALOGV("%s: Extract hotlist_ap_Lost results.\n", __FUNCTION__);
             startingIndex = mHotlistApLostNumResults - numResults;
-            ALOGD("%s: starting_index:%d",
+            ALOGV("%s: starting_index:%d",
                 __FUNCTION__, startingIndex);
             ret = gscan_parse_hotlist_ap_results(numResults,
                                                 mHotlistApLostResults,
@@ -1628,7 +1628,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             memset((u8 *)mSignificantChangeResults + sizeOfObtainedResults, 0,
                     sizeof(wifi_significant_change_result *) *
                                 numResults);
-            ALOGD("%s: mSignificantChangeMoreData = %d",
+            ALOGV("%s: mSignificantChangeMoreData = %d",
                     __FUNCTION__, mSignificantChangeMoreData);
 
             for (scanResultsInfo = (struct nlattr *) nla_data(tbVendor[
@@ -1672,12 +1672,12 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 memset((u8 *)mSignificantChangeResults[index],
                         0, resultsBufSize);
 
-                ALOGD("%s: For Significant Change results[%d], num_rssi:%d\n",
+                ALOGV("%s: For Significant Change results[%d], num_rssi:%d\n",
                     __FUNCTION__, index, num_rssi);
                 index++;
             }
 
-            ALOGD("%s: Extract significant change results.\n", __FUNCTION__);
+            ALOGV("%s: Extract significant change results.\n", __FUNCTION__);
             startingIndex =
                 mSignificantChangeNumResults - numResults;
             ret = gscan_get_significant_change_results(numResults,
@@ -1701,12 +1701,12 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             mSignificantChangeMoreData = nla_get_u8(
                 tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_MORE_DATA]);
-            ALOGD("%s: More data = %d. \n",
+            ALOGV("%s: More data = %d. \n",
                 __FUNCTION__, mSignificantChangeMoreData);
 
             /* Send the results if no more result fragments are expected */
             if (!mSignificantChangeMoreData) {
-                ALOGD("%s: Invoking the callback. \n", __FUNCTION__);
+                ALOGV("%s: Invoking the callback. \n", __FUNCTION__);
                 (*mHandler.on_significant_change)(reqId,
                                               mSignificantChangeNumResults,
                                               mSignificantChangeResults);
@@ -1850,13 +1850,13 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 mPnoNetworkFoundMoreData = nla_get_u8(
                     tbVendor[
                     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_MORE_DATA]);
-                ALOGD("%s: More data = %d. \n",
+                ALOGV("%s: More data = %d. \n",
                     __FUNCTION__, mPnoNetworkFoundMoreData);
             }
 
-            ALOGD("%s: Extract PNO_NETWORK_FOUND results.\n", __FUNCTION__);
+            ALOGV("%s: Extract PNO_NETWORK_FOUND results.\n", __FUNCTION__);
             startingIndex = mPnoNetworkFoundNumResults - numResults;
-            ALOGD("%s: starting_index:%d",
+            ALOGV("%s: starting_index:%d",
                 __FUNCTION__, startingIndex);
             ret = gscan_parse_pno_network_results(numResults,
                                                 mPnoNetworkFoundResults,

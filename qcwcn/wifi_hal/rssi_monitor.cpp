@@ -126,7 +126,7 @@ int RSSIMonitorCommand::handleEvent(WifiEvent &event)
              *  request_id value which we're maintaining.
              */
             if (reqId != id()) {
-                ALOGD("%s: Event has Req. ID:%d <> Ours:%d, continue...",
+                ALOGV("%s: Event has Req. ID:%d <> Ours:%d, continue...",
                     __FUNCTION__, reqId, id());
                 reqId = id();
             }

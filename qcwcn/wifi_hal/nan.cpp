@@ -696,7 +696,7 @@ out:
 int NanCommand::handleEvent(WifiEvent &event)
 {
     WifiVendorCommand::handleEvent(event);
-    ALOGD("%s: Subcmd=%u Vendor data len received:%d",
+    ALOGV("%s: Subcmd=%u Vendor data len received:%d",
           __FUNCTION__, mSubcmd, mDataLen);
     hexdump(mVendorData, mDataLen);
 
