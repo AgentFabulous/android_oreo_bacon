@@ -482,7 +482,6 @@ static wifi_error get_wifi_peer_info(wifi_peer_info *stats,
     }
     stats->num_rate               = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO_NUM_RATES]);
 
-    ALOGV("PEER STATS");
     ALOGV("numPeers %u  Peer MAC addr :" MAC_ADDR_STR " capabilities %0x numRate %u",
            stats->type, MAC_ADDR_ARRAY(stats->peer_mac_address),
            stats->capabilities, stats->num_rate);
@@ -934,7 +933,6 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
 
                 case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_TYPE_IFACE:
                 {
-                    ALOGV("Iface Stats Received");
                     resultsBufSize = sizeof(wifi_iface_stat);
                     mResultsParams.iface_stat =
                         (wifi_iface_stat *) malloc (resultsBufSize);
@@ -996,7 +994,6 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                     struct nlattr *peerInfo;
                     wifi_iface_stat *pIfaceStat;
                     u32 numPeers, num_rates = 0;
-                    ALOGV("Peer Stats Received");
                     if (!tb_vendor[
                             QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
                     {
