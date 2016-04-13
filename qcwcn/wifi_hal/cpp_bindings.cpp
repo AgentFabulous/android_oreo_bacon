@@ -754,9 +754,6 @@ WifiVendorCommand::~WifiVendorCommand()
 // in the corresponding object
 int WifiVendorCommand::handleResponse(WifiEvent &reply)
 {
-#ifdef QC_HAL_DEBUG
-    ALOGI("WifiVendorCommand::handleResponse");
-#endif
     struct nlattr **tb = reply.attributes();
     struct nlattr *attr = NULL;
     struct genlmsghdr *gnlh = reply.header();
@@ -765,9 +762,6 @@ int WifiVendorCommand::handleResponse(WifiEvent &reply)
         if (tb[NL80211_ATTR_VENDOR_DATA]) {
             mVendorData = (char *)nla_data(tb[NL80211_ATTR_VENDOR_DATA]);
             mDataLen = nla_len(tb[NL80211_ATTR_VENDOR_DATA]);
-#ifdef QC_HAL_DEBUG
-            ALOGD("%s: Vendor data len received:%d", __FUNCTION__, mDataLen);
-#endif
         }
     }
     return NL_SKIP;
@@ -777,9 +771,6 @@ int WifiVendorCommand::handleResponse(WifiEvent &reply)
 // save it in the object
 int WifiVendorCommand::handleEvent(WifiEvent &event)
 {
-#ifdef QC_HAL_DEBUG
-    ALOGI("WifiVendorCommand::handleEvent");
-#endif
     struct nlattr **tb = event.attributes();
     struct nlattr *attr = NULL;
     struct genlmsghdr *gnlh = event.header();
