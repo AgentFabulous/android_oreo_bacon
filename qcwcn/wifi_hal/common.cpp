@@ -429,10 +429,6 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities)
     }
 
     if ((lowiSupportedCapabilities & requested_lowi_capabilities) == 0) {
-        ALOGE("%s: requested lowi capabilities: 0x%08x is not "
-            " in supported capabilities: 0x%08x. Return NULL.",
-            __FUNCTION__, requested_lowi_capabilities,
-            lowiSupportedCapabilities);
         return NULL;
     }
     return LowiWifiHalApi;
