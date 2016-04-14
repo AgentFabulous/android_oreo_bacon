@@ -227,7 +227,7 @@ wifi_error GScanCommandEventHandler::gscan_parse_hotlist_ap_results(
     struct nlattr *scanResultsInfo;
     int rem = 0;
     u32 len = 0;
-    ALOGE("gscan_parse_hotlist_ap_results: starting counter: %d", i);
+    ALOGV("gscan_parse_hotlist_ap_results: starting counter: %d", i);
 
     for (scanResultsInfo = (struct nlattr *) nla_data(tb_vendor[
             QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST]),
@@ -1531,7 +1531,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 mHotlistApLostMoreData = nla_get_u8(
                     tbVendor[
                     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_MORE_DATA]);
-                ALOGE("%s: More data = %d. \n",
+                ALOGV("%s: More data = %d. \n",
                     __FUNCTION__, mHotlistApLostMoreData);
             }
 
