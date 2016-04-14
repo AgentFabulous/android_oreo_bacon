@@ -141,7 +141,7 @@ int IfaceEventHandlerCommand::handleEvent(WifiEvent &event)
 IfaceEventHandlerCommand::IfaceEventHandlerCommand(wifi_handle handle, int id, u32 subcmd)
         : wifiEventHandler(handle, id, subcmd)
 {
-    ALOGD("wifiEventHandler %p constructed", this);
+    ALOGV("wifiEventHandler %p constructed", this);
     registerHandler(mSubcmd);
     memset(&mHandler, 0, sizeof(wifi_event_handler));
     mEventData = NULL;
@@ -150,7 +150,7 @@ IfaceEventHandlerCommand::IfaceEventHandlerCommand(wifi_handle handle, int id, u
 
 IfaceEventHandlerCommand::~IfaceEventHandlerCommand()
 {
-    ALOGD("IfaceEventHandlerCommand %p destructor", this);
+    ALOGV("IfaceEventHandlerCommand %p destructor", this);
     unregisterHandler(mSubcmd);
 }
 
@@ -175,12 +175,12 @@ wifiEventHandler::wifiEventHandler(wifi_handle handle, int id, u32 subcmd)
     mRequestId = id;
     mSubcmd = subcmd;
     registerHandler(mSubcmd);
-    ALOGD("wifiEventHandler %p constructed", this);
+    ALOGV("wifiEventHandler %p constructed", this);
 }
 
 wifiEventHandler::~wifiEventHandler()
 {
-    ALOGD("wifiEventHandler %p destructor", this);
+    ALOGV("wifiEventHandler %p destructor", this);
     unregisterHandler(mSubcmd);
 }
 
@@ -260,7 +260,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                         tb_vendor[
                     QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_RESULTS_SET_SIZE]);
 
-                    ALOGD("%s: Num of concurrency combinations: %d",
+                    ALOGV("%s: Num of concurrency combinations: %d",
                         __func__, val);
                     val = val > (unsigned int)mSetSizeMax ?
                           (unsigned int)mSetSizeMax : val;
@@ -276,15 +276,15 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                             sizeof(feature_set) * (*mSetSizePtr));
                     }
 
-                    ALOGD("%s: Get concurrency matrix response received.",
+                    ALOGV("%s: Get concurrency matrix response received.",
                         __func__);
-                    ALOGD("%s: Num of concurrency combinations : %d",
+                    ALOGV("%s: Num of concurrency combinations : %d",
                         __func__, *mSetSizePtr);
-                    ALOGD("%s: List of valid concurrency combinations is: ",
+                    ALOGV("%s: List of valid concurrency combinations is: ",
                         __func__);
                     for(i = 0; i < *mSetSizePtr; i++)
                     {
-                        ALOGD("%x", *(mConcurrencySet + i));
+                        ALOGV("%x", *(mConcurrencySet + i));
                     }
                 }
             }

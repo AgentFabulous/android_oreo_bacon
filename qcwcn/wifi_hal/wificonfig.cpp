@@ -46,7 +46,7 @@ wifi_error wifi_extended_dtim_config_set(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGD("%s: extended_dtim:%d", __FUNCTION__, extended_dtim);
+    ALOGV("%s: extended_dtim:%d", __FUNCTION__, extended_dtim);
 
     wifiConfigCommand = new WiFiConfigCommand(
                             wifiHandle,
@@ -115,7 +115,7 @@ wifi_error wifi_set_country_code(wifi_interface_handle iface,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGD("%s: %s", __FUNCTION__, country_code);
+    ALOGV("%s: %s", __FUNCTION__, country_code);
 
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate it randomly.
@@ -170,7 +170,7 @@ wifi_error wifi_set_beacon_wifi_iface_stats_averaging_factor(
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGD("%s factor:%u", __FUNCTION__, factor);
+    ALOGV("%s factor:%u", __FUNCTION__, factor);
     wifiConfigCommand = new WiFiConfigCommand(
                             wifiHandle,
                             id,
@@ -238,7 +238,7 @@ wifi_error wifi_set_guard_time(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGD("%s : guard_time:%u", __FUNCTION__, guard_time);
+    ALOGV("%s : guard_time:%u", __FUNCTION__, guard_time);
 
     wifiConfigCommand = new WiFiConfigCommand(
                             wifiHandle,
@@ -415,7 +415,7 @@ int WiFiConfigCommand::requestEvent()
         {
             ALOGE("%s: Time out happened.", __FUNCTION__);
         }
-        ALOGD("%s: Command invoked return value:%d, mWaitForRsp=%d",
+        ALOGV("%s: Command invoked return value:%d, mWaitForRsp=%d",
             __FUNCTION__, res, mWaitforRsp);
     }
 out:

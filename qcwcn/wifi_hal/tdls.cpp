@@ -384,14 +384,14 @@ wifi_error wifi_enable_tdls(wifi_interface_handle iface,
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nl_data)
         goto cleanup;
-    ALOGD("%s: MAC_ADDR: " MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
+    ALOGV("%s: MAC_ADDR: " MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
     ret = pTdlsCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MAC_ADDR,
                                   (char *)addr, 6);
     if (ret < 0)
         goto cleanup;
 
     if (params != NULL) {
-        ALOGD("%s: Channel: %d, Global operating class: %d, "
+        ALOGV("%s: Channel: %d, Global operating class: %d, "
             "Max Latency: %dms, Min Bandwidth: %dKbps",
             __FUNCTION__, params->channel, params->global_operating_class,
             params->max_latency_ms, params->min_bandwidth_kbps);
@@ -458,8 +458,8 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
     ret = pTdlsCommand->set_iface_id(iinfo->name);
     if (ret < 0)
         goto cleanup;
-    ALOGD("%s: ifindex obtained:%d", __FUNCTION__, ret);
-    ALOGD("%s: MAC_ADDR: " MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
+    ALOGV("%s: ifindex obtained:%d", __FUNCTION__, ret);
+    ALOGV("%s: MAC_ADDR: " MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
 
     /* Add the attributes */
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
@@ -508,7 +508,7 @@ wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
     ret = pTdlsCommand->set_iface_id(iinfo->name);
     if (ret < 0)
         goto cleanup;
-    ALOGD("%s: ifindex obtained:%d", __FUNCTION__, ret);
+    ALOGV("%s: ifindex obtained:%d", __FUNCTION__, ret);
 
     /* Add the attributes */
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
