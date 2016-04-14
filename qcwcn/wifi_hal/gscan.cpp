@@ -1901,12 +1901,10 @@ int GScanCommand:: gscan_get_cached_results(
                      cached_results[i].scan_id, j, numScanResults);
            }
 
-#ifdef QC_HAL_DEBUG
-           ALOGE("%s: scan_id %d ", __FUNCTION__,
+           ALOGV("%s: scan_id %d ", __FUNCTION__,
             cached_results[i].scan_id);
-           ALOGE("%s: flags  %u ", __FUNCTION__,
+           ALOGV("%s: flags  %u ", __FUNCTION__,
             cached_results[i].flags);
-#endif
 
            for (wifiScanResultsInfo = (struct nlattr *) nla_data(tb2[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST]),
