@@ -400,7 +400,7 @@ int NanCommand::getNanDiscEngEvent(NanDiscEngEventInd *event)
 
     //Has Self-STA Mac TLV
     if (remainingLen <= 0) {
-        ALOGI("%s: No TLV's present",__func__);
+        ALOGE("%s: No TLV's present",__func__);
         return WIFI_SUCCESS;
     }
 
@@ -486,7 +486,7 @@ int NanCommand::getNanTca(NanTCAInd *event)
 
     //Has NAN_TCA_ID_CLUSTER_SIZE
     if (remainingLen <= 0) {
-        ALOGI("%s: No TLV's present",__func__);
+        ALOGE("%s: No TLV's present",__func__);
         return WIFI_SUCCESS;
     }
 
