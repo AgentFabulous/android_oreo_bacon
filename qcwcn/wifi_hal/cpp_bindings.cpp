@@ -784,18 +784,14 @@ int WifiVendorCommand::handleEvent(WifiEvent &event)
         mVendor_id = nla_get_u32(tb[NL80211_ATTR_VENDOR_ID]);
         mSubcmd = nla_get_u32(tb[NL80211_ATTR_VENDOR_SUBCMD]);
 
-#ifdef QC_HAL_DEBUG
-        ALOGD("%s: Vendor event: vendor_id=0x%x subcmd=%u",
+        ALOGV("%s: Vendor event: vendor_id=0x%x subcmd=%u",
               __FUNCTION__, mVendor_id, mSubcmd);
-#endif
 
         if (tb[NL80211_ATTR_VENDOR_DATA]) {
             mVendorData = (char *)nla_data(tb[NL80211_ATTR_VENDOR_DATA]);
             mDataLen = nla_len(tb[NL80211_ATTR_VENDOR_DATA]);
-#ifdef QC_HAL_DEBUG
-            ALOGD("%s: Vendor data len received:%d", __FUNCTION__, mDataLen);
+            ALOGV("%s: Vendor data len received:%d", __FUNCTION__, mDataLen);
             hexdump(mVendorData, mDataLen);
-#endif
         }
     }
     return NL_SKIP;

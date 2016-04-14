@@ -1076,10 +1076,9 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             u32 lengthOfInfoElements = 0;
             u32 buckets_scanned = 0;
 
-#ifdef QC_HAL_DEBUG
-            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_FULL_SCAN_RESULT "
+            ALOGV("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_FULL_SCAN_RESULT "
                 "received.");
-#endif
+
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
             {
@@ -1116,10 +1115,10 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 nla_get_u32(
                 tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH]);
-#ifdef QC_HAL_DEBUG
-            ALOGD("%s: RESULTS_SCAN_RESULT_IE_LENGTH =%d",
+
+            ALOGV("%s: RESULTS_SCAN_RESULT_IE_LENGTH =%d",
                 __FUNCTION__, lengthOfInfoElements);
-#endif
+
             resultsBufSize =
                 lengthOfInfoElements + sizeof(wifi_scan_result);
             result = (wifi_scan_result *) malloc (resultsBufSize);
