@@ -541,7 +541,6 @@ int WifiEvent::parse() {
     int result = nla_parse(mAttributes, NL80211_ATTR_MAX_INTERNAL, genlmsg_attrdata(mHeader, 0),
           genlmsg_attrlen(mHeader, 0), NULL);
 
-    // ALOGD("event len = %d", nlmsg_hdr(mMsg)->nlmsg_len);
     return result;
 }
 
@@ -678,7 +677,6 @@ out:
 
 /* Event handlers */
 int WifiCommand::response_handler(struct nl_msg *msg, void *arg) {
-    // ALOGD("response_handler called");
     WifiCommand *cmd = (WifiCommand *)arg;
     WifiEvent reply(msg);
     int res = reply.parse();
@@ -708,21 +706,18 @@ int WifiCommand::event_handler(struct nl_msg *msg, void *arg) {
 
 /* Other event handlers */
 int WifiCommand::valid_handler(struct nl_msg *msg, void *arg) {
-    // ALOGD("valid_handler called");
      int *err = (int *)arg;
     *err = 0;
     return NL_SKIP;
 }
 
 int WifiCommand::ack_handler(struct nl_msg *msg, void *arg) {
-    // ALOGD("ack_handler called");
     int *err = (int *)arg;
     *err = 0;
     return NL_STOP;
 }
 
 int WifiCommand::finish_handler(struct nl_msg *msg, void *arg) {
-    // ALOGD("finish_handler called");
     int *ret = (int *)arg;
     *ret = 0;
     return NL_SKIP;
@@ -732,7 +727,6 @@ int WifiCommand::error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err, vo
     int *ret = (int *)arg;
     *ret = err->error;
 
-    // ALOGD("error_handler received : %d", err->error);
     return NL_SKIP;
 }
 
