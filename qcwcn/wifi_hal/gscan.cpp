@@ -1347,9 +1347,6 @@ GScanCommand::GScanCommand(wifi_handle handle, int id, u32 vendor_id,
                                   u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
 {
-#ifdef QC_HAL_DEBUG
-    ALOGD("GScanCommand %p constructed", this);
-#endif
     /* Initialize the member data variables here */
     mGetCapabilitiesRspParams = NULL;
     mGetCachedResultsRspParams = NULL;
@@ -1363,9 +1360,6 @@ GScanCommand::GScanCommand(wifi_handle handle, int id, u32 vendor_id,
 
 GScanCommand::~GScanCommand()
 {
-#ifdef QC_HAL_DEBUG
-    ALOGD("GScanCommand %p destructor", this);
-#endif
     unregisterVendorHandler(mVendor_id, mSubcmd);
 }
 
