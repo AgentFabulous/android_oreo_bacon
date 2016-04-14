@@ -635,7 +635,6 @@ static void internal_cleaned_up_handler(wifi_handle handle)
     if (info->rx_aggr_pkts)
         free(info->rx_aggr_pkts);
     wifi_logger_ring_buffers_deinit(info);
-    ALOGI("Cleanup Gscan Event Handlers");
     cleanupGscanHandlers(info);
 
     if (info->exit_sockets[0] >= 0) {
@@ -657,8 +656,6 @@ static void internal_cleaned_up_handler(wifi_handle handle)
     pthread_mutex_destroy(&info->cb_lock);
     pthread_mutex_destroy(&info->pkt_fate_stats_lock);
     free(info);
-
-    ALOGI("Internal cleanup completed");
 }
 
 void wifi_cleanup(wifi_handle handle, wifi_cleaned_up_handler handler)
@@ -746,9 +743,6 @@ void wifi_event_loop(wifi_handle handle)
         }
         rb_timerhandler(info);
     } while (!info->clean_up);
-
-
-    ALOGI("Cleaning up");
     internal_cleaned_up_handler(handle);
 }
 

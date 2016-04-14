@@ -111,8 +111,6 @@ int RSSIMonitorCommand::handleEvent(WifiEvent &event)
 
             memset(addr, 0, sizeof(mac_addr));
 
-            ALOGI("QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI Received");
-
             if (!tb_vendor[
                 QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_REQUEST_ID])
             {

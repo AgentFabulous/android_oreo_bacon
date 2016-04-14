@@ -1057,7 +1057,6 @@ NanCommand::~NanCommand()
 }
 
 int NanCommand::handleResponse(WifiEvent &reply){
-    ALOGI("skipping a response");
     return NL_SKIP;
 }
 
@@ -1110,7 +1109,6 @@ out:
 //Call the appropriate callback handler after parsing the vendor data.
 int NanCommand::handleEvent(WifiEvent &event)
 {
-    ALOGI("Got a NAN message from Driver");
     WifiVendorCommand::handleEvent(event);
     ALOGD("%s: Subcmd=%u Vendor data len received:%d",
           __FUNCTION__, mSubcmd, mDataLen);
