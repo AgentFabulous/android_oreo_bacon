@@ -1328,9 +1328,11 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
         {
             wifi_request_id id;
 
-            ALOGD("Event "
+#ifdef QC_HAL_DEBUG
+            ALOGV("Event "
                     "QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_RESULTS_AVAILABLE "
                     "received.");
+#endif
 
             if (!tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID]) {
                 ALOGE("%s: QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID"
