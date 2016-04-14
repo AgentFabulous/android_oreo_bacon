@@ -603,7 +603,6 @@ cleanup:
 NanCommand::NanCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
 {
-    ALOGV("NanCommand %p constructed", this);
     memset(&mHandler, 0,sizeof(mHandler));
     mNanVendorEvent = NULL;
     mNanDataLen = 0;

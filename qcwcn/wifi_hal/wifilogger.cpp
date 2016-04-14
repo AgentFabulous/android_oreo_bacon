@@ -776,7 +776,6 @@ wifi_error wifi_get_rx_pkt_fates(wifi_interface_handle iface,
 WifiLoggerCommand::WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
 {
-    ALOGV("WifiLoggerCommand %p constructed", this);
     mVersion = NULL;
     mVersionLen = 0;
     mRequestId = id;
@@ -788,7 +787,6 @@ WifiLoggerCommand::WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, 
 
 WifiLoggerCommand::~WifiLoggerCommand()
 {
-    ALOGV("WifiLoggerCommand %p destructor", this);
     unregisterVendorHandler(mVendor_id, mSubcmd);
 }
 
