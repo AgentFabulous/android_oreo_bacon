@@ -77,7 +77,6 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
 {
     int ret = 0;
-    ALOGD("GScanCommandEventHandler %p constructed", this);
     mRequestId = id;
     mHandler = handler;
     mSubCommandId = subcmd;
@@ -110,8 +109,6 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
         case QCA_NL80211_VENDOR_SUBCMD_GSCAN_START:
         {
             /* Register handlers for northbound asychronous scan events. */
-            ALOGD("%s: wait for GSCAN_RESULTS_AVAILABLE, "
-                "FULL_SCAN_RESULT, and SCAN EVENT events. \n", __FUNCTION__);
             ret = registerVendorHandler(mVendor_id,
                     QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_RESULTS_AVAILABLE) ||
                   registerVendorHandler(mVendor_id,
@@ -174,14 +171,11 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
 
 GScanCommandEventHandler::~GScanCommandEventHandler()
 {
-    ALOGD("GScanCommandEventHandler %p destructor", this);
     switch(mSubCommandId)
     {
         case QCA_NL80211_VENDOR_SUBCMD_GSCAN_START:
         {
             /* Unregister event handlers. */
-            ALOGD("%s: Unregister handlers for GSCAN_RESULTS_AVAILABLE, "
-            "FULL_SCAN_RESULT, and SCAN EVENT events. \n", __FUNCTION__);
             unregisterVendorHandler(mVendor_id,
                     QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_RESULTS_AVAILABLE);
             unregisterVendorHandler(mVendor_id,
@@ -911,7 +905,6 @@ wifi_error GScanCommandEventHandler::gscan_parse_pno_network_results(
     struct nlattr *scanResultsInfo;
     int rem = 0;
     u32 len = 0;
-    ALOGD("gscan_parse_pno_network_results: starting counter: %d", i);
 
     for (scanResultsInfo = (struct nlattr *) nla_data(tb_vendor[
             QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST]),
@@ -1387,9 +1380,6 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             u32 numResults = 0;
             u32 startingIndex, sizeOfObtainedResults;
 
-            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_FOUND "
-                "received.");
-
             id = nla_get_u32(
                     tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID]
                     );
@@ -1492,9 +1482,6 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             u32 resultsBufSize = 0;
             u32 numResults = 0;
             u32 startingIndex, sizeOfObtainedResults;
-
-            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_LOST "
-                "received.");
 
             id = nla_get_u32(
                     tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID]
@@ -1599,9 +1586,6 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             u32 startingIndex, index = 0;
             struct nlattr *scanResultsInfo;
             int rem = 0;
-
-            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_SIGNIFICANT_CHANGE "
-                "received.");
 
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
@@ -1812,9 +1796,6 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             u32 numResults = 0;
             u32 startingIndex, sizeOfObtainedResults;
 
-            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_PNO_NETWORK_FOUND "
-                "received.");
-
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
             {
@@ -1925,9 +1906,6 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
         case QCA_NL80211_VENDOR_SUBCMD_PNO_PASSPOINT_NETWORK_FOUND:
         {
             wifi_request_id id;
-
-            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_PNO_PASSPOINT_"
-                "NETWORK_FOUND received.");
 
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])

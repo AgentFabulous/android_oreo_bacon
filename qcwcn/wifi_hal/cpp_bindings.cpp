@@ -498,8 +498,6 @@ void WifiEvent::log() {
 
     byte *data = (byte *)genlmsg_attrdata(mHeader, 0);
     int len = genlmsg_attrlen(mHeader, 0);
-    ALOGD("cmd = %s, len = %d", get_cmdString(), len);
-    ALOGD("vendor_id = %04x, vendor_subcmd = %d", get_vendor_id(), get_vendor_subcmd());
 
     for (int i = 0; i < len; i += 16) {
         char line[81];
@@ -526,16 +524,8 @@ void WifiEvent::log() {
             }
         }
 
-        ALOGD("%s", line);
     }
 
-    for (unsigned i = 0; i < NL80211_ATTR_MAX_INTERNAL; i++) {
-        if (mAttributes[i] != NULL) {
-            ALOGD("found attribute %s", attributeToString(i));
-        }
-    }
-
-    ALOGD("-- End of message --");
 }
 
 const char *WifiEvent::get_cmdString() {
@@ -640,8 +630,6 @@ out:
 
 int WifiCommand::requestEvent(int cmd) {
 
-    ALOGD("requesting event %d", cmd);
-
     int res = wifi_register_handler(wifiHandle(), cmd, event_handler, this);
     if (res < 0) {
         return res;
@@ -651,13 +639,10 @@ int WifiCommand::requestEvent(int cmd) {
     if (res < 0)
         goto out;
 
-    ALOGD("waiting for response %d", cmd);
-
     res = nl_send_auto_complete(mInfo->cmd_sock, mMsg.getMessage());    /* send message */
     if (res < 0)
         goto out;
 
-    ALOGD("waiting for event %d", cmd);
     res = mCondition.wait();
     if (res < 0)
         goto out;
@@ -861,7 +846,6 @@ out:
 
 int WifiVendorCommand::requestResponse()
 {
-    ALOGD("%s: request a response", __FUNCTION__);
     return WifiCommand::requestResponse(mMsg);
 }
 

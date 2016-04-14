@@ -191,8 +191,6 @@ wifi_error wifi_register_cmd(wifi_handle handle, int id, WifiCommand *cmd)
 {
     hal_info *info = (hal_info *)handle;
 
-    ALOGD("registering command %d", id);
-
     if (info->num_cmd < info->alloc_cmd) {
         info->cmd[info->num_cmd].id   = id;
         info->cmd[info->num_cmd].cmd  = cmd;
@@ -207,8 +205,6 @@ wifi_error wifi_register_cmd(wifi_handle handle, int id, WifiCommand *cmd)
 WifiCommand *wifi_unregister_cmd(wifi_handle handle, int id)
 {
     hal_info *info = (hal_info *)handle;
-
-    ALOGD("un-registering command %d", id);
 
     for (int i = 0; i < info->num_cmd; i++) {
         if (info->cmd[i].id == id) {

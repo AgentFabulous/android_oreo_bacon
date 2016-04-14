@@ -741,7 +741,6 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
         }
         event_handlers->gScanSetBssidHotlistCmdEventHandler =
             gScanSetBssidHotlistCmdEventHandler;
-        ALOGD("%s: Handler object was created for HOTLIST_AP_FOUND.", __FUNCTION__);
     } else {
         gScanSetBssidHotlistCmdEventHandler->setCallbackHandler(callbackHandler);
     }
@@ -1028,8 +1027,6 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
         }
         event_handlers->gScanSetSignificantChangeCmdEventHandler =
             gScanSetSignificantChangeCmdEventHandler;
-        ALOGD("%s: Event handler object was created for SIGNIFICANT_CHANGE.",
-            __FUNCTION__);
     } else {
         gScanSetSignificantChangeCmdEventHandler->setCallbackHandler(callbackHandler);
     }
@@ -2268,8 +2265,6 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
         }
         event_handlers->gScanSetPnoListCmdEventHandler =
             gScanSetPnoListCmdEventHandler;
-        ALOGD("%s: Handler object was created for PNO_NETWORK_FOUND.",
-            __FUNCTION__);
     } else {
         gScanSetPnoListCmdEventHandler->setCallbackHandler(callbackHandler);
     }
@@ -2512,8 +2507,6 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
         }
         event_handlers->gScanPnoSetPasspointListCmdEventHandler =
             gScanPnoSetPasspointListCmdEventHandler;
-        ALOGD("%s: Handler object was created for PNO_PASSPOINT_"
-            "NETWORK_FOUND.", __FUNCTION__);
     } else {
         gScanPnoSetPasspointListCmdEventHandler->setCallbackHandler(callbackHandler);
     }
