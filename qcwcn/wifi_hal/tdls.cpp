@@ -50,7 +50,6 @@ TdlsCommand::TdlsCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
 
 TdlsCommand::~TdlsCommand()
 {
-    ALOGW("TdlsCommand %p distructor", this);
     mTdlsCommandInstance = NULL;
     unregisterVendorHandler(mVendor_id, mSubcmd);
 }
