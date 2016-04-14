@@ -158,7 +158,7 @@ int error_handler(struct sockaddr_nl *nla,
     int *ret = (int *)arg;
     *ret = err->error;
 
-    ALOGD("%s invoked with error: %d", __func__, err->error);
+    ALOGV("%s invoked with error: %d", __func__, err->error);
     return NL_SKIP;
 }
 static int no_seq_check(struct nl_msg *msg, void *arg)

@@ -98,7 +98,7 @@ wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->get_valid_channels == NULL) {
-        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGV("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->get_valid_channels(handle, band, max_channels,
                           channels, num_channels);
@@ -195,7 +195,7 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->get_gscan_capabilities == NULL) {
-        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGV("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->get_gscan_capabilities(handle,
                                                      capabilities);
@@ -301,7 +301,7 @@ wifi_error wifi_start_gscan(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->start_gscan  == NULL) {
-        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGV("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->start_gscan(id, iface, params, handler);
         ALOGV("%s: lowi start_gscan "
@@ -523,7 +523,7 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->stop_gscan == NULL) {
-        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGV("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->stop_gscan(id, iface);
         ALOGV("%s: lowi stop_gscan "
@@ -617,7 +617,7 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->set_bssid_hotlist == NULL) {
-        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGV("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->set_bssid_hotlist(id, iface, params,handler);
         ALOGV("%s: lowi set_bssid_hotlist "
@@ -790,7 +790,7 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->reset_bssid_hotlist == NULL) {
-        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGV("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->reset_bssid_hotlist(id, iface);
         ALOGV("%s: lowi reset_bssid_hotlist "
@@ -886,7 +886,7 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->set_significant_change_handler == NULL) {
-        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGV("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->set_significant_change_handler(id,
                                                              iface,
@@ -1074,7 +1074,7 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->reset_significant_change_handler == NULL) {
-        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGV("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->reset_significant_change_handler(id, iface);
         ALOGV("%s: lowi reset_significant_change_handler "
@@ -1171,7 +1171,7 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
     lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
     if (lowiWifiHalApi == NULL ||
         lowiWifiHalApi->get_cached_gscan_results == NULL) {
-        ALOGD("%s: Sending cmd directly to host", __FUNCTION__);
+        ALOGV("%s: Sending cmd directly to host", __FUNCTION__);
     } else {
         ret = lowiWifiHalApi->get_cached_gscan_results(iface,
                                                        flush,
@@ -1274,7 +1274,7 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
             if (*num > 0) {
                 /* Mark scan results as incomplete for the last scan_id */
                 results[(*num)-1].flags = WIFI_SCAN_FLAG_INTERRUPTED;
-                ALOGD("%s: Timeout happened. Mark scan results as incomplete "
+                ALOGV("%s: Timeout happened. Mark scan results as incomplete "
                     "for scan_id:%d", __FUNCTION__, results[(*num)-1].scan_id);
                 ret = WIFI_SUCCESS;
             } else
@@ -1885,7 +1885,7 @@ int GScanCommand:: gscan_get_cached_results(
                                         cached_results[i].scan_id) {
                j = 0; /* reset wifi_scan_result counter */
                cached_results[i].num_results = 0;
-               ALOGD("parsing: *lastProcessedScanId [%d] !="
+               ALOGV("parsing: *lastProcessedScanId [%d] !="
                      " cached_results[%d].scan_id:%d, j:%d "
                      "numScanResults: %d",
                      mGetCachedResultsRspParams->lastProcessedScanId, i,
@@ -1897,7 +1897,7 @@ int GScanCommand:: gscan_get_cached_results(
                mGetCachedResultsRspParams->num_cached_results++;
            } else {
                j = mGetCachedResultsRspParams->wifiScanResultsStartingIndex;
-               ALOGD("parsing: *lastProcessedScanId [%d] == "
+               ALOGV("parsing: *lastProcessedScanId [%d] == "
                      "cached_results[%d].scan_id:%d, j:%d "
                      "numScanResults:%d",
                      mGetCachedResultsRspParams->lastProcessedScanId, i,
@@ -2742,7 +2742,7 @@ void GScanCommand::getGetCapabilitiesRspParams(
             &mGetCapabilitiesRspParams->capabilities,
             sizeof(wifi_gscan_capabilities));
     } else {
-        ALOGD("%s: mGetCapabilitiesRspParams is NULL", __FUNCTION__);
+        ALOGV("%s: mGetCapabilitiesRspParams is NULL", __FUNCTION__);
     }
 }
 
