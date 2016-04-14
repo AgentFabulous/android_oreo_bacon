@@ -488,12 +488,12 @@ wifi_error wifi_initialize(wifi_handle *handle)
 
     ret = wifi_init_interfaces(*handle);
     if (ret != WIFI_SUCCESS) {
-        ALOGI("Failed to init interfaces");
+        ALOGE("Failed to init interfaces");
         goto unload;
     }
 
     if (info->num_interfaces == 0) {
-        ALOGI("No interfaces found");
+        ALOGE("No interfaces found");
         ret = WIFI_ERROR_UNINITIALIZED;
         goto unload;
     }

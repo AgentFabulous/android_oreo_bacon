@@ -343,7 +343,7 @@ wifi_error fetchLowiCbTableAndCapabilities(lowi_cb_table_t **lowi_wifihal_api,
                                                     &lowiMinorVersion,
                                                     &lowiMicroVersion);
         if (ret) {
-            ALOGI("%s: get_lowi_version returned error:%d",
+            ALOGE("%s: get_lowi_version returned error:%d",
                   __FUNCTION__, ret);
             retVal = WIFI_ERROR_NOT_SUPPORTED;
             goto cleanup;
@@ -357,7 +357,7 @@ wifi_error fetchLowiCbTableAndCapabilities(lowi_cb_table_t **lowi_wifihal_api,
                                           lowiMinorVersion,
                                           lowiMicroVersion);
         if (versionCheck < 0) {
-            ALOGI("%s: Version Check failed:%d", __FUNCTION__,
+            ALOGE("%s: Version Check failed:%d", __FUNCTION__,
                   versionCheck);
             retVal = WIFI_ERROR_NOT_SUPPORTED;
             goto cleanup;
@@ -400,7 +400,7 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities)
                                               &lowi_get_capabilities_support);
         if (ret != WIFI_SUCCESS || LowiWifiHalApi == NULL ||
             LowiWifiHalApi->init == NULL) {
-            ALOGI("%s: LOWI is not supported.", __FUNCTION__);
+            ALOGE("%s: LOWI is not supported.", __FUNCTION__);
             goto cleanup;
         }
         /* Initialize LOWI if it isn't up already. */
