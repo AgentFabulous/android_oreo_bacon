@@ -349,13 +349,11 @@ protected:
 
     /* Override this method to parse reply and dig out data; save it in the object */
     virtual int handleResponse(WifiEvent& reply) {
-        ALOGI("skipping a response");
         return NL_SKIP;
     }
 
     /* Override this method to parse event and dig out data; save it in the object */
     virtual int handleEvent(WifiEvent& event) {
-        ALOGI("skipping an event");
         return NL_SKIP;
     }
 
