@@ -43,7 +43,6 @@ TdlsCommand* TdlsCommand::mTdlsCommandInstance  = NULL;
 TdlsCommand::TdlsCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
 {
-    ALOGV("TdlsCommand %p constructed", this);
     memset(&mHandler, 0, sizeof(mHandler));
     memset(&mTDLSgetStatusRspParams, 0, sizeof(wifi_tdls_status));
     mRequestId = 0;
