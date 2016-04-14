@@ -22,7 +22,7 @@
 
 int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
 {
-    ALOGI("NAN_ENABLE");
+    ALOGV("NAN_ENABLE");
     size_t message_len = NAN_MAX_ENABLE_REQ_SIZE;
 
     if (pReq == NULL) {
@@ -129,7 +129,7 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
+    ALOGV("Message Len %zu", message_len);
     memset (pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_ENABLE_REQ;
@@ -272,7 +272,7 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
 
 int NanCommand::putNanDisable(transaction_id id)
 {
-    ALOGI("NAN_DISABLE");
+    ALOGV("NAN_DISABLE");
     size_t message_len = sizeof(NanDisableReqMsg);
 
     pNanDisableReqMsg pFwReq = (pNanDisableReqMsg)malloc(message_len);
@@ -281,7 +281,7 @@ int NanCommand::putNanDisable(transaction_id id)
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
+    ALOGV("Message Len %zu", message_len);
     memset (pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_DISABLE_REQ;
@@ -303,7 +303,7 @@ int NanCommand::putNanDisable(transaction_id id)
 
 int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
 {
-    ALOGI("NAN_CONFIG");
+    ALOGV("NAN_CONFIG");
     size_t message_len = NAN_MAX_CONFIGURATION_REQ_SIZE;
     int idx = 0;
 
@@ -376,7 +376,7 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
+    ALOGV("Message Len %zu", message_len);
     memset (pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_CONFIGURATION_REQ;
@@ -464,7 +464,7 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
 
 int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
 {
-    ALOGI("NAN_PUBLISH");
+    ALOGV("NAN_PUBLISH");
     if (pReq == NULL) {
         cleanup();
         return WIFI_ERROR_INVALID_ARGS;
@@ -483,7 +483,7 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
+    ALOGV("Message Len %zu", message_len);
     memset(pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_PUBLISH_SERVICE_REQ;
@@ -547,7 +547,7 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
 
 int NanCommand::putNanPublishCancel(transaction_id id, const NanPublishCancelRequest *pReq)
 {
-    ALOGI("NAN_PUBLISH_CANCEL");
+    ALOGV("NAN_PUBLISH_CANCEL");
     if (pReq == NULL) {
         cleanup();
         return WIFI_ERROR_INVALID_ARGS;
@@ -561,7 +561,7 @@ int NanCommand::putNanPublishCancel(transaction_id id, const NanPublishCancelReq
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
+    ALOGV("Message Len %zu", message_len);
     memset(pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_PUBLISH_SERVICE_CANCEL_REQ;
@@ -586,7 +586,7 @@ int NanCommand::putNanSubscribe(transaction_id id,
                                 const NanSubscribeRequest *pReq)
 {
 
-    ALOGI("NAN_SUBSCRIBE");
+    ALOGV("NAN_SUBSCRIBE");
     if (pReq == NULL) {
         cleanup();
         return WIFI_ERROR_INVALID_ARGS;
@@ -608,7 +608,7 @@ int NanCommand::putNanSubscribe(transaction_id id,
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
+    ALOGV("Message Len %zu", message_len);
     memset(pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_SUBSCRIBE_SERVICE_REQ;
@@ -680,7 +680,7 @@ int NanCommand::putNanSubscribe(transaction_id id,
 int NanCommand::putNanSubscribeCancel(transaction_id id,
                                       const NanSubscribeCancelRequest *pReq)
 {
-    ALOGI("NAN_SUBSCRIBE_CANCEL");
+    ALOGV("NAN_SUBSCRIBE_CANCEL");
     if (pReq == NULL) {
         cleanup();
         return WIFI_ERROR_INVALID_ARGS;
@@ -694,7 +694,7 @@ int NanCommand::putNanSubscribeCancel(transaction_id id,
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
+    ALOGV("Message Len %zu", message_len);
     memset(pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_SUBSCRIBE_SERVICE_CANCEL_REQ;
@@ -718,7 +718,7 @@ int NanCommand::putNanSubscribeCancel(transaction_id id,
 int NanCommand::putNanTransmitFollowup(transaction_id id,
                                        const NanTransmitFollowupRequest *pReq)
 {
-    ALOGI("TRANSMIT_FOLLOWUP");
+    ALOGV("TRANSMIT_FOLLOWUP");
     if (pReq == NULL) {
         cleanup();
         return WIFI_ERROR_INVALID_ARGS;
@@ -738,7 +738,7 @@ int NanCommand::putNanTransmitFollowup(transaction_id id,
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
+    ALOGV("Message Len %zu", message_len);
     memset (pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_TRANSMIT_FOLLOWUP_REQ;
@@ -784,7 +784,7 @@ int NanCommand::putNanTransmitFollowup(transaction_id id,
 
 int NanCommand::putNanStats(transaction_id id, const NanStatsRequest *pReq)
 {
-    ALOGI("NAN_STATS");
+    ALOGV("NAN_STATS");
     if (pReq == NULL) {
         cleanup();
         return WIFI_ERROR_INVALID_ARGS;
@@ -798,7 +798,7 @@ int NanCommand::putNanStats(transaction_id id, const NanStatsRequest *pReq)
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
+    ALOGV("Message Len %zu", message_len);
     memset(pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_STATS_REQ;
@@ -824,7 +824,7 @@ int NanCommand::putNanStats(transaction_id id, const NanStatsRequest *pReq)
 
 int NanCommand::putNanTCA(transaction_id id, const NanTCARequest *pReq)
 {
-    ALOGI("NAN_TCA");
+    ALOGV("NAN_TCA");
     if (pReq == NULL) {
         cleanup();
         return WIFI_ERROR_INVALID_ARGS;
@@ -839,7 +839,7 @@ int NanCommand::putNanTCA(transaction_id id, const NanTCARequest *pReq)
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
+    ALOGV("Message Len %zu", message_len);
     memset(pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_TCA_REQ;
@@ -881,7 +881,7 @@ int NanCommand::putNanTCA(transaction_id id, const NanTCARequest *pReq)
 int NanCommand::putNanBeaconSdfPayload(transaction_id id,
                                        const NanBeaconSdfPayloadRequest *pReq)
 {
-    ALOGI("NAN_BEACON_SDF_PAYLAOD");
+    ALOGV("NAN_BEACON_SDF_PAYLAOD");
     if (pReq == NULL) {
         cleanup();
         return WIFI_ERROR_INVALID_ARGS;
@@ -897,7 +897,7 @@ int NanCommand::putNanBeaconSdfPayload(transaction_id id,
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGI("Message Len %zu", message_len);
+    ALOGV("Message Len %zu", message_len);
     memset(pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_BEACON_SDF_REQ;
@@ -1044,7 +1044,7 @@ int NanCommand::calcNanTransmitPostDiscoverySize(
         ret += (SIZEOF_TLV_HDR + \
                 pPostDiscovery->infrastructure_ssid_len);
     }
-    ALOGI("%s:size:%d", __func__, ret);
+    ALOGV("%s:size:%d", __func__, ret);
     return ret;
 }
 
@@ -1063,7 +1063,7 @@ void NanCommand::fillNanSocialChannelParamVal(
         pChannelParamArr[NAN_CHANNEL_24G_BAND] |= 6;
         pChannelParamArr[NAN_CHANNEL_5G_BAND_LOW]|= 44;
         pChannelParamArr[NAN_CHANNEL_5G_BAND_HIGH]|= 149;
-        ALOGI("%s: Filled SocialChannelParamVal", __func__);
+        ALOGV("%s: Filled SocialChannelParamVal", __func__);
         hexdump((char*)pChannelParamArr, NAN_MAX_SOCIAL_CHANNELS * sizeof(u32));
     }
     return;
@@ -1080,7 +1080,7 @@ u32 NanCommand::getNanTransmitPostConnectivityCapabilityVal(
     ret |= (pCapab->is_tdls_supported? 1:0) << 2;
     ret |= (pCapab->is_wfds_supported? 1:0) << 1;
     ret |= (pCapab->is_wfd_supported? 1:0);
-    ALOGI("%s: val:%d", __func__, ret);
+    ALOGV("%s: val:%d", __func__, ret);
     return ret;
 }
 
@@ -1113,7 +1113,7 @@ void NanCommand::fillNanTransmitPostDiscoveryVal(
                         (const u8*)&pTxDisc->infrastructure_ssid_val[0],
                         tlvs);
         }
-        ALOGI("%s: Filled TransmitPostDiscoveryVal", __func__);
+        ALOGV("%s: Filled TransmitPostDiscoveryVal", __func__);
         hexdump((char*)pOutValue, calcNanTransmitPostDiscoverySize(pTxDisc));
     }
 
@@ -1150,7 +1150,7 @@ void NanCommand::fillNanFurtherAvailabilityMapVal(
                    &pFamChan->avail_interval_bitmap,
                    sizeof(pFwFamChan->availIntBitmap));
         }
-        ALOGI("%s: Filled FurtherAvailabilityMapVal", __func__);
+        ALOGV("%s: Filled FurtherAvailabilityMapVal", __func__);
         hexdump((char*)pOutValue, famsize);
     }
     return;
@@ -1167,7 +1167,7 @@ int NanCommand::calcNanFurtherAvailabilityMapSize(
         /* numchans * sizeof(FamChannels) */
         ret += (pFam->numchans * sizeof(NanFurtherAvailabilityChan));
     }
-    ALOGI("%s:size:%d", __func__, ret);
+    ALOGV("%s:size:%d", __func__, ret);
     return ret;
 }
 
