@@ -45,8 +45,6 @@ wifi_error wifi_set_iface_event_handler(wifi_request_id id,
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
 
-    ALOGE("Setting iface event handler, halHandle = %p", wifiHandle);
-
     /* Check if a similar request to set iface event handler was made earlier.
      * Right now we don't differentiate between the case where (i) the new
      * Request Id is different from the current one vs (ii) both new and
