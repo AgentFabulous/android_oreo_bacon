@@ -86,7 +86,7 @@ wifi_error wifi_reset_iface_event_handler(wifi_request_id id,
     if (mwifiEventHandler)
     {
         if (id == mwifiEventHandler->get_request_id()) {
-            ALOGI("Delete Object mwifiEventHandler for id = %d", id);
+            ALOGV("Delete Object mwifiEventHandler for id = %d", id);
             delete mwifiEventHandler;
             mwifiEventHandler = NULL;
         } else {
@@ -95,7 +95,7 @@ wifi_error wifi_reset_iface_event_handler(wifi_request_id id,
             return WIFI_ERROR_NOT_SUPPORTED;
         }
     } else {
-        ALOGI("Object mwifiEventHandler for id = %d already Deleted", id);
+        ALOGV("Object mwifiEventHandler for id = %d already Deleted", id);
     }
 
 cleanup:
@@ -124,7 +124,7 @@ int IfaceEventHandlerCommand::handleEvent(WifiEvent &event)
             } else {
                 ALOGE("%s: NL80211_ATTR_REG_ALPHA2 not found", __func__);
             }
-            ALOGI("Country : %c%c", code[0], code[1]);
+            ALOGV("Country : %c%c", code[0], code[1]);
             if(mHandler.on_country_code_changed)
             {
                 mHandler.on_country_code_changed(code);
@@ -132,7 +132,7 @@ int IfaceEventHandlerCommand::handleEvent(WifiEvent &event)
         }
         break;
         default:
-            ALOGI("NL Event : %d Not supported", mSubcmd);
+            ALOGV("NL Event : %d Not supported", mSubcmd);
     }
 
     return NL_SKIP;
@@ -190,7 +190,7 @@ int wifiEventHandler::handleEvent(WifiEvent &event)
     mSubcmd = gnlh->cmd;
     nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
             genlmsg_attrlen(gnlh, 0), NULL);
-    ALOGI("Got NL Event : %d from the Driver.", gnlh->cmd);
+    ALOGV("Got NL Event : %d from the Driver.", gnlh->cmd);
 
     return NL_SKIP;
 }
@@ -220,7 +220,7 @@ int WifihalGeneric::requestResponse()
 
 int WifihalGeneric::handleResponse(WifiEvent &reply)
 {
-    ALOGI("Got a Wi-Fi HAL module message from Driver");
+    ALOGV("Got a Wi-Fi HAL module message from Driver");
     int i = 0;
     u32 status;
     WifiVendorCommand::handleResponse(reply);
@@ -241,7 +241,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 mSet = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]);
-                ALOGI("Supported feature set : %x", mSet);
+                ALOGV("Supported feature set : %x", mSet);
 
                 break;
             }
@@ -305,7 +305,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 }
                 filterVersion = nla_get_u32(
                        tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION]);
-                ALOGI("Current version : %u", filterVersion);
+                ALOGV("Current version : %u", filterVersion);
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH])
                 {
@@ -315,7 +315,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 }
                 filterLength = nla_get_u32(
                     tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH]);
-                ALOGI("Max filter length Supported : %u", filterLength);
+                ALOGV("Max filter length Supported : %u", filterLength);
 
             }
             break;
@@ -334,7 +334,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 }
                 firmware_bus_max_size = nla_get_u32(
                        tb_vendor[QCA_WLAN_VENDOR_ATTR_DRV_INFO_BUS_SIZE]);
-                ALOGI("Max BUS size Supported: %d", firmware_bus_max_size);
+                ALOGV("Max BUS size Supported: %d", firmware_bus_max_size);
             }
             break;
         default :

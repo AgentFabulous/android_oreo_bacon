@@ -149,7 +149,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pRsp->response_type = NAN_RESPONSE_STATS;
             pRsp->body.stats_response.stats_type = \
                 (NanStatsType)pFwRsp->statsRspParams.statsType;
-            ALOGI("%s: stats_type:%d",__func__,
+            ALOGV("%s: stats_type:%d",__func__,
                   pRsp->body.stats_response.stats_type);
             u8 *pInputTlv = pFwRsp->ptlv;
             NanTlv outputTlv;
@@ -159,7 +159,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
                 (sizeof(NanMsgHeader) + sizeof(NanStatsRspParams)));
             if (remainingLen > 0) {
                 readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv);
-                ALOGI("%s: Remaining Len:%d readLen:%d type:%d length:%d",
+                ALOGV("%s: Remaining Len:%d readLen:%d type:%d length:%d",
                       __func__, remainingLen, readLen, outputTlv.type,
                       outputTlv.length);
                 if (outputTlv.length <= \
@@ -170,7 +170,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
                 }
             }
             else
-                ALOGI("%s: No TLV's present",__func__);
+                ALOGV("%s: No TLV's present",__func__);
             break;
         }
         case NAN_MSG_ID_ENABLE_RSP:

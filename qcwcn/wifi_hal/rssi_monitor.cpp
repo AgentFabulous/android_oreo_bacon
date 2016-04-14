@@ -79,7 +79,7 @@ RSSIMonitorCommand* RSSIMonitorCommand::instance(wifi_handle handle,
         {
             /* upper layer must have cleaned up the handle and reinitialized,
                so we need to update the same */
-            ALOGI("Handle different, update the handle");
+            ALOGV("Handle different, update the handle");
             mRSSIMonitorCommandInstance->mInfo = (hal_info *)handle;
         }
         mRSSIMonitorCommandInstance->setReqId(id);
@@ -136,7 +136,7 @@ int RSSIMonitorCommand::handleEvent(WifiEvent &event)
             if (ret != WIFI_SUCCESS) {
                 return ret;
             }
-            ALOGI(MAC_ADDR_STR, MAC_ADDR_ARRAY(addr));
+            ALOGV(MAC_ADDR_STR, MAC_ADDR_ARRAY(addr));
 
             if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_CUR_RSSI])
             {
@@ -146,7 +146,7 @@ int RSSIMonitorCommand::handleEvent(WifiEvent &event)
             }
             rssi = get_s8(tb_vendor[
                         QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_CUR_RSSI]);
-            ALOGI("Current RSSI : %d ", rssi);
+            ALOGV("Current RSSI : %d ", rssi);
 
             if (mHandler.on_rssi_threshold_breached)
                 (*mHandler.on_rssi_threshold_breached)(reqId, addr, rssi);
@@ -203,7 +203,7 @@ wifi_error wifi_start_rssi_monitoring(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("%s: Max RSSI:%d Min RSSI:%d", __FUNCTION__,
+    ALOGV("%s: Max RSSI:%d Min RSSI:%d", __FUNCTION__,
           max_rssi, min_rssi);
     /* Add the vendor specific attributes for the NL command. */
     nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
