@@ -1042,8 +1042,10 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
             if (tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]) {
                 *mSupportedSet =
                 nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]);
-                ALOGD("%s: Supported Feature Set : val 0x%x",
+#ifdef QC_HAL_DEBUG
+                ALOGV("%s: Supported Feature Set : val 0x%x",
                       __FUNCTION__, *mSupportedSet);
+#endif
             }
         }
         break;
