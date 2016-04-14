@@ -1733,10 +1733,6 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             u32 scanEventStatus = 0;
             wifi_request_id reqId;
 
-#ifdef QC_HAL_DEBUG
-            ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_EVENT "
-                "received.");
-#endif
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
             {
