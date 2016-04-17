@@ -62,15 +62,15 @@
         android:src="@drawable/ic_settings" />
 
     <com.android.camera.ui.RotateImageView
+        android:id="@+id/scene_mode_switcher"
+        style="@style/ToggleButton" />
+
+    <com.android.camera.ui.RotateImageView
         android:id="@+id/front_back_switcher"
         style="@style/ToggleButton" />
 
     <com.android.camera.ui.RotateImageView
         android:id="@+id/filter_mode_switcher"
-        style="@style/ToggleButton" />
-
-    <com.android.camera.ui.RotateImageView
-        android:id="@+id/scene_mode_switcher"
         style="@style/ToggleButton" />
 
     <com.android.camera.ui.RotateImageView
