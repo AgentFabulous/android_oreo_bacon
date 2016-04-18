@@ -443,6 +443,12 @@ enum qca_wlan_vendor_attr_ll_stats_results
     /* Unsigned 32bit value */
     QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE,
 
+    /* Unsigned 32bit value */
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_TX_LEVELS,
+
+    /* Number of msecs the radio spent in transmitting for each power level */
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_TX_TIME_PER_LEVEL,
+
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_LL_STATS_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX = QCA_WLAN_VENDOR_ATTR_LL_STATS_AFTER_LAST - 1,
