@@ -709,6 +709,25 @@ static wifi_error get_wifi_radio_stats(wifi_radio_stat *stats,
     }
     stats->tx_time           = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_TX_TIME]);
 
+    if (stats->num_tx_levels) {
+        if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_TX_TIME_PER_LEVEL]) {
+            ALOGE("%s: num_tx_levels is %u but QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_TX_TIME_PER_LEVEL not found", __func__, stats->num_tx_levels);
+            stats->num_tx_levels = 0;
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        stats->tx_time_per_levels =
+                             (u32 *) malloc(sizeof(u32) * stats->num_tx_levels);
+        if (!stats->tx_time_per_levels) {
+            ALOGE("%s: radio_stat: tx_time_per_levels malloc Failed", __func__);
+            stats->num_tx_levels = 0;
+            return WIFI_ERROR_OUT_OF_MEMORY;
+        }
+
+        nla_memcpy(stats->tx_time_per_levels,
+            tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_TX_TIME_PER_LEVEL],
+            sizeof(u32) * stats->num_tx_levels);
+    }
+
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_RX_TIME])
     {
         ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_RX_TIME not found", __FUNCTION__);
@@ -893,6 +912,10 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                     }
                     memset(mResultsParams.radio_stat, 0, resultsBufSize);
 
+                    if (tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_TX_LEVELS])
+                        mResultsParams.radio_stat->num_tx_levels = nla_get_u32(tb_vendor[
+                                            QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_TX_LEVELS]);
+
                     wifi_channel_stat *pWifiChannelStats;
                     status = get_wifi_radio_stats(mResultsParams.radio_stat,
                               tb_vendor);
@@ -904,7 +927,7 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                     ALOGV("radio :%u onTime :%u txTime :%u rxTime :%u"
                           " onTimeScan :%u onTimeNbd :%u onTimeGscan :%u"
                           " onTimeRoamScan :%u onTimePnoScan :%u"
-                          " onTimeHs20 :%u numChannels :%u",
+                          " onTimeHs20 :%u numChannels :%u num_tx_levels: %u",
                           mResultsParams.radio_stat->radio,
                           mResultsParams.radio_stat->on_time,
                           mResultsParams.radio_stat->tx_time,
@@ -915,7 +938,14 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                           mResultsParams.radio_stat->on_time_roam_scan,
                           mResultsParams.radio_stat->on_time_pno_scan,
                           mResultsParams.radio_stat->on_time_hs20,
-                          mResultsParams.radio_stat->num_channels);
+                          mResultsParams.radio_stat->num_channels,
+                          mResultsParams.radio_stat->num_tx_levels);
+#ifdef QC_HAL_DEBUG
+                    for (i = 0; i < mResultsParams.radio_stat->num_tx_levels; i++) {
+                        ALOGV("Power level: %u  tx_time: %u", i,
+                              mResultsParams.radio_stat->tx_time_per_levels[i]);
+                    }
+#endif
                     ALOGV("%5s | %10s | %11s | %11s | %6s | %11s", "width",
                           "CenterFreq", "CenterFreq0", "CenterFreq1",
                           "onTime", "ccaBusyTime");
