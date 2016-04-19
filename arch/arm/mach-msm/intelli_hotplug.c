@@ -27,9 +27,9 @@
 #define INTELLI_PLUG_MAJOR_VERSION	5
 #define INTELLI_PLUG_MINOR_VERSION	1
 
-#define DEF_SAMPLING_MS			268
-#define RESUME_SAMPLING_MS		HZ / 10
-#define START_DELAY_MS			HZ * 20
+#define DEF_SAMPLING_MS			30
+#define RESUME_SAMPLING_MS		100
+#define START_DELAY_MS			10000
 #define MIN_INPUT_INTERVAL		150 * 1000L
 #define BOOST_LOCK_DUR			2500 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		1
@@ -503,7 +503,7 @@ static int __ref intelli_plug_start(void)
 	}
 
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-			      START_DELAY_MS);
+			      msecs_to_jiffies(START_DELAY_MS));
 
 	return ret;
 err_dev:
