@@ -41,7 +41,6 @@ import android.preference.PreferenceScreen;
 import android.text.TextUtils;
 import android.view.MenuItem;
 
-import com.android.internal.util.cm.ScreenType;
 import com.cyanogenmod.settings.device.utils.Constants;
 
 import java.util.ArrayList;
@@ -103,10 +102,8 @@ public class BluetoothInputSettings extends PreferenceActivity {
         filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
         registerReceiver(mReceiver, filter);
 
-        // If running on a phone, remove padding around the listview
-        if (!ScreenType.isTablet(this)) {
-            getListView().setPadding(0, 0, 0, 0);
-        }
+        // Remove padding around the listview from all devices
+        getListView().setPadding(0, 0, 0, 0);
     }
 
     @Override

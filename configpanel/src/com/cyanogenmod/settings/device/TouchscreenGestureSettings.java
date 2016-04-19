@@ -16,8 +16,6 @@
 
 package com.cyanogenmod.settings.device;
 
-import com.android.internal.util.cm.ScreenType;
-
 import com.cyanogenmod.settings.device.utils.NodePreferenceActivity;
 
 import android.os.Bundle;
@@ -55,10 +53,8 @@ public class TouchscreenGestureSettings extends NodePreferenceActivity {
     protected void onResume() {
         super.onResume();
 
-        // If running on a phone, remove padding around the listview
-        if (!ScreenType.isTablet(this)) {
-            getListView().setPadding(0, 0, 0, 0);
-        }
+        // Remove padding around the listview from all devices
+        getListView().setPadding(0, 0, 0, 0);
 
         mHapticFeedback.setChecked(
                 Settings.System.getInt(getContentResolver(), KEY_HAPTIC_FEEDBACK, 1) != 0);
