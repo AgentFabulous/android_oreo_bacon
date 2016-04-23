@@ -987,9 +987,18 @@ void QCamera2HardwareInterface::processAntishakeAlgo(QCamera2HardwareInterface *
 
     /* Don't process antishake in camcorder mode */
     if (pme->mParameters.getRecordingHintValue()) {
+        pme->mCurrFrameCnt = 0;
         pme->mParameters.setPrvwIsoMode(CAM_ISO_MODE_AUTO);
         return;
     }
+
+    /*
+     * Only update exp time once every 5 frames to prevent thrashing.
+     * Make sure exp time is checked on first frame (post-increment
+     * mCurrFrameCnt).
+     */
+    if (pme->mCurrFrameCnt++ % 5)
+        return;
 
     old_iso = pme->mParameters.getPrvwIsoMode();
 
