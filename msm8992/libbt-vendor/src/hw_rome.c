@@ -137,15 +137,14 @@ int get_vs_hci_event(unsigned char *rsp)
         goto failed;
     }
 
-    ALOGI("%s: Parameter Length: 0x%x", __FUNCTION__, paramlen = rsp[EVT_PLEN]);
-    ALOGI("%s: Command response: 0x%x", __FUNCTION__, rsp[CMD_RSP_OFFSET]);
-    ALOGI("%s: Response type   : 0x%x", __FUNCTION__, rsp[RSP_TYPE_OFFSET]);
+    ALOGI("%s: length 0x%x resp 0x%x type 0x%x", __FUNCTION__, paramlen = rsp[EVT_PLEN],
+          rsp[CMD_RSP_OFFSET], rsp[RSP_TYPE_OFFSET]);
 
     /* Check the status of the operation */
     switch ( rsp[CMD_RSP_OFFSET] )
     {
         case EDL_CMD_REQ_RES_EVT:
-        ALOGI("%s: Command Request Response", __FUNCTION__);
+        ALOGV("%s: Command Request Response", __FUNCTION__);
         switch(rsp[RSP_TYPE_OFFSET])
         {
             case EDL_PATCH_VER_RES_EVT:
@@ -421,7 +420,7 @@ void frame_hci_cmd_pkt(
             /* Copy the patch header info as CMD params */
             memcpy(&cmd[5], phdr_buffer, PATCH_HDR_LEN);
             ALOGD("%s: Sending EDL_PATCH_SET_REQ_CMD", __FUNCTION__);
-            ALOGD("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
+            ALOGV("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
                 segtNo, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]);
             break;
         case EDL_PATCH_DLD_REQ_CMD:
@@ -437,23 +436,23 @@ void frame_hci_cmd_pkt(
 
             ALOGD("%s: Sending EDL_PATCH_DLD_REQ_CMD: size: %d bytes",
                 __FUNCTION__, size);
-            ALOGD("HCI-CMD %d:\t0x%x\t0x%x\t0x%x\t0x%x\t0x%x\t0x%x\t0x%x\t"
+            ALOGV("HCI-CMD %d:\t0x%x\t0x%x\t0x%x\t0x%x\t0x%x\t0x%x\t0x%x\t"
                 "0x%x\t0x%x\t0x%x\t\n", segtNo, cmd[0], cmd[1], cmd[2],
                 cmd[3], cmd[4], cmd[5], cmd[6], cmd[7], cmd[8], cmd[9]);
             break;
         case EDL_PATCH_ATCH_REQ_CMD:
             ALOGD("%s: Sending EDL_PATCH_ATTACH_REQ_CMD", __FUNCTION__);
-            ALOGD("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
+            ALOGV("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
             segtNo, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]);
             break;
         case EDL_PATCH_RST_REQ_CMD:
             ALOGD("%s: Sending EDL_PATCH_RESET_REQ_CMD", __FUNCTION__);
-            ALOGD("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
+            ALOGV("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
             segtNo, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]);
             break;
         case EDL_PATCH_VER_REQ_CMD:
             ALOGD("%s: Sending EDL_PATCH_VER_REQ_CMD", __FUNCTION__);
-            ALOGD("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
+            ALOGV("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
             segtNo, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]);
             break;
         case EDL_PATCH_TLV_REQ_CMD:
@@ -463,19 +462,19 @@ void frame_hci_cmd_pkt(
 
             /* TLV Segment Length */
             cmd[5] = size;
-            ALOGD("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
+            ALOGV("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
             segtNo, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5]);
             offset = (segtNo * MAX_SIZE_PER_TLV_SEGMENT);
             memcpy(&cmd[6], (pdata_buffer + offset), size);
             break;
         case EDL_GET_BUILD_INFO:
             ALOGD("%s: Sending EDL_GET_BUILD_INFO", __FUNCTION__);
-            ALOGD("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
+            ALOGV("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
                 segtNo, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]);
             break;
         case EDL_GET_BOARD_ID:
             ALOGD("%s: Sending EDL_GET_BOARD_ID", __FUNCTION__);
-            ALOGD("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
+            ALOGV("HCI-CMD %d:\t0x%x \t0x%x \t0x%x \t0x%x \t0x%x",
                 segtNo, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]);
             break;
         default:
@@ -864,7 +863,7 @@ int rome_get_tlv_file(char *file_path)
         ALOGI("====================================================");
 
     } else if(ptlv_header->tlv_type == TLV_TYPE_NVM) {
-        ALOGI("====================================================");
+        ALOGV("====================================================");
         ALOGI("TLV Type\t\t\t : 0x%x", ptlv_header->tlv_type);
         ALOGI("Length\t\t\t : %d bytes",  nvm_length = (ptlv_header->tlv_length1) |
                                                     (ptlv_header->tlv_length2 << 8) |
@@ -876,10 +875,10 @@ int rome_get_tlv_file(char *file_path)
        for(nvm_byte_ptr=(unsigned char *)(nvm_ptr = &(ptlv_header->tlv.nvm)), nvm_index=0;
              nvm_index < nvm_length ; nvm_ptr = (tlv_nvm_hdr *) nvm_byte_ptr)
        {
-            ALOGI("TAG ID\t\t\t : %d", nvm_ptr->tag_id);
-            ALOGI("TAG Length\t\t\t : %d", nvm_tag_len = nvm_ptr->tag_len);
-            ALOGI("TAG Pointer\t\t\t : %d", nvm_ptr->tag_ptr);
-            ALOGI("TAG Extended Flag\t\t : %d", nvm_ptr->tag_ex_flag);
+            ALOGV("TAG ID\t\t\t : %d", nvm_ptr->tag_id);
+            ALOGV("TAG Length\t\t\t : %d", nvm_tag_len = nvm_ptr->tag_len);
+            ALOGV("TAG Pointer\t\t\t : %d", nvm_ptr->tag_ptr);
+            ALOGV("TAG Extended Flag\t\t : %d", nvm_ptr->tag_ex_flag);
 
             /* Increase nvm_index to NVM data */
             nvm_index+=sizeof(tlv_nvm_hdr);
@@ -888,7 +887,7 @@ int rome_get_tlv_file(char *file_path)
             /* Write BD Address */
             if(nvm_ptr->tag_id == TAG_NUM_2){
                 memcpy(nvm_byte_ptr, vnd_local_bd_addr, 6);
-                ALOGI("BD Address: %.02x:%.02x:%.02x:%.02x:%.02x:%.02x",
+                ALOGV("BD Address: %.02x:%.02x:%.02x:%.02x:%.02x:%.02x",
                     *nvm_byte_ptr, *(nvm_byte_ptr+1), *(nvm_byte_ptr+2),
                     *(nvm_byte_ptr+3), *(nvm_byte_ptr+4), *(nvm_byte_ptr+5));
             }
@@ -896,7 +895,7 @@ int rome_get_tlv_file(char *file_path)
             for(i =0;(i<nvm_ptr->tag_len && (i*3 + 2) <PRINT_BUF_SIZE);i++)
                 snprintf((char *) data_buf, PRINT_BUF_SIZE, "%s%.02x ", (char *)data_buf, *(nvm_byte_ptr + i));
 
-            ALOGI("TAG Data\t\t\t : %s", data_buf);
+            ALOGV("TAG Data\t\t\t : %s", data_buf);
 
             /* Clear buffer */
             memset(data_buf, 0x0, PRINT_BUF_SIZE);
@@ -906,7 +905,7 @@ int rome_get_tlv_file(char *file_path)
             nvm_byte_ptr +=nvm_ptr->tag_len;
         }
 
-        ALOGI("====================================================");
+        ALOGV("====================================================");
 
     } else {
         ALOGI("TLV Header type is unknown (%d) ", ptlv_header->tlv_type);
@@ -921,7 +920,7 @@ int rome_tlv_dnld_segment(int fd, int index, int seg_size, unsigned char wait_cc
     unsigned char cmd[HCI_MAX_CMD_SIZE];
     unsigned char rsp[HCI_MAX_EVENT_SIZE];
 
-    ALOGI("%s: Downloading TLV Patch segment no.%d, size:%d", __FUNCTION__, index, seg_size);
+    ALOGV("%s: Downloading TLV Patch segment no.%d, size:%d", __FUNCTION__, index, seg_size);
 
     /* Frame the HCI CMD PKT to be sent to Controller*/
     frame_hci_cmd_pkt(cmd, EDL_PATCH_TLV_REQ_CMD, 0, index, seg_size);
