@@ -103,7 +103,8 @@ typedef enum
     NAN_MSG_ID_BEACON_SDF_RSP               = 31,
     NAN_MSG_ID_BEACON_SDF_IND               = 32,
     NAN_MSG_ID_CAPABILITIES_REQ             = 33,
-    NAN_MSG_ID_CAPABILITIES_RSP             = 34
+    NAN_MSG_ID_CAPABILITIES_RSP             = 34,
+    NAN_MSG_ID_SELF_TRANSMIT_FOLLOWUP_IND   = 35
 } NanMsgId;
 
 /*
@@ -924,6 +925,7 @@ typedef enum {
     NAN_INDICATION_DISABLED                =7,
     NAN_INDICATION_TCA                     =8,
     NAN_INDICATION_BEACON_SDF_PAYLOAD      =9,
+    NAN_INDICATION_SELF_TRANSMIT_FOLLOWUP  =10,
     NAN_INDICATION_UNKNOWN                 =0xFFFF
 } NanIndicationType;
 
@@ -966,6 +968,13 @@ typedef struct PACKED
     u32 max_app_info_len;
     u32 max_queued_transmit_followup_msgs;
 } NanCapabilitiesRspMsg, *pNanCapabilitiesRspMsg;
+
+/* NAN Self Transmit Followup */
+typedef struct PACKED
+{
+    NanMsgHeader fwHeader;
+    u32 reason;
+} NanSelfTransmitFollowupIndMsg, *pNanSelfTransmitFollowupIndMsg;
 
 /*
     Function to get the sta_parameter expected by Sigma
