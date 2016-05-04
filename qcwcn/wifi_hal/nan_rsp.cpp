@@ -537,10 +537,10 @@ int NanCommand::handleNdpResponse(NanResponseType ndpCmdType,
     ALOGD("%s: Transaction id : val %d", __FUNCTION__, id);
     rsp_data.status =
         (NanStatusType)nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_DRV_RESPONSE_STATUS_TYPE]);
-    ALOGD("%s: Status : status %d", __FUNCTION__, rsp_data.status);
+    ALOGD("%s: Status : %d", __FUNCTION__, rsp_data.status);
     rsp_data.value =
         nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_DRV_RETURN_VALUE]);
-    ALOGD("%s: Value : status %d", __FUNCTION__, rsp_data.value);
+    ALOGD("%s: Value : %d", __FUNCTION__, rsp_data.value);
     rsp_data.response_type = ndpCmdType;
     if (ndpCmdType == NAN_DP_INITIATOR_RESPONSE)
     {

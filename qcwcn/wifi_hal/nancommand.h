@@ -97,7 +97,6 @@ private:
     int getNdpRequest(struct nlattr **tb_vendor, NanDataPathRequestInd *event);
     int getNdpConfirm(struct nlattr **tb_vendor, NanDataPathConfirmInd *event);
     int getNdpEnd(struct nlattr **tb_vendor, NanDataPathEndInd *event);
-    int getNdpScheduleUpdate(struct nlattr **tb_vendor, NanDataPathScheduleUpdateInd *event);
 public:
     NanCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
     static NanCommand* instance(wifi_handle handle);

@@ -759,9 +759,6 @@ wifi_error nan_data_request_initiator(transaction_id id,
         nanCommand->put_u16(
             QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_INSTANCE_ID,
             msg->service_instance_id) ||
-        nanCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL,
-            msg->channel) ||
         nanCommand->put_bytes(
             QCA_WLAN_VENDOR_ATTR_NDP_PEER_DISCOVERY_MAC_ADDR,
             (char *)msg->peer_disc_mac_addr,
@@ -771,11 +768,19 @@ wifi_error nan_data_request_initiator(transaction_id id,
             msg->ndp_iface)) {
         goto cleanup;
     }
+
+    if (msg->channel_request_type != NAN_DP_CHANNEL_NOT_REQUESTED) {
+        if (nanCommand->put_u32 (
+                QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL_CONFIG,
+                msg->channel_request_type) ||
+            nanCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL,
+                msg->channel))
+            goto cleanup;
+    }
+
     if (msg->app_info.ndp_app_info_len != 0) {
-        if (nanCommand->put_u16(
-                QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO_LEN,
-                msg->app_info.ndp_app_info_len) ||
-            nanCommand->put_bytes(
+        if (nanCommand->put_bytes(
                 QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO,
                 (char *)msg->app_info.ndp_app_info,
                 msg->app_info.ndp_app_info_len)) {
@@ -855,10 +860,7 @@ wifi_error nan_data_indication_response(transaction_id id,
         goto cleanup;
     }
     if (msg->app_info.ndp_app_info_len != 0) {
-        if (nanCommand->put_u16(
-                QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO_LEN,
-                msg->app_info.ndp_app_info_len) ||
-            nanCommand->put_bytes(
+        if (nanCommand->put_bytes(
                 QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO,
                 (char *)msg->app_info.ndp_app_info,
                 msg->app_info.ndp_app_info_len)) {
@@ -927,68 +929,11 @@ wifi_error nan_data_end(transaction_id id,
         nanCommand->put_u16(
             QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID,
             id) ||
-        nanCommand->put_u8(
-            QCA_WLAN_VENDOR_ATTR_NDP_NUM_INSTANCE_ID,
-            msg->num_ndp_instances) ||
         nanCommand->put_bytes(
             QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID_ARRAY,
             (char *)msg->ndp_instance_id,
             msg->num_ndp_instances * sizeof(u32))) {
         goto cleanup;
-    }
-    nanCommand->attr_end(nlData);
-
-    ret = nanCommand->requestEvent();
-    if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
-cleanup:
-    delete nanCommand;
-    return (wifi_error)ret;
-}
-
-wifi_error nan_data_schedule_update(transaction_id id,
-                                    wifi_interface_handle iface,
-                                    NanDataPathScheduleUpdate* msg)
-{
-    int ret = WIFI_SUCCESS;
-    struct nlattr *nlData, *nlCfgQos;
-    NanCommand *nanCommand = NULL;
-
-    if (msg == NULL)
-        return WIFI_ERROR_INVALID_ARGS;
-
-    ret = nan_initialize_vendor_cmd(iface,
-                                    &nanCommand);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: Initialization failed", __FUNCTION__);
-        return (wifi_error)ret;
-    }
-
-    /* Add the vendor specific attributes for the NL command. */
-    nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
-        goto cleanup;
-
-    if (nanCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
-            QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_REQUEST) ||
-        nanCommand->put_u16(
-            QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID,
-            id) ||
-        nanCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID,
-            msg->ndp_instance_id)) {
-        goto cleanup;
-    }
-    if (msg->qos_cfg == NAN_DP_CONFIG_QOS) {
-        nlCfgQos =
-            nanCommand->attr_start(QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_QOS);
-        if (!nlCfgQos)
-            goto cleanup;
-
-        /* TBD Qos Info */
-        nanCommand->attr_end(nlCfgQos);
     }
     nanCommand->attr_end(nlData);
 
@@ -1025,9 +970,7 @@ NanCommand* NanCommand::instance(wifi_handle handle)
                                              QCA_NL80211_VENDOR_SUBCMD_NAN);
         ALOGV("NanCommand %p created", mNanCommandInstance);
         return mNanCommandInstance;
-    }
-    else
-    {
+    } else {
         if (handle != getWifiHandle(mNanCommandInstance->mInfo)) {
             /* upper layer must have cleaned up the handle and reinitialized,
                so we need to update the same */
@@ -1128,8 +1071,7 @@ int NanCommand::handleEvent(WifiEvent &event)
             //the response callback handler with the populated
             //NanResponseMsg
             handleNanResponse();
-        }
-        else {
+        } else {
             //handleNanIndication will parse the data and call
             //the corresponding Indication callback handler
             //with the corresponding populated Indication event
@@ -1164,12 +1106,8 @@ int NanCommand::handleEvent(WifiEvent &event)
                 case QCA_WLAN_VENDOR_ATTR_NDP_END_RESPONSE:
                     handleNdpResponse(NAN_DP_END, tb_vendor);
                     break;
-                case QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_RESPONSE:
-                    handleNdpResponse(NAN_DP_SCHEDULE_UPDATE, tb_vendor);
-                    break;
                 case QCA_WLAN_VENDOR_ATTR_NDP_DATA_REQUEST_IND:
                 case QCA_WLAN_VENDOR_ATTR_NDP_CONFIRM_IND:
-                case QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_IND:
                 case QCA_WLAN_VENDOR_ATTR_NDP_END_IND:
                     handleNdpIndication(ndpCmdType, tb_vendor);
                     break;
@@ -1178,8 +1116,7 @@ int NanCommand::handleEvent(WifiEvent &event)
                           __FUNCTION__, ndpCmdType);
                 }
         }
-    }
-    else {
+    } else {
         //error case should not happen print log
         ALOGE("%s: Wrong NAN subcmd received %d", __FUNCTION__, mSubcmd);
     }
@@ -1254,13 +1191,10 @@ u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv)
 
     ALOGV("READ TLV length %u, readLen %u", pOutTlv->length, readLen);
 
-    if (pOutTlv->length)
-    {
+    if (pOutTlv->length) {
         pOutTlv->value = pInTlv;
         readLen += pOutTlv->length;
-    }
-    else
-    {
+    } else {
         pOutTlv->value = NULL;
     }
 

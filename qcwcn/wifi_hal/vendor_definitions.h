@@ -1230,26 +1230,22 @@ enum qca_wlan_vendor_attr_ndp_params
     QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_SECURITY,
     /* Unsigned 32-bit value for Qos */
     QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_QOS,
-    /* Unsigned 16-bit value for app info length */
-    QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO_LEN,
     /* Array of u8: len = QCA_WLAN_VENDOR_ATTR_NAN_DP_APP_INFO_LEN */
     QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO,
     /* Unsigned 32-bit value for NDP instance Id */
     QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID,
-    /* Unsigned 8-bit value for num instance Ids */
-    QCA_WLAN_VENDOR_ATTR_NDP_NUM_INSTANCE_ID,
     /* Array of instance Ids */
     QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID_ARRAY,
     /* Unsigned 32-bit value for initiator/responder ndp response code accept/reject */
     QCA_WLAN_VENDOR_ATTR_NDP_RESPONSE_CODE,
-    /* Unsigned 32-bit value for schedule status success/fail */
-    QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_STATUS_CODE,
     /* NDI MAC address. An array of 6 Unsigned int8 */
     QCA_WLAN_VENDOR_ATTR_NDP_NDI_MAC_ADDR,
     /* Unsigned 32-bit value errors types returned by driver */
     QCA_WLAN_VENDOR_ATTR_NDP_DRV_RESPONSE_STATUS_TYPE,
     /* Unsigned 32-bit value error values returned by driver */
     QCA_WLAN_VENDOR_ATTR_NDP_DRV_RETURN_VALUE,
+    /* Unsigned 32-bit value for Channel setup configuration */
+    QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL_CONFIG,
 
     /* KEEP LAST */
     QCA_WLAN_VENDOR_ATTR_NDP_AFTER_LAST,
@@ -1284,12 +1280,9 @@ enum qca_wlan_vendor_attr_ndp_sub_cmd_value
    QCA_WLAN_VENDOR_ATTR_NDP_RESPONDER_RESPONSE = 6,
    QCA_WLAN_VENDOR_ATTR_NDP_END_REQUEST = 7,
    QCA_WLAN_VENDOR_ATTR_NDP_END_RESPONSE = 8,
-   QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_REQUEST = 9,
-   QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_RESPONSE = 10,
-   QCA_WLAN_VENDOR_ATTR_NDP_DATA_REQUEST_IND = 11,
-   QCA_WLAN_VENDOR_ATTR_NDP_CONFIRM_IND = 12,
-   QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_IND = 13,
-   QCA_WLAN_VENDOR_ATTR_NDP_END_IND = 14
+   QCA_WLAN_VENDOR_ATTR_NDP_DATA_REQUEST_IND = 9,
+   QCA_WLAN_VENDOR_ATTR_NDP_CONFIRM_IND = 10,
+   QCA_WLAN_VENDOR_ATTR_NDP_END_IND = 11
 };
 
 #define PACKET_FILTER_ID 0
