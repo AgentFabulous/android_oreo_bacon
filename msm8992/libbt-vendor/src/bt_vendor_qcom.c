@@ -631,6 +631,7 @@ static int op(bt_vendor_opcode_t opcode, void *param)
     uint8_t local_bd_addr_from_prop[6];
     char* tok;
 #endif
+    bool skip_init = true;
 
     ALOGV("bt-vendor : op for %d", opcode);
 
@@ -816,6 +817,7 @@ static int op(bt_vendor_opcode_t opcode, void *param)
                                     } else {
                                         ALOGV("rome_soc_init is completed");
                                         property_set("wc_transport.soc_initialized", "1");
+                                        skip_init = false;
                                     }
                                 }
                             }
@@ -846,7 +848,11 @@ static int op(bt_vendor_opcode_t opcode, void *param)
                                          }
                                      }
 
-                                     enable_controller_log(fd_filter);
+                                     if (!skip_init) {
+                                         /* skip if already sent */
+                                         enable_controller_log(fd_filter);
+                                         skip_init = true;
+                                     }
 
                                      for (idx=0; idx < CH_MAX; idx++)
                                          (*fd_array)[idx] = fd_filter;
