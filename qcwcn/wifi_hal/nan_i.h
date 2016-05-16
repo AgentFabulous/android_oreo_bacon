@@ -964,6 +964,7 @@ typedef struct PACKED
     u32 max_ndi_interfaces;
     u32 max_ndp_sessions;
     u32 max_app_info_len;
+    u32 max_queued_transmit_followup_msgs;
 } NanCapabilitiesRspMsg, *pNanCapabilitiesRspMsg;
 
 /*
