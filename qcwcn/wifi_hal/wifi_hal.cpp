@@ -355,6 +355,11 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_packet_filter = wifi_set_packet_filter;
     fn->wifi_get_packet_filter_capabilities = wifi_get_packet_filter_capabilities;
     fn->wifi_nan_get_capabilities = nan_get_capabilities;
+    fn->wifi_nan_data_interface_create = nan_data_interface_create;
+    fn->wifi_nan_data_interface_delete = nan_data_interface_delete;
+    fn->wifi_nan_data_request_initiator = nan_data_request_initiator;
+    fn->wifi_nan_data_indication_response = nan_data_indication_response;
+    fn->wifi_nan_data_end = nan_data_end;
     fn->wifi_configure_nd_offload = wifi_configure_nd_offload;
     fn->wifi_get_driver_memory_dump = wifi_get_driver_memory_dump;
     fn->wifi_get_wake_reason_stats = wifi_get_wake_reason_stats;
