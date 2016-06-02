@@ -756,7 +756,7 @@ wifi_error nan_data_request_initiator(transaction_id id,
         nanCommand->put_u16(
             QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID,
             id) ||
-        nanCommand->put_u16(
+        nanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_INSTANCE_ID,
             msg->service_instance_id) ||
         nanCommand->put_bytes(

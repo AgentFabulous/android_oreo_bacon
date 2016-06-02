@@ -1208,7 +1208,7 @@ enum qca_wlan_vendor_attr_ndp_params
     /* Unsigned 16-bit value */
     QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID,
     /* NL attributes for data used NDP SUB cmds */
-    /* Unsigned 16-bit value indicating a service info */
+    /* Unsigned 32-bit value indicating a service info */
     QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_INSTANCE_ID,
     /* Unsigned 32-bit value; channel frequency */
     QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL,
