@@ -1070,7 +1070,6 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
 
             ALOGV("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_FULL_SCAN_RESULT "
                 "received.");
-
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
             {
