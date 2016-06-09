@@ -38,7 +38,7 @@
 #include "wifi_hal.h"
 #include "common.h"
 #include "cpp_bindings.h"
-#include "qca-vendor.h"
+#include "vendor_definitions.h"
 
 void appendFmt(char *buf, size_t buf_len, int &offset, const char *fmt, ...)
 {
@@ -966,7 +966,8 @@ wifi_error WifiVendorCommand::get_mac_addr(struct nlattr **tb_vendor,
     }
 
     memcpy(addr, (u8 *)nla_data(tb_vendor[attribute]),
-                  nla_len(tb_vendor[attribute]));
+                 nla_len(tb_vendor[attribute]));
+
     return WIFI_SUCCESS;
 }
 
