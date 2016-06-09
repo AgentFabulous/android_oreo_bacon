@@ -36,7 +36,6 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include "rssi_monitor.h"
-#include "qca-vendor.h"
 #include "vendor_definitions.h"
 
 //Singleton Static Instance
