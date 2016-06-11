@@ -48,7 +48,6 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
-#include <string.h>
 
 #include "bt_hci_bdroid.h"
 #include "hci_uart.h"
@@ -96,8 +95,6 @@ struct ps_cfg_entry ps_list[MAX_TAGS];
 #ifdef __cplusplus
 }
 #endif
-
-#define RESERVED(p)  if(p) ALOGI( "%s: reserved param", __FUNCTION__);
 
 /*****************************************************************************
 **   Functions
@@ -877,8 +874,6 @@ static int set_patch_ram(int dev, char *patch_loc, int len)
     uint8_t *event;
     uint8_t *loc_ptr = &cmd[7];
 
-    RESERVED(len);
-
     if (!patch_loc)
         return -1;
 
@@ -1391,8 +1386,6 @@ void lpm_set_ar3k(uint8_t pio, uint8_t action, uint8_t polarity)
     char buffer;
 
     ALOGI("lpm mode: %d  action: %d", pio, action);
-
-    RESERVED(polarity);
 
     switch (pio)
     {
