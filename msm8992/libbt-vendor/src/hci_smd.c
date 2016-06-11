@@ -33,8 +33,6 @@
 #include <cutils/properties.h>
 #include "bt_vendor_qcom.h"
 #include "hci_smd.h"
-#include <string.h>
-#include <cutils/properties.h>
 
 /*****************************************************************************
 **   Macros & Constants
@@ -54,7 +52,6 @@ extern int is_bt_ssr_hci;
 /*****************************************************************************
 **   Functions
 *****************************************************************************/
-
 int bt_hci_init_transport_id (int chId )
 {
   struct termios   term;
