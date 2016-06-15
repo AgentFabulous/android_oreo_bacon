@@ -42,8 +42,6 @@
 
 #define LOG_TAG  "WifiHAL"
 
-#include "hardware_legacy/wifi.h"
-
 #include "wifi_hal.h"
 #include "common.h"
 #include "cpp_bindings.h"
@@ -373,7 +371,6 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
 wifi_error wifi_initialize(wifi_handle *handle)
 {
     int err = 0;
-    bool driver_loaded = false;
     wifi_error ret = WIFI_SUCCESS;
     wifi_interface_handle iface_handle;
     struct nl_sock *cmd_sock = NULL;
@@ -482,15 +479,6 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
-    if (!is_wifi_driver_loaded()) {
-        ret = (wifi_error)wifi_load_driver();
-        if(ret != WIFI_SUCCESS) {
-            ALOGE("%s Failed to load wifi driver : %d\n", __func__, ret);
-            goto unload;
-        }
-        driver_loaded = true;
-    }
-
     ret = wifi_init_interfaces(*handle);
     if (ret != WIFI_SUCCESS) {
         ALOGE("Failed to init interfaces");
@@ -595,8 +583,6 @@ unload:
         }
     }
 
-    if (driver_loaded)
-        wifi_unload_driver();
     return ret;
 }
 
