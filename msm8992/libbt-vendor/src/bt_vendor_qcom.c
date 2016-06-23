@@ -917,7 +917,7 @@ static int op(bt_vendor_opcode_t opcode, void *param)
             break;
 
         case BT_VND_OP_GET_LPM_IDLE_TIMEOUT:
-            if (btSocType ==  BT_SOC_AR3K) {
+            {
                 uint32_t *timeout_ms = (uint32_t *) param;
                 *timeout_ms = 1000;
             }
