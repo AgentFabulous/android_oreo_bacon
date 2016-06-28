@@ -834,29 +834,46 @@ static wifi_error process_beacon_received_event(hal_info *info,
 
 static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
 {
-    u16 count = 0, id, payloadlen;
+    u16 count = 0, id;
+    u16 payloadlen = 0;
+    u16 hdr_size = 0;
     wifi_error status;
+    fw_diag_msg_fixed_hdr_t *diag_msg_fixed_hdr;
     fw_diag_msg_hdr_t *diag_msg_hdr;
+    fw_diag_msg_hdr_v2_t *diag_msg_hdr_v2;
+    u8 *payload = NULL;
 
     buf += 4;
     length -= 4;
 
-    while (length > (count + sizeof(fw_diag_msg_hdr_t))) {
-        diag_msg_hdr = (fw_diag_msg_hdr_t *)(buf + count);
-
-        id = diag_msg_hdr->diag_id;
-        payloadlen = diag_msg_hdr->u.payload_len;
-
-        switch (diag_msg_hdr->diag_event_type) {
+    while (length > (count + sizeof(fw_diag_msg_fixed_hdr_t))) {
+        diag_msg_fixed_hdr = (fw_diag_msg_fixed_hdr_t *)(buf + count);
+        switch (diag_msg_fixed_hdr->diag_event_type) {
             case WLAN_DIAG_TYPE_EVENT:
+            case WLAN_DIAG_TYPE_EVENT_V2:
             {
+                if (WLAN_DIAG_TYPE_EVENT ==
+                        diag_msg_fixed_hdr->diag_event_type) {
+                    diag_msg_hdr = (fw_diag_msg_hdr_t *)diag_msg_fixed_hdr;
+                    id = diag_msg_hdr->diag_id;
+                    payloadlen = diag_msg_hdr->u.payload_len;
+                    hdr_size = sizeof(fw_diag_msg_hdr_t);
+                    payload = diag_msg_hdr->payload;
+                } else {
+                    diag_msg_hdr_v2 =
+                        (fw_diag_msg_hdr_v2_t *)diag_msg_fixed_hdr;
+                    id = diag_msg_hdr_v2->diag_id;
+                    payloadlen = diag_msg_hdr_v2->u.payload_len;
+                    hdr_size = sizeof(fw_diag_msg_hdr_v2_t);
+                    payload = diag_msg_hdr_v2->payload;
+                }
                 switch (id) {
                     case EVENT_WLAN_BT_COEX_BT_SCO_START:
                     case EVENT_WLAN_BT_COEX_BT_SCO_STOP:
                     case EVENT_WLAN_BT_COEX_BT_HID_START:
                     case EVENT_WLAN_BT_COEX_BT_HID_STOP:
                         status = process_bt_coex_event(info, id,
-                                                       diag_msg_hdr->payload,
+                                                       payload,
                                                        payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process bt_coex event");
@@ -866,7 +883,7 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                     case EVENT_WLAN_BT_COEX_BT_SCAN_START:
                     case EVENT_WLAN_BT_COEX_BT_SCAN_STOP:
                         status = process_bt_coex_scan_event(info, id,
-                                                       diag_msg_hdr->payload,
+                                                       payload,
                                                        payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process bt_coex_scan event");
@@ -880,7 +897,7 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                    case EVENT_WLAN_EXTSCAN_FEATURE_STOP:
                    case EVENT_WLAN_EXTSCAN_RESULTS_AVAILABLE:
                         status = process_extscan_event(info, id,
-                                                       diag_msg_hdr->payload,
+                                                       payload,
                                                        payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process extscan event");
@@ -892,7 +909,7 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                    case EVENT_WLAN_ROAM_CANDIDATE_FOUND:
                    case EVENT_WLAN_ROAM_SCAN_CONFIG:
                         status = process_roam_event(info, id,
-                                                    diag_msg_hdr->payload,
+                                                    payload,
                                                     payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process roam event");
@@ -901,7 +918,7 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                         break;
                    case EVENT_WLAN_ADD_BLOCK_ACK_SUCCESS:
                         status = process_addba_success_event(info,
-                                                       diag_msg_hdr->payload,
+                                                       payload,
                                                        payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process addba success event");
@@ -910,7 +927,7 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                         break;
                    case EVENT_WLAN_ADD_BLOCK_ACK_FAILED:
                         status = process_addba_failed_event(info,
-                                                      diag_msg_hdr->payload,
+                                                      payload,
                                                       payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process addba failed event");
@@ -919,7 +936,7 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                         break;
                    case EVENT_WLAN_BEACON_EVENT:
                         status = process_beacon_received_event(info,
-                                                      diag_msg_hdr->payload,
+                                                      payload,
                                                       payloadlen);
                         if (status != WIFI_SUCCESS) {
                             ALOGE("Failed to process beacon received event");
@@ -932,14 +949,25 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
             }
             break;
             case WLAN_DIAG_TYPE_LOG:
+            case WLAN_DIAG_TYPE_LOG_V2:
             {
-                id = diag_msg_hdr->diag_id;
-                payloadlen = diag_msg_hdr->u.payload_len;
-
+                if (WLAN_DIAG_TYPE_LOG == diag_msg_fixed_hdr->diag_event_type) {
+                    diag_msg_hdr = (fw_diag_msg_hdr_t *)diag_msg_fixed_hdr;
+                    id = diag_msg_hdr->diag_id;
+                    payloadlen = diag_msg_hdr->u.payload_len;
+                    hdr_size = sizeof(fw_diag_msg_hdr_t);
+                    payload = diag_msg_hdr->payload;
+                } else {
+                    diag_msg_hdr_v2 = (fw_diag_msg_hdr_v2_t *)diag_msg_fixed_hdr;
+                    id = diag_msg_hdr_v2->diag_id;
+                    payloadlen = diag_msg_hdr_v2->u.payload_len;
+                    hdr_size = sizeof(fw_diag_msg_hdr_v2_t);
+                    payload = diag_msg_hdr_v2->payload;
+                }
                 switch (id) {
                 case LOG_WLAN_EXTSCAN_CAPABILITIES:
                     status = process_log_extscan_capabilities(info,
-                                                    diag_msg_hdr->payload,
+                                                    payload,
                                                     payloadlen);
                     if (status != WIFI_SUCCESS) {
                         ALOGE("Failed to process extscan capabilities");
@@ -947,22 +975,46 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                     }
                     break;
                 default:
-                    return WIFI_SUCCESS;
+                    break;
                 }
             }
             break;
             case WLAN_DIAG_TYPE_MSG:
-            {
+                diag_msg_hdr = (fw_diag_msg_hdr_t *)diag_msg_fixed_hdr;
+                id = diag_msg_hdr->diag_id;
                 /* Length field is only one byte for WLAN_DIAG_TYPE_MSG */
                 payloadlen = diag_msg_hdr->u.msg_hdr.payload_len;
+                hdr_size = sizeof(fw_diag_msg_hdr_t);
+                payload = diag_msg_hdr->payload;
+                process_firmware_prints(info, (u8 *)diag_msg_fixed_hdr,
+                                       payloadlen + hdr_size);
+                break;
+            case WLAN_DIAG_TYPE_MSG_V2:
+                diag_msg_hdr_v2 = (fw_diag_msg_hdr_v2_t *)diag_msg_fixed_hdr;
+                id = diag_msg_hdr_v2->diag_id;
+                /* Length field is only one byte for WLAN_DIAG_TYPE_MSG_V2 */
+                payloadlen = diag_msg_hdr_v2->u.msg_hdr.payload_len;
+                hdr_size = sizeof(fw_diag_msg_hdr_v2_t);
+                payload = diag_msg_hdr_v2->payload;
+                process_firmware_prints(info, (u8 *)diag_msg_fixed_hdr,
+                                       payloadlen + hdr_size);
+                break;
+            case WLAN_DIAG_TYPE_CONFIG:
+            {
+                /* Base timestamp is part of this diag type */
+                diag_msg_hdr = (fw_diag_msg_hdr_t *) diag_msg_fixed_hdr;
+                id = diag_msg_hdr->diag_id;
+                payload = diag_msg_hdr->payload;
+                payloadlen = diag_msg_hdr->u.payload_len;
+                hdr_size = sizeof(fw_diag_msg_hdr_t);
                 process_firmware_prints(info, (u8 *)diag_msg_hdr,
-                                       payloadlen + sizeof(fw_diag_msg_hdr_t));
+                                        payloadlen + hdr_size);
             }
             break;
             default:
                 return WIFI_SUCCESS;
         }
-        count += payloadlen + sizeof(fw_diag_msg_hdr_t);
+        count += payloadlen + hdr_size;
     }
     return WIFI_SUCCESS;
 }
