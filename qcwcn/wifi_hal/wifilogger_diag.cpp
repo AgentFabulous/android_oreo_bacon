@@ -39,6 +39,11 @@
 #include "wifilogger_vendor_tag_defs.h"
 #include "pkt_stats.h"
 
+static uint32_t get_le32(const uint8_t *pos)
+{
+    return pos[0] | (pos[1] << 8) | (pos[2] << 16) | (pos[3] << 24);
+}
+
 #define MAX_CONNECTIVITY_EVENTS 18 // should match the value in wifi_logger.h
 static event_remap_t events[MAX_CONNECTIVITY_EVENTS] = {
     {WLAN_PE_DIAG_ASSOC_REQ_EVENT, WIFI_EVENT_ASSOCIATION_REQUESTED},
@@ -1529,7 +1534,6 @@ static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
 static u16 get_tx_mcs(u8 series,
                       struct tx_ppdu_start *ppdu_start)
 {
-    u16 tx_rate = 0;
     MCS mcs;
     struct series_bw *sbw = NULL;
 
@@ -2189,7 +2193,6 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
         }
     } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_CNSS_DIAG) {
         uint16_t diag_fw_type;
-        uint32_t event_id;
         buf = (uint8_t *)NLMSG_DATA(wnl);
 
         fw_event_hdr_t *event_hdr =
@@ -2205,7 +2208,6 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
         if (diag_fw_type == DIAG_TYPE_FW_MSG) {
             dbglog_slot *slot;
             u16 length = 0;
-            u32 version = 0;
 
             slot = (dbglog_slot *)buf;
             length = get_le32((u8 *)&slot->length);

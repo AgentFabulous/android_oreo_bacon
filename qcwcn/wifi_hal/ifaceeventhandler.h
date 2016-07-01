@@ -82,7 +82,6 @@ public:
 class WifihalGeneric: public WifiVendorCommand
 {
 private:
-    wifi_interface_handle mHandle;
     feature_set mSet;
     int mSetSizeMax;
     int *mSetSizePtr;

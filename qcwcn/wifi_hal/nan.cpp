@@ -41,7 +41,6 @@ wifi_error nan_register_handler(wifi_interface_handle iface,
     // Obtain the singleton instance
     int ret = 0;
     NanCommand *nanCommand = NULL;
-    interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
 
     nanCommand = NanCommand::instance(wifiHandle);
@@ -53,7 +52,6 @@ wifi_error nan_register_handler(wifi_interface_handle iface,
     ret = nanCommand->setCallbackHandler(handlers);
     return (wifi_error)ret;
 
-cleanup:
     return (wifi_error)ret;
 }
 
@@ -536,7 +534,6 @@ wifi_error nan_get_sta_parameter(transaction_id id,
 {
     int ret = WIFI_ERROR_NOT_SUPPORTED;
     NanCommand *nanCommand = NULL;
-    interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
 
     nanCommand = NanCommand::instance(wifiHandle);
