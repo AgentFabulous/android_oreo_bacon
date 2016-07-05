@@ -113,7 +113,7 @@ static int boostpulse_duration_val = DEFAULT_MIN_SAMPLE_TIME;
 /* End time of boost pulse in ktime converted to usecs */
 static u64 boostpulse_endtime;
 #define DEFAULT_INPUT_BOOST_FREQ 1728000
-unsigned int input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
+int inter_input_boost_freq = DEFAULT_INPUT_BOOST_FREQ;
 
 /*
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
@@ -391,7 +391,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
 
-	if (cpu_load >= go_hispeed_load || boosted) {
+	if (cpu_load >= go_hispeed_load) {
 		if (pcpu->policy->cur < this_hispeed_freq) {
 			new_freq = this_hispeed_freq;
 		} else {
@@ -406,8 +406,10 @@ static void cpufreq_interactive_timer(unsigned long data)
 		new_freq = choose_freq(pcpu, loadadjfreq);
 	}
 
-	if (boosted)
-		new_freq = max(new_freq, input_boost_freq);
+	if (boosted) {
+		if (new_freq < inter_input_boost_freq)
+			new_freq = inter_input_boost_freq;
+ 	}
 
 	if (pcpu->policy->cur >= this_hispeed_freq &&
 	    new_freq > pcpu->policy->cur &&
@@ -1048,13 +1050,13 @@ static ssize_t store_max_freq_hysteresis(struct kobject *kobj,
 static struct global_attr max_freq_hysteresis_attr = __ATTR(max_freq_hysteresis, 0644,
 		show_max_freq_hysteresis, store_max_freq_hysteresis);
 
-static ssize_t show_input_boost_freq(struct kobject *kobj,
+static ssize_t show_inter_input_boost_freq(struct kobject *kobj,
                         struct attribute *attr, char *buf)
 {
-        return sprintf(buf, "%u\n", input_boost_freq);
+        return sprintf(buf, "%u\n", inter_input_boost_freq);
 }
 
-static ssize_t store_input_boost_freq(struct kobject *kobj,
+static ssize_t store_inter_input_boost_freq(struct kobject *kobj,
                         struct attribute *attr, const char *buf, size_t count)
 {
         int ret;
@@ -1063,12 +1065,12 @@ static ssize_t store_input_boost_freq(struct kobject *kobj,
         ret = kstrtoul(buf, 0, &val);
         if (ret < 0)
                 return ret;
-        input_boost_freq = val;
+        inter_input_boost_freq = val;
         return count;
 }
 
-static struct global_attr input_boost_freq_attr = __ATTR(input_boost_freq, 0644,
-                show_input_boost_freq, store_input_boost_freq);
+static struct global_attr inter_input_boost_freq_attr = __ATTR(inter_input_boost_freq, 0644,
+                show_inter_input_boost_freq, store_inter_input_boost_freq);
 
 static ssize_t show_down_low_load_threshold(struct kobject *kobj,
                         struct attribute *attr, char *buf)
@@ -1105,7 +1107,7 @@ static struct attribute *interactive_attributes[] = {
 	&boostpulse_duration.attr,
 	&io_is_busy_attr.attr,
 	&max_freq_hysteresis_attr.attr,
-	&input_boost_freq_attr.attr,
+	&inter_input_boost_freq_attr.attr,
 	&down_low_load_threshold_attr.attr,
 	NULL,
 };
