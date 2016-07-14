@@ -57,7 +57,6 @@ extern "C" {
 #include "hw_rome.h"
 
 #define BT_VERSION_FILEPATH "/data/misc/bluedroid/bt_fw_version.txt"
-#define BT_NVM_FILEPATH "/bt_firmware/image/btnv32.b"
 #define BOARD_ID_LEN 0x5
 #define MSB_NIBBLE_MASK 0xF0
 #define LSB_NIBBLE_MASK 0x0F
@@ -1100,7 +1099,9 @@ error:
 int rome_download_tlv_file(int fd)
 {
     int tlv_size, err = -1;
-    char nvm_file_path_bid[32] = BT_NVM_FILEPATH;
+    char nvm_file_path_bid[32] = { 0,};
+
+    memcpy(nvm_file_path_bid, nvm_file_path, strlen(nvm_file_path) - 2);
 
     /* Rampatch TLV file Downloading */
     pdata_buffer = NULL;
@@ -1120,8 +1121,9 @@ int rome_download_tlv_file(int fd)
     }
 
     strlcat(nvm_file_path_bid, board_id, sizeof(nvm_file_path_bid));
+
     if((tlv_size = rome_get_tlv_file(nvm_file_path_bid)) < 0) {
-        ALOGE("%s: %s: file doesn't exist, falling back to default file", __FUNCTION__, nvm_file_path_bid);
+        ALOGI("%s: %s: file doesn't exist, falling back to default file", __FUNCTION__, nvm_file_path_bid);
 default_download:
         /* NVM TLV file Downloading */
         if((tlv_size = rome_get_tlv_file(nvm_file_path)) < 0)
