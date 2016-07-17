@@ -37,6 +37,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_REAL_SHARPNESS 7 // Cap backend sharpness value to 7 (out of 36)
+
 #define ISO_VAL_AUTO 0
 #define ISO_VAL_100 100
 #define ISO_VAL_200 200
