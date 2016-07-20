@@ -119,16 +119,6 @@ static nl_sock * wifi_create_nl_socket(int port, int protocol)
 
     wifi_socket_set_local_port(sock, port);
 
-    struct sockaddr_nl *addr_nl = &(sock->s_local);
-    /* ALOGI("socket address is %d:%d:%d:%d",
-       addr_nl->nl_family, addr_nl->nl_pad, addr_nl->nl_pid,
-       addr_nl->nl_groups); */
-
-    struct sockaddr *addr = NULL;
-    // ALOGI("sizeof(sockaddr) = %d, sizeof(sockaddr_nl) = %d", sizeof(*addr),
-    // sizeof(*addr_nl));
-
-    // ALOGI("Connecting socket");
     if (nl_connect(sock, protocol)) {
         ALOGE("Could not connect handle");
         nl_socket_free(sock);
@@ -725,7 +715,6 @@ void wifi_event_loop(wifi_handle handle)
     /* TODO: Add support for timeouts */
 
     do {
-        int timeout = -1;                   /* Infinite timeout */
         pfd[0].revents = 0;
         pfd[1].revents = 0;
         pfd[2].revents = 0;
@@ -858,7 +847,6 @@ public:
         // ALOGI("handling reponse in %s", __func__);
 
         struct nlattr **tb = reply.attributes();
-        struct genlmsghdr *gnlh = reply.header();
         struct nlattr *mcgrp = NULL;
         int i;
 

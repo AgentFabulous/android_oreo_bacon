@@ -755,7 +755,6 @@ WifiVendorCommand::~WifiVendorCommand()
 int WifiVendorCommand::handleResponse(WifiEvent &reply)
 {
     struct nlattr **tb = reply.attributes();
-    struct nlattr *attr = NULL;
     struct genlmsghdr *gnlh = reply.header();
 
     if (gnlh->cmd == NL80211_CMD_VENDOR) {
@@ -772,7 +771,6 @@ int WifiVendorCommand::handleResponse(WifiEvent &reply)
 int WifiVendorCommand::handleEvent(WifiEvent &event)
 {
     struct nlattr **tb = event.attributes();
-    struct nlattr *attr = NULL;
     struct genlmsghdr *gnlh = event.header();
 
     if (gnlh->cmd == NL80211_CMD_VENDOR) {
