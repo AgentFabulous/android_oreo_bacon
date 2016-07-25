@@ -45,6 +45,7 @@ extern "C" {
 #include <dirent.h>
 #include <ctype.h>
 #include <cutils/properties.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
