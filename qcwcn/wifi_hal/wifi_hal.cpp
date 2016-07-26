@@ -95,15 +95,10 @@ wifi_interface_handle wifi_get_iface_handle(wifi_handle handle, char *name)
 
 void wifi_socket_set_local_port(struct nl_sock *sock, uint32_t port)
 {
-    uint32_t pid = getpid() & 0x3FFFFF;
-
-    if (port == 0) {
-        sock->s_flags &= ~NL_OWN_PORT;
-    } else {
-        sock->s_flags |= NL_OWN_PORT;
-    }
-
-    sock->s_local.nl_pid = pid + (port << 22);
+    /* Release local port pool maintained by libnl and assign a own port
+     * identifier to the socket.
+     */
+    nl_socket_set_local_port(sock, ((uint32_t)getpid() & 0x3FFFFFU) | (port << 22));
 }
 
 static nl_sock * wifi_create_nl_socket(int port, int protocol)
