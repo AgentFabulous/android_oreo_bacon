@@ -553,6 +553,12 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
+    ret = initializeRSSIMonitorHandler(info);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Initializing RSSI Event Handler Failed");
+        goto unload;
+    }
+
     ALOGV("Initialized Wifi HAL Successfully; vendor cmd = %d Supported"
             " features : %x", NL80211_CMD_VENDOR, info->supported_feature_set);
 
@@ -569,6 +575,7 @@ unload:
             if (info->pkt_stats) free(info->pkt_stats);
             if (info->rx_aggr_pkts) free(info->rx_aggr_pkts);
             cleanupGscanHandlers(info);
+            cleanupRSSIMonitorHandler(info);
             free(info);
         }
     }
@@ -617,6 +624,7 @@ static void internal_cleaned_up_handler(wifi_handle handle)
         free(info->rx_aggr_pkts);
     wifi_logger_ring_buffers_deinit(info);
     cleanupGscanHandlers(info);
+    cleanupRSSIMonitorHandler(info);
 
     if (info->exit_sockets[0] >= 0) {
         close(info->exit_sockets[0]);
