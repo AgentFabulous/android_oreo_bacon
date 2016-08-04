@@ -1585,7 +1585,6 @@ static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
 	struct sk_buff *skb;
 	long timeo = 0;
 	struct scm_cookie tmp_scm;
-	int max_level;
 	int sk_locked;
 	int max_level = 0;
 
