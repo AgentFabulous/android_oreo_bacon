@@ -107,6 +107,7 @@ libmm-vdec-inc          += frameworks/native/include/media/hardware
 libmm-vdec-inc          += $(vdec-inc)
 libmm-vdec-inc      += hardware/qcom/media/msm8974/libc2dcolorconvert
 libmm-vdec-inc      += frameworks/av/include/media/stagefright
+libmm-vdec-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 
 LOCAL_MODULE                    := libOmxVdec
