@@ -17,7 +17,7 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/slab.h>
-#include <linux/display_state.h>
+#include <linux/state_notifier.h>
 
 #define MAPLE_IOSCHED_PATCHLEVEL	(6)
 
@@ -78,7 +78,7 @@ maple_add_request(struct request_queue *q, struct request *rq)
 	struct maple_data *mdata = maple_get_data(q);
 	const int sync = rq_is_sync(rq);
 	const int dir = rq_data_dir(rq);
-	const bool display_on = is_display_on();
+	const bool display_on = state_suspended();
 
 	/*
 	 * Add request to the proper fifo list and set its
@@ -118,13 +118,13 @@ maple_expired_request(struct maple_data *mdata, int sync, int data_dir)
 static struct request *
 maple_choose_expired_request(struct maple_data *mdata)
 {
-	/* Reset (non-expired-)batch-counter */
-	mdata->batched = 0;
-
 	struct request *rq_sync_read = maple_expired_request(mdata, SYNC, READ);
 	struct request *rq_sync_write = maple_expired_request(mdata, SYNC, WRITE);
 	struct request *rq_async_read = maple_expired_request(mdata, ASYNC, READ);
 	struct request *rq_async_write = maple_expired_request(mdata, ASYNC, WRITE);
+
+	/* Reset (non-expired-)batch-counter */
+	mdata->batched = 0;
 
 	/*
 	 * Check expired requests.
@@ -156,11 +156,11 @@ maple_choose_expired_request(struct maple_data *mdata)
 static struct request *
 maple_choose_request(struct maple_data *mdata, int data_dir)
 {
-	/* Increase (non-expired-)batch-counter */
-	mdata->batched++;
-
 	struct list_head *sync = mdata->fifo_list[SYNC];
 	struct list_head *async = mdata->fifo_list[ASYNC];
+
+	/* Increase (non-expired-)batch-counter */
+	mdata->batched++;
 
 	/*
 	 * Retrieve request from available fifo list.
@@ -205,7 +205,7 @@ maple_dispatch_requests(struct request_queue *q, int force)
 	struct maple_data *mdata = maple_get_data(q);
 	struct request *rq = NULL;
 	int data_dir = READ;
-	const bool display_on = is_display_on();
+	const bool display_on = state_suspended();
 
 	/*
 	 * Retrieve any expired request after a batch of
@@ -261,22 +261,14 @@ maple_latter_request(struct request_queue *q, struct request *rq)
 	return list_entry(rq->queuelist.next, struct request, queuelist);
 }
 
-static int maple_init_queue(struct request_queue *q, struct elevator_type *e)
+static void *maple_init_queue(struct request_queue *q)
 {
 	struct maple_data *mdata;
-	struct elevator_queue *eq;
-
-	eq = elevator_alloc(q, e);
-	if (!eq)
-		return -ENOMEM;
 
 	/* Allocate structure */
 	mdata = kmalloc_node(sizeof(*mdata), GFP_KERNEL, q->node);
-	if (!mdata) {
-		kobject_put(&eq->kobj);
-		return -ENOMEM;
-	}
-	eq->elevator_data = mdata;
+	if (!mdata)
+		return NULL;
 
 	/* Initialize fifo lists */
 	INIT_LIST_HEAD(&mdata->fifo_list[SYNC][READ]);
@@ -294,10 +286,7 @@ static int maple_init_queue(struct request_queue *q, struct elevator_type *e)
 	mdata->writes_starved = writes_starved;
 	mdata->sleep_latency_multiple = sleep_latency_multiple;
 
-	spin_lock_irq(q->queue_lock);
-	q->elevator = eq;
-	spin_unlock_irq(q->queue_lock);
-	return 0;
+	return mdata;
 }
 
 static void
@@ -405,9 +394,7 @@ static struct elevator_type iosched_maple = {
 static int __init maple_init(void)
 {
 	/* Register elevator */
-	elv_register(&iosched_maple);
-
-	return 0;
+	return elv_register(&iosched_maple);
 }
 
 static void __exit maple_exit(void)
