@@ -186,6 +186,7 @@ class VideoHeap : public MemoryHeapBase
 #define MAX_NUM_INPUT_OUTPUT_BUFFERS 64
 #endif
 
+#define _ION_HEAP_MASK_COMPATIBILITY_WA
 #ifdef _ION_HEAP_MASK_COMPATIBILITY_WA
     #define ION_HEAP_MASK heap_mask
 #else

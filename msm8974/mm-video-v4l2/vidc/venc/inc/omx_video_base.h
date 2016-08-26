@@ -102,6 +102,7 @@ static const char* MEM_DEVICE = "/dev/pmem_smipool";
 #error MEM_DEVICE cannot be determined.
 #endif
 
+#define _ION_HEAP_MASK_COMPATIBILITY_WA
 #ifdef _ION_HEAP_MASK_COMPATIBILITY_WA
     #define ION_HEAP_MASK heap_mask
 #else

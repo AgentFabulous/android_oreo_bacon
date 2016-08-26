@@ -548,7 +548,7 @@ bool venc_dev::handle_extradata(void *buffer, int index)
             extradata_info.uaddr + index * extradata_info.buffer_size);
 
         switch (p_extradata->type) {
-            case MSM_VIDC_EXTRADATA_METADATA_MBI:
+            case EXTRADATA_METADATA_MBI:
             {
                 OMX_U32 payloadSize = append_mbi_extradata(&p_extra->data, p_extradata);
                 p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + payloadSize, 4);
@@ -568,7 +568,7 @@ bool venc_dev::handle_extradata(void *buffer, int index)
                 p_extra->nDataSize = p_extradata->data_size;
                 break;
             }
-            case MSM_VIDC_EXTRADATA_NONE:
+            case EXTRADATA_NONE:
                 p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE), 4);
                 p_extra->nVersion.nVersion = OMX_SPEC_VERSION;
                 p_extra->nPortIndex = OMX_DirOutput;
@@ -583,7 +583,7 @@ bool venc_dev::handle_extradata(void *buffer, int index)
         }
 
         p_extra = (OMX_OTHER_EXTRADATATYPE *)(((char *)p_extra) + p_extra->nSize);
-    } while (p_extradata->type != MSM_VIDC_EXTRADATA_NONE);
+    } while (p_extradata->type != EXTRADATA_NONE);
 
     /* Just for debugging: Traverse the list of extra datas  and spit it out onto log */
     p_extra = (OMX_OTHER_EXTRADATATYPE *)ALIGN(p_bufhdr->pBuffer +
@@ -898,12 +898,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
         profile_level.level = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0;
         session_qp_range.minqp = 1;
         session_qp_range.maxqp = 128;
-    } else if (codec == OMX_VIDEO_CodingHEVC) {
-        m_sVenc_cfg.codectype = V4L2_PIX_FMT_HEVC;
-        session_qp_range.minqp = 1;
-        session_qp_range.maxqp = 51;
-        codec_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN;
-        profile_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_1;
     }
     session_qp_values.minqp = session_qp_range.minqp;
     session_qp_values.maxqp = session_qp_range.maxqp;
@@ -1355,11 +1349,6 @@ bool venc_dev::venc_set_param(void *paramData,OMX_INDEXTYPE index )
 
                     DEBUG_PRINT_LOW("input: actual: %u, min: %u, count_req: %u",
                             (unsigned int)portDefn->nBufferCountActual, (unsigned int)m_sInput_buff_property.mincount, bufreq.count);
-                    if (m_sVenc_cfg.input_width * m_sVenc_cfg.input_height >= 3840 * 2160) {
-                        if (venc_set_perf_mode(V4L2_MPEG_VIDC_VIDEO_PERF_POWER_SAVE) == false) {
-                            DEBUG_PRINT_ERROR("ERROR: Failed to set Power save mode");
-                        }
-                    }
                 } else if (portDefn->nPortIndex == PORT_INDEX_OUT) {
                     m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
                     m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
@@ -2361,14 +2350,6 @@ unsigned venc_dev::venc_start(void)
 
     streaming[CAPTURE_PORT] = true;
 
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_REQUEST_SEQ_HEADER;
-    control.value = 1;
-    ret = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (ret) {
-        DEBUG_PRINT_ERROR("failed to request seq header");
-        return 1;
-    }
-
     stopped = 0;
     return 0;
 }
@@ -2721,6 +2702,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         // surface encode (RBG)  1            GrallocSource  1              bufhdr (color-converted)
         // CPU (Eg: MediaCodec)  0            --             0              bufhdr
         // ---------------------------------------------------------------------------------------
+        int color_space = 0;
         if (metadatamode) {
             plane.m.userptr = index;
             meta_buf = (encoder_media_buffer_type *)bufhdr->pBuffer;
@@ -2736,16 +2718,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     return false;
                 }
             } else if (!color_format) {
-		int color_space = 0;
-
-                if ((meta_buf->buffer_type == kMetadataBufferTypeCameraSource) ||
-                        (meta_buf->buffer_type == kMetadataBufferTypeNativeHandleSource)) {
-                    if (meta_buf->meta_handle->numFds + meta_buf->meta_handle->numInts > 3 &&
-                        meta_buf->meta_handle->data[3] & private_handle_t::PRIV_FLAGS_ITU_R_709) {
-                        buf.flags = V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
-			color_space = V4L2_COLORSPACE_REC709;
-		    }
-
                     if (meta_buf->meta_handle->numFds + meta_buf->meta_handle->numInts > 2) {
                     plane.data_offset = meta_buf->meta_handle->data[1];
                     plane.length = meta_buf->meta_handle->data[2];
@@ -2785,11 +2757,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                                 reinterpret_cast<MetaData_t*>(handle->base_metadata);
                         ColorSpace_t csc = pMeta->operation & UPDATE_COLOR_SPACE ?
                                 pMeta->colorSpace : (ColorSpace_t)-1;
-                        if (csc == ITU_R_709) {
-                            buf.flags |= V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
-                            DEBUG_PRINT_LOW("venc_empty_buf: force 601 -> 709 clamping");
-			    color_space = V4L2_COLORSPACE_REC709;
-                        } else if (csc == ITU_R_601_FR) {
+                        if (csc == ITU_R_601_FR) {
                             DEBUG_PRINT_LOW("venc_empty_buf: 601 full-range");
                             color_space = V4L2_COLORSPACE_470_SYSTEM_BG;
                         } else if (csc == ITU_R_601) {
@@ -2816,13 +2784,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
 				return false;
 			}
 		}
-            } else {
-                plane.data_offset = bufhdr->nOffset;
-                plane.length = bufhdr->nAllocLen;
-                plane.bytesused = bufhdr->nFilledLen;
-                DEBUG_PRINT_LOW("venc_empty_buf: Opaque non-camera buf: fd = %d "
-                        ": filled %d of %d", fd, plane.bytesused, plane.length);
-            }
         } else {
             plane.data_offset = bufhdr->nOffset;
             plane.length = bufhdr->nAllocLen;
@@ -3000,52 +2961,9 @@ bool venc_dev::venc_validate_hybridhp_params(OMX_U32 layers, OMX_U32 bFrames, OM
 bool venc_dev::venc_set_hier_layers(QOMX_VIDEO_HIERARCHICALCODINGTYPE type,
                                     OMX_U32 num_layers)
 {
-    struct v4l2_control control;
-
-    if (!venc_validate_hybridhp_params(num_layers, 0, 0, (int)type)){
-        DEBUG_PRINT_ERROR("Invalid settings, Hier-pLayers enabled with HybridHP");
-        return false;
-    }
-
-    if (type == QOMX_HIERARCHICALCODING_P) {
-        // Reduce layer count by 1 before sending to driver. This avoids
-        // driver doing the same in multiple places.
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_HIER_P_NUM_LAYERS;
-        control.value = num_layers - 1;
-        DEBUG_PRINT_HIGH("Set Hier P num layers: %u", (unsigned int)num_layers);
-        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-            DEBUG_PRINT_ERROR("Request to set Hier P num layers failed");
-            return false;
-        }
-        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
-            DEBUG_PRINT_LOW("Set H264_SVC_NAL");
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_H264_NAL_SVC;
-            control.value = V4L2_CID_MPEG_VIDC_VIDEO_H264_NAL_SVC_ENABLED;
-            if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_ERROR("Failed to enable SVC_NAL");
-                return false;
-            }
-        }
-        hier_layers.hier_mode = HIER_P;
-    } else if (type == QOMX_HIERARCHICALCODING_B) {
-        if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
-            DEBUG_PRINT_ERROR("Failed : Hier B layers supported only for HEVC encode");
-            return false;
-        }
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_HIER_B_NUM_LAYERS;
-        control.value = num_layers - 1;
-        DEBUG_PRINT_INFO("Set Hier B num layers: %u", (unsigned int)num_layers);
-        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-            DEBUG_PRINT_ERROR("Request to set Hier P num layers failed");
-            return false;
-        }
-        hier_layers.hier_mode = HIER_B;
-    } else {
-        DEBUG_PRINT_ERROR("Request to set hier num layers failed for type: %d", type);
-        return false;
-    }
-    hier_layers.numlayers = num_layers;
-    return true;
+    // not supported on 8974
+    DEBUG_PRINT_ERROR("set_hier_layers not supported on 8974");
+    return false;
 }
 
 bool venc_dev::venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable)
@@ -3504,95 +3422,8 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
                 break;
         }
     }  else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
-        if (eProfile == OMX_VIDEO_HEVCProfileMain) {
-            requested_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN;
-        } else if(eProfile == OMX_VIDEO_HEVCProfileMain10) {
-            requested_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10;
-        } else {
-            DEBUG_PRINT_ERROR("ERROR: Unsupported HEVC profile = %lu",
-                    requested_profile.profile);
-            return false;
-        }
-
-        //profile level
-        switch (eLevel) {
-            case OMX_VIDEO_HEVCMainTierLevel1:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_1;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel1:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_1;
-                break;
-            case OMX_VIDEO_HEVCMainTierLevel2:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_2;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel2:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_2;
-                break;
-            case OMX_VIDEO_HEVCMainTierLevel21:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_2_1;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel21:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_2_1;
-                break;
-            case OMX_VIDEO_HEVCMainTierLevel3:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_3;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel3:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_3;
-                break;
-            case OMX_VIDEO_HEVCMainTierLevel31:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_3_1;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel31:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_3_1;
-                break;
-            case OMX_VIDEO_HEVCMainTierLevel4:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_4;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel4:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_4;
-                break;
-            case OMX_VIDEO_HEVCMainTierLevel41:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_4_1;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel41:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_4_1;
-                break;
-            case OMX_VIDEO_HEVCMainTierLevel5:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_5;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel5:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_5;
-                break;
-            case OMX_VIDEO_HEVCMainTierLevel51:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_5_1;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel51:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_5_1;
-                break;
-            case OMX_VIDEO_HEVCMainTierLevel52:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_5_2;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel52:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_5_2;
-                break;
-            case OMX_VIDEO_HEVCMainTierLevel6:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_6;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel6:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_6;
-                break;
-            case OMX_VIDEO_HEVCMainTierLevel61:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_6_1;
-                break;
-            case OMX_VIDEO_HEVCHighTierLevel61:
-                requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_6_1;
-                break;
-            default :
-                DEBUG_PRINT_ERROR("ERROR: Unsupported HEVC level= %lu",
-                        requested_level.level);
+                DEBUG_PRINT_ERROR("ERROR: HEVC is not supported on 8974");
                 return false;
-        }
     }
 
     if (!m_profile_set) {
@@ -3605,8 +3436,6 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
             control.id = V4L2_CID_MPEG_VIDEO_MPEG4_PROFILE;
         } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H263) {
             control.id = V4L2_CID_MPEG_VIDC_VIDEO_H263_PROFILE;
-        } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_HEVC_PROFILE;
         } else {
             DEBUG_PRINT_ERROR("Wrong CODEC");
             return false;
@@ -3640,8 +3469,6 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
             control.id = V4L2_CID_MPEG_VIDC_VIDEO_H263_LEVEL;
         } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
             control.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL;
-        } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_HEVC_TIER_LEVEL;
         } else {
             DEBUG_PRINT_ERROR("Wrong CODEC");
             return false;
@@ -3690,8 +3517,6 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
 
     if ((codec_profile.profile != V4L2_MPEG_VIDEO_MPEG4_PROFILE_ADVANCED_SIMPLE) &&
             (codec_profile.profile != V4L2_MPEG_VIDEO_H264_PROFILE_MAIN) &&
-            (codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN) &&
-            (codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10) &&
             (codec_profile.profile != V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)) {
         nBFrames=0;
     }
@@ -4313,67 +4138,8 @@ bool venc_dev::venc_calibrate_gop()
 
 bool venc_dev::venc_set_hybrid_hierp(OMX_U32 layers)
 {
-    DEBUG_PRINT_LOW("venc_set_hybrid_hierp layers: %u", layers);
-    struct v4l2_control control;
-    int rc;
-
-    if (!venc_validate_hybridhp_params(layers, 0, 0, (int) HIER_P_HYBRID)) {
-        DEBUG_PRINT_ERROR("Invalid settings, Hybrid HP enabled with LTR OR Hier-pLayers OR bframes");
-        return false;
-    }
-
-    if (!layers || layers > MAX_HYB_HIERP_LAYERS) {
-        DEBUG_PRINT_ERROR("Invalid numbers of layers set: %d (max supported is 6)", layers);
-        return false;
-    }
-
-    hier_layers.numlayers = layers;
-    hier_layers.hier_mode = HIER_P_HYBRID;
-    if (venc_calibrate_gop()) {
-     // Update the driver with the new nPframes and nBframes
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_NUM_P_FRAMES;
-        control.value = intra_period.num_pframes;
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
-            return false;
-        }
-
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_NUM_B_FRAMES;
-        control.value = intra_period.num_bframes;
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
-            return false;
-        }
-        DEBUG_PRINT_LOW("Updated nPframes (%ld) and nBframes (%ld)",
-                         intra_period.num_pframes, intra_period.num_bframes);
-    } else {
-        DEBUG_PRINT_ERROR("Invalid settings, Hybrid HP enabled with LTR OR Hier-pLayers OR bframes");
-        return false;
-    }
-
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_HYBRID_HIERP_MODE;
-    control.value = layers - 1;
-
-    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%x, val=%d",
-                    control.id, control.value);
-
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set hybrid hierp %d", rc);
-        return false;
-    }
-
-    DEBUG_PRINT_LOW("SUCCESS IOCTL set control for id=%x, val=%d",
-                    control.id, control.value);
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_H264_NAL_SVC;
-    control.value = V4L2_CID_MPEG_VIDC_VIDEO_H264_NAL_SVC_ENABLED;
-    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-        DEBUG_PRINT_ERROR("Failed to enable SVC_NAL");
-        return false;
-    }
-    return true;
+    DEBUG_PRINT_ERROR("venc_set_hybrid_hierp not supported on 8974");
+    return false;
 }
 
 bool venc_dev::venc_set_ltrmode(OMX_U32 enable, OMX_U32 count)
@@ -4537,77 +4303,8 @@ bool venc_dev::venc_set_vpe_rotation(OMX_S32 rotation_angle)
 
 bool venc_dev::venc_set_searchrange()
 {
-    DEBUG_PRINT_LOW("venc_set_searchrange");
-    struct v4l2_control control;
-    struct v4l2_ext_control ctrl[6];
-    struct v4l2_ext_controls controls;
-    int rc;
-
-    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_MPEG4) {
-        ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_X_RANGE;
-        ctrl[0].value = 16;
-        ctrl[1].id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_Y_RANGE;
-        ctrl[1].value = 4;
-        ctrl[2].id = V4L2_CID_MPEG_VIDC_VIDEO_PFRAME_X_RANGE;
-        ctrl[2].value = 16;
-        ctrl[3].id = V4L2_CID_MPEG_VIDC_VIDEO_PFRAME_Y_RANGE;
-        ctrl[3].value = 4;
-        ctrl[4].id = V4L2_CID_MPEG_VIDC_VIDEO_BFRAME_X_RANGE;
-        ctrl[4].value = 12;
-        ctrl[5].id = V4L2_CID_MPEG_VIDC_VIDEO_BFRAME_Y_RANGE;
-        ctrl[5].value = 4;
-    } else if ((m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) ||
-               (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8)) {
-        ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_X_RANGE;
-        ctrl[0].value = 16;
-        ctrl[1].id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_Y_RANGE;
-        ctrl[1].value = 4;
-        ctrl[2].id = V4L2_CID_MPEG_VIDC_VIDEO_PFRAME_X_RANGE;
-        ctrl[2].value = 16;
-        ctrl[3].id = V4L2_CID_MPEG_VIDC_VIDEO_PFRAME_Y_RANGE;
-        ctrl[3].value = 4;
-        ctrl[4].id = V4L2_CID_MPEG_VIDC_VIDEO_BFRAME_X_RANGE;
-        ctrl[4].value = 12;
-        ctrl[5].id = V4L2_CID_MPEG_VIDC_VIDEO_BFRAME_Y_RANGE;
-        ctrl[5].value = 4;
-    } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H263) {
-        ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_X_RANGE;
-        ctrl[0].value = 4;
-        ctrl[1].id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_Y_RANGE;
-        ctrl[1].value = 4;
-        ctrl[2].id = V4L2_CID_MPEG_VIDC_VIDEO_PFRAME_X_RANGE;
-        ctrl[2].value = 4;
-        ctrl[3].id = V4L2_CID_MPEG_VIDC_VIDEO_PFRAME_Y_RANGE;
-        ctrl[3].value = 4;
-        ctrl[4].id = V4L2_CID_MPEG_VIDC_VIDEO_BFRAME_X_RANGE;
-        ctrl[4].value = 4;
-        ctrl[5].id = V4L2_CID_MPEG_VIDC_VIDEO_BFRAME_Y_RANGE;
-        ctrl[5].value = 4;
-    } else {
-        DEBUG_PRINT_ERROR("Invalid codec type");
-        return false;
-    }
-    controls.count = 6;
-    controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
-    controls.controls = ctrl;
-
-    DEBUG_PRINT_LOW(" Calling IOCTL set control for"
-        "id=%x, val=%d id=%x, val=%d"
-        "id=%x, val=%d id=%x, val=%d"
-        "id=%x, val=%d id=%x, val=%d",
-        controls.controls[0].id, controls.controls[0].value,
-        controls.controls[1].id, controls.controls[1].value,
-        controls.controls[2].id, controls.controls[2].value,
-        controls.controls[3].id, controls.controls[3].value,
-        controls.controls[4].id, controls.controls[4].value,
-        controls.controls[5].id, controls.controls[5].value);
-
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set search range %d", rc);
-        return false;
-    }
-    return true;
+    DEBUG_PRINT_ERROR("venc_set_searchrange not supported on 8974");
+    return false;
 }
 
 bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
@@ -4699,20 +4396,9 @@ bool venc_dev::venc_set_perf_level(QOMX_VIDEO_PERF_LEVEL ePerfLevel)
 
 bool venc_dev::venc_set_perf_mode(OMX_U32 mode)
 {
-    struct v4l2_control control;
-    if (mode && mode <= V4L2_MPEG_VIDC_VIDEO_PERF_POWER_SAVE) {
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_PERF_MODE;
-        control.value = mode;
-        DEBUG_PRINT_LOW("Going to set V4L2_CID_MPEG_VIDC_VIDEO_PERF_MODE");
-        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-            DEBUG_PRINT_ERROR("Failed to set V4L2_CID_MPEG_VIDC_VIDEO_PERF_MODE");
-            return false;
-        }
-        return true;
-    } else {
-        DEBUG_PRINT_ERROR("Invalid mode set for V4L2_CID_MPEG_VIDC_VIDEO_PERF_MODE: %d", mode);
-        return false;
-    }
+    // not supported on 8974
+    DEBUG_PRINT_ERROR("set_perf_mode is not supported on 8974");
+    return false;
 }
 
 bool venc_dev::venc_set_vui_timing_info(OMX_BOOL enable)
@@ -4760,27 +4446,8 @@ bool venc_dev::venc_set_peak_bitrate(OMX_U32 nPeakBitrate)
 
 bool venc_dev::venc_set_vpx_error_resilience(OMX_BOOL enable)
 {
-    struct v4l2_control control;
-    int rc = 0;
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_VPX_ERROR_RESILIENCE;
-
-    if (enable)
-        control.value = 1;
-    else
-        control.value = 0;
-
-    DEBUG_PRINT_LOW("venc_set_vpx_error_resilience: %d", control.value);
-
-    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
-
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set VPX Error Resilience");
-        return false;
-    }
-    vpx_err_resilience.enable = 1;
-    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-    return true;
+    DEBUG_PRINT_ERROR("set_vpx_error_resilience not supported on 8974");
+    return false;
 }
 
 bool venc_dev::venc_set_session_priority(OMX_U32 priority) {
@@ -5152,103 +4819,9 @@ bool venc_dev::venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel)
                 break;
         }
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
-        switch (codec_profile.profile) {
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN:
-                *eProfile = OMX_VIDEO_HEVCProfileMain;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10:
-                *eProfile = OMX_VIDEO_HEVCProfileMain10;
-                break;
-            default:
-                *eProfile = OMX_VIDEO_HEVCProfileMax;
-                status = false;
-                break;
-        }
-        if (!status) {
-            return status;
-        }
-
-        switch (profile_level.level) {
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel1;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_1:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel1;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_2:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel2;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_2:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel2;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_2_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel21;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_2_1:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel21;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_3:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel3;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_3:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel3;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_3_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel31;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_3_1:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel31;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_4:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel4;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_4:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel4;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_4_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel41;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_4_1:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel41;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_5:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel5;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_5:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel5;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_5_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel51;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_5_1:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel51;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_5_2:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel52;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_5_2:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel52;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_6:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel6;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_6:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel6;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_6_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel61;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_6_1:
-                *eLevel = OMX_VIDEO_HEVCHighTierLevel61;
-                break;
-            case V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_6_2:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel62;
-                break;
-            default:
-                *eLevel = OMX_VIDEO_HEVCLevelMax;
-                status = false;
-                break;
-        }
+        // not supported on 8974
+        DEBUG_PRINT_ERROR("HEVC not supported on 8974");
+        return false;
     }
 
     return status;
@@ -5409,13 +4982,6 @@ bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
                 *eProfile = OMX_VIDEO_HEVCProfileMain;
     } else {
                 switch (codec_profile.profile) {
-                    case V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN:
-                        *eProfile = OMX_VIDEO_HEVCProfileMain;
-                        break;
-                    case V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10:
-                        *eProfile = OMX_VIDEO_HEVCProfileMain10;
-                        break;
-                    default:
                         DEBUG_PRINT_ERROR("%s(): Unknown Error", __func__);
                         return false;
                 }
