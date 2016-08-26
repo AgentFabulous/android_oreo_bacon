@@ -45,6 +45,11 @@ PRODUCT_PROPERTY_OVERRIDES := \
 # Put en_US first in the list, so make it default.
 PRODUCT_LOCALES := en_US
 
+# Import backuptool scripts
+PRODUCT_COPY_FILES += \
+    build/make/tools/install/backuptool.functions:install/bin/backuptool.functions \
+    build/make/tools/install/backuptool.sh:install/bin/backuptool.sh
+
 # Get some sounds
 $(call inherit-product-if-exists, frameworks/base/data/sounds/GoogleAudio.mk)
 
