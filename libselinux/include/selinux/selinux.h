@@ -10,6 +10,8 @@ extern "C" {
 
 /* Return 1 if we are running on a SELinux kernel, or 0 if not or -1 if we get an error. */
 extern int is_selinux_enabled(void);
+/* Return 1 if we are running on a enforced, or 0 if not or -1 if we get an error. */
+extern int selinux_status_getenforce(void);
 /* Return 1 if we are running on a SELinux MLS kernel, or 0 otherwise. */
 extern int is_selinux_mls_enabled(void);
 
