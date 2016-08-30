@@ -895,7 +895,6 @@ static void lcds_set_brightness(struct led_classdev *led_cdev,
 	}
 	if(!strcmp(led_cdev->name, "blue"))
 	{
-	if(shine_debug)
 		if(shine_debug) {
 			pr_debug("shineled----%s: light the blue ,value = %d\n", __func__, value);
 		}
