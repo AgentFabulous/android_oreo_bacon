@@ -813,12 +813,6 @@ static void getUBwcWidthAndHeight(int width, int height, int format,
 {
     switch (format)
     {
-        case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-            aligned_w = VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, width);
-            aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, height);
-            break;
         default:
             ALOGE("%s: Unsupported pixel format: 0x%x", __FUNCTION__, format);
             aligned_w = 0;
@@ -889,11 +883,6 @@ static unsigned int getUBwcSize(int width, int height, int format,
         case HAL_PIXEL_FORMAT_RGBA_8888:
             size = alignedw * alignedh * 4;
             size += getUBwcMetaBufferSize(width, height, 4);
-            break;
-        case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-            size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_UBWC, width, height);
             break;
         default:
             ALOGE("%s: Unsupported pixel format: 0x%x", __FUNCTION__, format);

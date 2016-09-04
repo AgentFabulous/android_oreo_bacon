@@ -271,7 +271,7 @@ inline void MdpCtrl::setRotationFlags() {
 }
 
 inline uint8_t MdpCtrl::getPriority() const {
-    return mOVInfo.priority;
+    return 0;
 }
 
 ///////    MdpData   //////

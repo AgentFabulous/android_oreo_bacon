@@ -58,8 +58,6 @@ namespace ovutils = overlay::utils;
 extern "C" {
 #endif
 
-EGLAPI EGLBoolean eglGpuPerfHintQCOM(EGLDisplay dpy, EGLContext ctx,
-                                           EGLint *attrib_list);
 #define EGL_GPU_HINT_1        0x32D0
 #define EGL_GPU_HINT_2        0x32D1
 
@@ -1032,9 +1030,6 @@ void setListStats(hwc_context_t *ctx,
         if(ctx->mWindowboxFeature && dpy && isAIVVideoLayer(layer)) {
             ctx->listStats[dpy].mAIVVideoMode = true;
         }
-        if (layer->flags & HWC_SCREENSHOT_ANIMATOR_LAYER) {
-            ctx->listStats[dpy].isDisplayAnimating = true;
-        }
         if(isSecureDisplayBuffer(hnd)) {
             ctx->listStats[dpy].secureUI = true;
         }
@@ -1439,11 +1434,6 @@ void optimizeLayerRects(const hwc_display_contents_1_t *list) {
                      layer->sourceCropf.top = (float)bottomCrop.top;
                      layer->sourceCropf.right = (float)bottomCrop.right;
                      layer->sourceCropf.bottom = (float)bottomCrop.bottom;
-#ifdef QCOM_BSP
-                     //Update layer dirtyRect
-                     layer->dirtyRect = getIntersection(bottomCrop,
-                                            layer->dirtyRect);
-#endif
                   }
                }
                j--;
@@ -1629,9 +1619,6 @@ int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
 
     for(uint32_t i = 0; i < list->numHwLayers; i++) {
         if(list->hwLayers[i].compositionType == HWC_OVERLAY ||
-#ifdef QCOM_BSP
-           list->hwLayers[i].compositionType == HWC_BLIT ||
-#endif
            list->hwLayers[i].compositionType == HWC_FRAMEBUFFER_TARGET) {
             //Populate releaseFenceFds.
             if(UNLIKELY(swapzero)) {
@@ -1648,11 +1635,6 @@ int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
                 // if ABC is enabled for more than one layer
                 if(fd >= 0 && (isAbcInUse(ctx) == true) &&
                   ctx->listStats[dpy].renderBufIndexforABC !=(int32_t)i){
-                    list->hwLayers[i].releaseFenceFd = dup(fd);
-                } else if((list->hwLayers[i].compositionType == HWC_BLIT)&&
-                                               (isAbcInUse(ctx) == false)){
-                    //For Blit, the app layers should be released when the Blit
-                    //is complete. This fd was passed from copybit->draw
                     list->hwLayers[i].releaseFenceFd = dup(fd);
                 } else
 #endif
@@ -2435,67 +2417,6 @@ void setGPUHint(hwc_context_t* ctx, hwc_display_contents_1_t* list) {
     if(!gpuHint->mGpuPerfModeEnable || !ctx || !list)
         return;
 
-#ifdef QCOM_BSP
-    /* Set the GPU hint flag to high for MIXED/GPU composition only for
-       first frame after MDP -> GPU/MIXED mode transition. Set the GPU
-       hint to default if the previous composition is GPU or current GPU
-       composition is due to idle fallback */
-    if(!gpuHint->mEGLDisplay || !gpuHint->mEGLContext) {
-        gpuHint->mEGLDisplay = eglGetCurrentDisplay();
-        if(!gpuHint->mEGLDisplay) {
-            ALOGW("%s Warning: EGL current display is NULL", __FUNCTION__);
-            return;
-        }
-        gpuHint->mEGLContext = eglGetCurrentContext();
-        if(!gpuHint->mEGLContext) {
-            ALOGW("%s Warning: EGL current context is NULL", __FUNCTION__);
-            return;
-        }
-    }
-    if(isGLESComp(ctx, list)) {
-        if(gpuHint->mCompositionState != COMPOSITION_STATE_GPU
-            && !MDPComp::isIdleFallback()) {
-            EGLint attr_list[] = {EGL_GPU_HINT_1,
-                                  EGL_GPU_LEVEL_3,
-                                  EGL_NONE };
-            if((gpuHint->mCurrGPUPerfMode != EGL_GPU_LEVEL_3) &&
-                !eglGpuPerfHintQCOM(gpuHint->mEGLDisplay,
-                                    gpuHint->mEGLContext, attr_list)) {
-                ALOGW("eglGpuPerfHintQCOM failed for Built in display");
-            } else {
-                gpuHint->mCurrGPUPerfMode = EGL_GPU_LEVEL_3;
-                gpuHint->mCompositionState = COMPOSITION_STATE_GPU;
-            }
-        } else {
-            EGLint attr_list[] = {EGL_GPU_HINT_1,
-                                  EGL_GPU_LEVEL_0,
-                                  EGL_NONE };
-            if((gpuHint->mCurrGPUPerfMode != EGL_GPU_LEVEL_0) &&
-                !eglGpuPerfHintQCOM(gpuHint->mEGLDisplay,
-                                    gpuHint->mEGLContext, attr_list)) {
-                ALOGW("eglGpuPerfHintQCOM failed for Built in display");
-            } else {
-                gpuHint->mCurrGPUPerfMode = EGL_GPU_LEVEL_0;
-            }
-            if(MDPComp::isIdleFallback()) {
-                gpuHint->mCompositionState = COMPOSITION_STATE_IDLE_FALLBACK;
-            }
-        }
-    } else {
-        /* set the GPU hint flag to default for MDP composition */
-        EGLint attr_list[] = {EGL_GPU_HINT_1,
-                              EGL_GPU_LEVEL_0,
-                              EGL_NONE };
-        if((gpuHint->mCurrGPUPerfMode != EGL_GPU_LEVEL_0) &&
-                !eglGpuPerfHintQCOM(gpuHint->mEGLDisplay,
-                                    gpuHint->mEGLContext, attr_list)) {
-            ALOGW("eglGpuPerfHintQCOM failed for Built in display");
-        } else {
-            gpuHint->mCurrGPUPerfMode = EGL_GPU_LEVEL_0;
-        }
-        gpuHint->mCompositionState = COMPOSITION_STATE_MDP;
-    }
-#endif
 }
 
 bool isPeripheral(const hwc_rect_t& rect1, const hwc_rect_t& rect2) {

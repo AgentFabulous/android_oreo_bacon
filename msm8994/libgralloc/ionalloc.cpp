@@ -76,9 +76,9 @@ int IonAlloc::alloc_buffer(alloc_data& data)
 
     ionAllocData.len = data.size;
     ionAllocData.align = data.align;
-    ionAllocData.heap_id_mask = data.flags & ~ION_SECURE;
+    ionAllocData.heap_mask = data.flags & ~ION_SECURE;
 #ifdef ION_FLAG_ALLOW_NON_CONTIG
-    ionAllocData.heap_id_mask &= (data.flags & ~ION_FLAG_ALLOW_NON_CONTIG);
+    ionAllocData.heap_mask &= (data.flags & ~ION_FLAG_ALLOW_NON_CONTIG);
 #endif
     ionAllocData.flags = data.uncached ? 0 : ION_FLAG_CACHED;
     // ToDo: replace usage of alloc data structure with
