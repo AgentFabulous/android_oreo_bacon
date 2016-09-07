@@ -150,7 +150,6 @@ struct shash_alg sha256_neon_algs[] = { {
 		.cra_priority	=	250,
 		.cra_flags	=	CRYPTO_ALG_TYPE_SHASH,
 		.cra_blocksize	=	SHA256_BLOCK_SIZE,
-		.cra_module	=	THIS_MODULE,
 	}
 }, {
 	.digestsize	=	SHA224_DIGEST_SIZE,
@@ -167,6 +166,5 @@ struct shash_alg sha256_neon_algs[] = { {
 		.cra_priority	=	250,
 		.cra_flags	=	CRYPTO_ALG_TYPE_SHASH,
 		.cra_blocksize	=	SHA224_BLOCK_SIZE,
-		.cra_module	=	THIS_MODULE,
 	}
 } };
