@@ -209,11 +209,11 @@ static int lm3630_intr_config(struct lm3630_chip_data *pchip)
 
 #ifdef CONFIG_STATE_NOTIFIER
 	// if display is switched off
-	if (!use_fb_notifier && bl_level == 0)
+	if (bl_level == 0)
 		state_suspend();
 
 	// if display is switched on
-	if (!use_fb_notifier && bl_level != 0 && pre_brightness == 0)
+	if (bl_level != 0 && pre_brightness == 0)
 		state_resume();
 #endif /*CONFIG_STATE_NOTIFIER*/
 
