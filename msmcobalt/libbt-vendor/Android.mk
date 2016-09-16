@@ -31,7 +31,9 @@ LOCAL_SRC_FILES := \
         src/bt_vendor_persist.cpp
 
 #Disable this flag in case if FM over UART support not needed
+ifeq ($(QCOM_BT_FM_OVER_UART),true)
 LOCAL_CFLAGS := -DFM_OVER_UART
+endif
 
 ifneq (,$(filter userdebug eng,$(TARGET_BUILD_VARIANT)))
 LOCAL_CFLAGS += -DPANIC_ON_SOC_CRASH
