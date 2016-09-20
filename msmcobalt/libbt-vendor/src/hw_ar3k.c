@@ -52,6 +52,7 @@ extern "C" {
 #include "bt_hci_bdroid.h"
 #include "hci_uart.h"
 #include "hw_ar3k.h"
+#include "bt_vendor_qcom.h"
 
 /******************************************************************************
 **  Variables
