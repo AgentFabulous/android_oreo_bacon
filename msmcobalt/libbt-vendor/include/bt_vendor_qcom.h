@@ -69,6 +69,7 @@ enum {
     BT_STATUS_FAIL,
     BT_STATUS_INVAL,
     BT_STATUS_NOMEM,
+    BT_STATUS_PROP_FAILURE,
 };
 
 struct bt_qcom_struct {
