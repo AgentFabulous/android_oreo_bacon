@@ -43,7 +43,7 @@
 #define BT_VND_OP_GET_LINESPEED 30
 
 #define STOP_WCNSS_FILTER 0xDD
-#define STOP_WAIT_TIMEOUT 100
+#define STOP_WAIT_TIMEOUT   1000
 
 #define SOC_INIT_PROPERTY "wc_transport.soc_initialized"
 
@@ -281,35 +281,39 @@ void stop_hci_filter() {
 
        ALOGV("%s: Entry ", __func__);
 
-       property_get(BT_VND_FILTER_START, value, "false");
-
-       if (strcmp(value, "false") == 0) {
-           ALOGI("%s: hci_filter has been stopped already", __func__);
-//           return;
-       }
        if ((soc_type = get_bt_soc_type()) == BT_SOC_CHEROKEE) {
-           filter_ctrl = connect_to_local_socket("wcnssfilter_ctrl");
-           if (filter_ctrl < 0) {
-               ALOGI("%s: Error while connecting to CTRL_SOCK, filter should stopped: %d", __func__, filter_ctrl);
-               //Ignore and fallback
-           } else {
-               retval = write(filter_ctrl, &stop_val, 1);
-               if (retval != 1) {
-                   ALOGI("%s: problem writing to CTRL_SOCK, ignore: %d", __func__, retval);
-               //Ignore and fallback
+           property_get("wc_transport.hci_filter_status", value, "0");
+           if (strcmp(value, "0") == 0) {
+               ALOGI("%s: hci_filter has been stopped already", __func__);
+           }
+           else {
+               filter_ctrl = connect_to_local_socket("wcnssfilter_ctrl");
+               if (filter_ctrl < 0) {
+                   ALOGI("%s: Error while connecting to CTRL_SOCK, filter should stopped: %d",
+                          __func__, filter_ctrl);
+               }
+               else {
+                   retval = write(filter_ctrl, &stop_val, 1);
+                   if (retval != 1) {
+                       ALOGI("%s: problem writing to CTRL_SOCK, ignore: %d", __func__, retval);
+                       //Ignore and fallback
+                   }
+
+                   close(filter_ctrl);
                }
            }
 
            /* Ensure Filter is closed by checking the status before
               RFKILL 0 operation. this should ideally comeout very
               quick */
-           for(i=0; i<5; i++) {
-               property_get("wc_transport.hci_filter_status", value, "0");
-               if (strcmp(value, "0") == 0) {
+           for(i=0; i<500; i++) {
+               property_get(BT_VND_FILTER_START, value, "false");
+               if (strcmp(value, "false") == 0) {
                    ALOGI("%s: WCNSS_FILTER stopped", __func__);
+                   usleep(STOP_WAIT_TIMEOUT * 10);
                    break;
                } else {
-                   /*sleep of 100ms, This should give enough time for FILTER to
+                   /*sleep of 1ms, This should give enough time for FILTER to
                    exit with all necessary cleanup*/
                    usleep(STOP_WAIT_TIMEOUT);
                }
@@ -710,9 +714,8 @@ bool is_soc_initialized() {
     return init;
 }
 
-
-/** Requested operations */
-static int op(bt_vendor_opcode_t opcode, void *param)
+/* flavor of op without locks */
+static int __op(bt_vendor_opcode_t opcode, void *param)
 {
     int retval = BT_STATUS_SUCCESS;
     int nCnt = 0;
@@ -732,12 +735,6 @@ static int op(bt_vendor_opcode_t opcode, void *param)
     bool skip_init = true;
     int  opcode_init = opcode;
     ALOGV("++%s opcode %d", __FUNCTION__, opcode);
-    pthread_mutex_lock(&q_lock);
-    if (!q) {
-        ALOGE("op called with NULL context");
-        retval = -BT_STATUS_INVAL;
-        goto out;
-    }
 
     switch(opcode_init)
     {
@@ -1254,9 +1251,25 @@ userial_open:
     }
 
 out:
-    pthread_mutex_unlock(&q_lock);
     ALOGV("--%s", __FUNCTION__);
     return retval;
+}
+
+static int op(bt_vendor_opcode_t opcode, void *param)
+{
+    int ret;
+    ALOGV("++%s", __FUNCTION__);
+    pthread_mutex_lock(&q_lock);
+    if (!q) {
+        ALOGE("op called with NULL context");
+        ret = -BT_STATUS_INVAL;
+        goto out;
+    }
+    ret = __op(opcode, param);
+out:
+    pthread_mutex_unlock(&q_lock);
+    ALOGV("--%s ret = 0x%x", __FUNCTION__, ret);
+    return ret;
 }
 
 static void ssr_cleanup(int reason)
@@ -1270,8 +1283,7 @@ static void ssr_cleanup(int reason)
     pthread_mutex_lock(&q_lock);
     if (!q) {
         ALOGE("ssr_cleanup called with NULL context");
-        pthread_mutex_unlock(&q_lock);
-        return;
+        goto out;
     }
     if (property_set("wc_transport.patch_dnld_inprog", "null") < 0) {
         ALOGE("Failed to set property");
@@ -1291,34 +1303,33 @@ static void ssr_cleanup(int reason)
                  * Then we should send special byte to crash SOC in
                  * WCNSS_Filter, so we do not need to power off UART here.
                  */
-                pthread_mutex_unlock(&q_lock);
-                return;
+                goto out;
             }
         }
-        /* release lock here as op holds lock anyways */
-        pthread_mutex_unlock(&q_lock);
 
         /* Close both ANT channel */
-        op(BT_VND_OP_ANT_USERIAL_CLOSE, NULL);
+        __op(BT_VND_OP_ANT_USERIAL_CLOSE, NULL);
 #endif
         /* Close both BT channel */
-        op(BT_VND_OP_USERIAL_CLOSE, NULL);
+        __op(BT_VND_OP_USERIAL_CLOSE, NULL);
 
 #ifdef FM_OVER_UART
-        op(BT_VND_OP_FM_USERIAL_CLOSE, NULL);
+        __op(BT_VND_OP_FM_USERIAL_CLOSE, NULL);
 #endif
         /*CTRL OFF twice to make sure hw
          * turns off*/
 #ifdef ENABLE_ANT
-        op(BT_VND_OP_POWER_CTRL, &pwr_state);
+        __op(BT_VND_OP_POWER_CTRL, &pwr_state);
 #endif
 #ifdef FM_OVER_UART
-        op(BT_VND_OP_POWER_CTRL, &pwr_state);
+        __op(BT_VND_OP_POWER_CTRL, &pwr_state);
 #endif
     }
     /*Generally switching of chip should be enough*/
-    op(BT_VND_OP_POWER_CTRL, &pwr_state);
+    __op(BT_VND_OP_POWER_CTRL, &pwr_state);
 
+out:
+    pthread_mutex_unlock(&q_lock);
     ALOGI("--%s", __FUNCTION__);
 }
 
