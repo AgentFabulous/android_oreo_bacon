@@ -585,7 +585,7 @@ static inline void print_bdaddr(unsigned char *addr)
 
 static int init(const bt_vendor_callbacks_t *cb, unsigned char *bdaddr)
 {
-    char address[PROPERTY_VALUE_MAX];
+    char prop[PROPERTY_VALUE_MAX] = {0};
     struct bt_qcom_struct *temp = NULL;
     int ret = BT_STATUS_SUCCESS, i;
 
@@ -611,8 +611,18 @@ static int init(const bt_vendor_callbacks_t *cb, unsigned char *bdaddr)
     temp->ant_fd = -1;
     temp->soc_type = get_bt_soc_type();
     soc_init(temp->soc_type);
+
     le2bd(bdaddr, temp->bdaddr);
     print_bdaddr(temp->bdaddr);
+    snprintf(prop, sizeof(prop), "%02x:%02x:%02x:%02x:%02x:%02x",
+             temp->bdaddr[0], temp->bdaddr[1], temp->bdaddr[2],
+             temp->bdaddr[3], temp->bdaddr[4], temp->bdaddr[5]);
+    ret = property_set("wc_transport.stack_bdaddr", prop);
+    if (ret < 0) {
+        ALOGE("Failed to set wc_transport.stack_bdaddr prop, ret = %d", ret);
+        ret = -BT_STATUS_PROP_FAILURE;
+        goto out;
+    }
 
 /* TODO: Move these fields inside bt_qcom context */
 #ifdef WIFI_BT_STATUS_SYNC
