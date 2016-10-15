@@ -126,6 +126,16 @@ public:
     int putNanBeaconSdfPayload(transaction_id id, const NanBeaconSdfPayloadRequest *pReq);
     int getNanStaParameter(wifi_interface_handle iface, NanStaParameter *pRsp);
     int putNanCapabilities(transaction_id id);
+
+    /* Functions for NAN error translation
+       For NanResponse, NanPublishTerminatedInd, NanSubscribeTerminatedInd,
+       NanDisabledInd, NanTransmitFollowupInd:
+       function to translate firmware specific errors
+       to generic freamework error along with the error string
+    */
+    void NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
+                             u32 valueRcvd,
+                             void *pRsp);
 };
 #endif /* __WIFI_HAL_NAN_COMMAND_H__ */
 

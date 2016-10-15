@@ -184,7 +184,8 @@ int NanCommand::getNanPublishTerminated(NanPublishTerminatedInd *event)
 
     pNanPublishTerminatedIndMsg pRsp = (pNanPublishTerminatedIndMsg)mNanVendorEvent;
     event->publish_id = pRsp->fwHeader.handle;
-    event->reason = (NanStatusType)pRsp->reason;
+    NanErrorTranslation((NanInternalStatusType)pRsp->reason, 0,
+                        (void*)event);
     return WIFI_SUCCESS;
 }
 
@@ -330,7 +331,8 @@ int NanCommand::getNanSubscribeTerminated(NanSubscribeTerminatedInd *event)
 
     pNanSubscribeTerminatedIndMsg pRsp = (pNanSubscribeTerminatedIndMsg)mNanVendorEvent;
     event->subscribe_id = pRsp->fwHeader.handle;
-    event->reason = (NanStatusType)pRsp->reason;
+    NanErrorTranslation((NanInternalStatusType)pRsp->reason, 0,
+                        (void*)event);
     return WIFI_SUCCESS;
 }
 
@@ -471,7 +473,8 @@ int NanCommand::getNanDisabled(NanDisabledInd *event)
     }
 
     pNanDisableIndMsg pRsp = (pNanDisableIndMsg)mNanVendorEvent;
-    event->reason = (NanStatusType)pRsp->reason;
+    NanErrorTranslation((NanInternalStatusType)pRsp->reason, 0,
+                        (void*)event);
     return WIFI_SUCCESS;
 
 }
@@ -815,7 +818,8 @@ int NanCommand::getNanTransmitFollowupInd(NanTransmitFollowupInd *event)
 
     pNanSelfTransmitFollowupIndMsg pRsp = (pNanSelfTransmitFollowupIndMsg)mNanVendorEvent;
     event->id = pRsp->fwHeader.transactionId;
-    event->reason = (NanStatusType)pRsp->reason;
+    NanErrorTranslation((NanInternalStatusType)pRsp->reason, 0,
+                        (void*)event);
     return WIFI_SUCCESS;
 }
 
