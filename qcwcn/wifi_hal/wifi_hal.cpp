@@ -183,6 +183,40 @@ cleanup:
     return (wifi_error)ret;
 }
 
+static wifi_error wifi_get_capabilities(wifi_interface_handle handle)
+{
+    wifi_error ret;
+    int requestId;
+    WifihalGeneric *wifihalGeneric;
+    wifi_handle wifiHandle = getWifiHandle(handle);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver", __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* No request id from caller, so generate one and pass it on to the driver.
+     * Generate it randomly.
+     */
+    requestId = get_requestid();
+
+    wifihalGeneric = new WifihalGeneric(
+                            wifiHandle,
+                            requestId,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_GSCAN_GET_CAPABILITIES);
+    if (!wifihalGeneric) {
+        ALOGE("%s: Failed to create object of WifihalGeneric class", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ret = wifihalGeneric->wifiGetCapabilities(handle);
+
+    delete wifihalGeneric;
+    return ret;
+}
+
 static wifi_error get_firmware_bus_max_size_supported(
                                                 wifi_interface_handle iface)
 {
@@ -510,6 +544,10 @@ wifi_error wifi_initialize(wifi_handle *handle)
         ALOGE("Wifi Logger Ring Initialization Failed");
         goto unload;
     }
+
+    ret = wifi_get_capabilities(iface_handle);
+    if (ret != WIFI_SUCCESS)
+        ALOGE("Failed to get wifi Capabilities, error: %d", ret);
 
     info->pkt_stats = (struct pkt_stats_s *)malloc(sizeof(struct pkt_stats_s));
     if (!info->pkt_stats) {
