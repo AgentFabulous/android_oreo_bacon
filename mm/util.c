@@ -356,12 +356,9 @@ struct address_space *page_mapping(struct page *page)
 
 	VM_BUG_ON(PageSlab(page));
 #ifdef CONFIG_SWAP
-	if (unlikely(PageSwapCache(page))) {
-		swp_entry_t entry;
-
-		entry.val = page_private(page);
-		mapping = swap_address_space(entry);
-	} else
+	if (unlikely(PageSwapCache(page)))
+		mapping = &swapper_space;
+	else
 #endif
 	if ((unsigned long)mapping & PAGE_MAPPING_ANON)
 		mapping = NULL;
