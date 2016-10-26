@@ -340,7 +340,21 @@ config CPU_FREQ_GOV_BLU_ACTIVE
 	  To compile this driver as a module, choose M here: the
 	  module will be called cpufreq_blu_active.
 
-	  If in doubt, say N.	
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_ALUCARD
+	tristate "'alucard' cpufreq governor"
+	depends on CPU_FREQ
+
+config CPU_FREQ_GOV_DYNAMIC_INTERACTIVE
+	tristate "'dynamic_interactive' cpufreq governor"
+	depends on CPU_FREQ	
+
+config CPU_FREQ_GOV_SMARTMAX_EPS
+        tristate "'smartmax EPS' cpufreq policy governor"
+        select CPU_FREQ_TABLE
+        help
+          'smartmax EPS' is the extreme powersaving version of smartmax
 
 menu "x86 CPU frequency scaling drivers"
 depends on X86
