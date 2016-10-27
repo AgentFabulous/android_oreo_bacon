@@ -2658,3 +2658,85 @@ wifi_error wifi_configure_roaming(wifi_interface_handle iface, wifi_roaming_conf
 
     return ret;
 }
+
+/* Enable/disable firmware roaming */
+wifi_error wifi_enable_firmware_roaming(wifi_interface_handle iface, fw_roaming_state_t state)
+{
+    wifi_error result = WIFI_SUCCESS;
+    int requestId, ret;
+    GScanCommand *roamCommand;
+    struct nlattr *nlData;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    qca_roaming_policy policy;
+
+    ALOGV("%s: set firmware roam state : %d", __FUNCTION__, state);
+
+    if (state == ROAMING_ENABLE) {
+        policy = QCA_ROAMING_ALLOWED_WITHIN_ESS;
+    } else if(state == ROAMING_DISABLE) {
+        policy = QCA_ROAMING_NOT_ALLOWED;
+    } else {
+        ALOGE("%s: Invalid state provided: %d. Exit \n", __FUNCTION__, state);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    /* No request id from caller, so generate one and pass it on to the driver.
+     * Generate it randomly.
+     */
+    requestId = get_requestid();
+
+    roamCommand =
+         new GScanCommand(wifiHandle,
+                          requestId,
+                          OUI_QCA,
+                          QCA_NL80211_VENDOR_SUBCMD_ROAMING);
+    if (roamCommand == NULL) {
+        ALOGE("%s: Failed to create object of GScanCommand class", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = roamCommand->create();
+    if (ret < 0) {
+        ALOGE("%s: Failed to create NL message,  Error: %d", __FUNCTION__, ret);
+        result = WIFI_ERROR_UNKNOWN;
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    ret = roamCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0) {
+        ALOGE("%s: Failed to set interface Id of message, Error: %d", __FUNCTION__, ret);
+        result = WIFI_ERROR_UNKNOWN;
+        goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        result = WIFI_ERROR_UNKNOWN;
+        goto cleanup;
+    }
+
+    if (roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_POLICY, policy)) {
+        ALOGE("%s: Failed to add roaming policy atribute, Error: %d", __FUNCTION__, ret);
+        result = WIFI_ERROR_UNKNOWN;
+        goto cleanup;
+    }
+
+    roamCommand->attr_end(nlData);
+
+    ret = roamCommand->requestResponse();
+    if (ret != 0) {
+        ALOGE("%s: Failed to send request, Error:%d", __FUNCTION__, ret);
+        if (ret == -EBUSY)
+            result = WIFI_ERROR_BUSY;
+        else
+            result = WIFI_ERROR_UNKNOWN;
+    }
+
+cleanup:
+    delete roamCommand;
+    return result;
+}
