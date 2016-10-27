@@ -2499,6 +2499,94 @@ cleanup:
 
 }
 
+wifi_error wifi_set_ssid_white_list(wifi_request_id id, wifi_interface_handle iface,
+                                    int num_networks, ssid_t *ssid_list)
+{
+    wifi_error result = WIFI_SUCCESS;
+    int ret = 0, i;
+    GScanCommand *roamCommand;
+    struct nlattr *nlData, *nlSsids;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    char ssid[MAX_SSID_LENGTH + 1];
+
+    ALOGV("%s: Number of SSIDs : %d", __FUNCTION__, num_networks);
+
+    roamCommand = new GScanCommand(
+                                wifiHandle,
+                                id,
+                                OUI_QCA,
+                                QCA_NL80211_VENDOR_SUBCMD_ROAM);
+    if (roamCommand == NULL) {
+        ALOGE("%s: Failed to create object of GScanCommand class", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = roamCommand->create();
+    if (ret < 0) {
+        ALOGE("%s: Failed to create NL message,  Error: %d", __FUNCTION__, ret);
+        result = WIFI_ERROR_UNKNOWN;
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    ret = roamCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0) {
+        ALOGE("%s: Failed to set interface Id of message, Error: %d", __FUNCTION__, ret);
+        result = WIFI_ERROR_UNKNOWN;
+        goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        result = WIFI_ERROR_UNKNOWN;
+        goto cleanup;
+    }
+
+    if (roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
+                             QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SSID_WHITE_LIST) ||
+        roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID, id) ||
+        roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_NUM_NETWORKS,
+                             num_networks)) {
+        ALOGE("%s: Failed to add vendor atributes, Error: %d", __FUNCTION__, ret);
+        result = WIFI_ERROR_UNKNOWN;
+        goto cleanup;
+    }
+
+    nlSsids = roamCommand->attr_start(QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_LIST);
+    for (i = 0; i < num_networks; i++) {
+        struct nlattr *nl_ssid = roamCommand->attr_start(i);
+
+        memcpy(ssid, ssid_list[i].ssid_str, ssid_list[i].length);
+        ssid[ssid_list[i].length] = '\0';
+        ALOGV("ssid[%d] : %s", i, ssid);
+
+        if (roamCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID, ssid,
+                                   (ssid_list[i].length + 1))) {
+            ALOGE("%s: Failed to add ssid atribute, Error: %d", __FUNCTION__, ret);
+            result = WIFI_ERROR_UNKNOWN;
+            goto cleanup;
+        }
+
+        roamCommand->attr_end(nl_ssid);
+    }
+    roamCommand->attr_end(nlSsids);
+
+    roamCommand->attr_end(nlData);
+
+    ret = roamCommand->requestResponse();
+    if (ret != 0) {
+        ALOGE("%s: Failed to send request, Error:%d", __FUNCTION__, ret);
+        result = WIFI_ERROR_UNKNOWN;
+    }
+
+cleanup:
+    delete roamCommand;
+    return result;
+}
+
 wifi_error wifi_get_roaming_capabilities(wifi_interface_handle iface,
                                          wifi_roaming_capabilities *caps)
 {
@@ -2518,4 +2606,55 @@ wifi_error wifi_get_roaming_capabilities(wifi_interface_handle iface,
     memcpy(caps, &info->capa.roaming_capa, sizeof(wifi_roaming_capabilities));
 
     return WIFI_SUCCESS;
+}
+
+wifi_error wifi_configure_roaming(wifi_interface_handle iface, wifi_roaming_config *roaming_config)
+{
+    wifi_error ret;
+    int requestId;
+    wifi_bssid_params bssid_params;
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!roaming_config) {
+        ALOGE("%s: Invalid Buffer provided. Exit", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    /* No request id from caller, so generate one and pass it on to the driver.
+     * Generate it randomly.
+     */
+    requestId = get_requestid();
+
+    /* Set bssid blacklist */
+    if (roaming_config->num_blacklist_bssid > info->capa.roaming_capa.max_blacklist_size) {
+        ALOGE("%s: Number of blacklist bssids(%d) provided is more than maximum blacklist bssids(%d)"
+              " supported", __FUNCTION__, roaming_config->num_blacklist_bssid,
+              info->capa.roaming_capa.max_blacklist_size);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+    bssid_params.num_bssid = roaming_config->num_blacklist_bssid;
+
+    memcpy(bssid_params.bssids, roaming_config->blacklist_bssid,
+           (bssid_params.num_bssid * sizeof(mac_addr)));
+
+    ret = wifi_set_bssid_blacklist(requestId, iface, bssid_params);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Failed to configure blacklist bssids", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Set ssid whitelist */
+    if (roaming_config->num_whitelist_ssid > info->capa.roaming_capa.max_whitelist_size) {
+        ALOGE("%s: Number of whitelist ssid(%d) provided is more than maximum whitelist ssids(%d) "
+              "supported", __FUNCTION__, roaming_config->num_whitelist_ssid,
+              info->capa.roaming_capa.max_whitelist_size);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+    ret = wifi_set_ssid_white_list(requestId, iface, roaming_config->num_whitelist_ssid,
+                                   roaming_config->whitelist_ssid);
+    if (ret != WIFI_SUCCESS)
+        ALOGE("%s: Failed to configure whitelist ssids", __FUNCTION__);
+
+    return ret;
 }
