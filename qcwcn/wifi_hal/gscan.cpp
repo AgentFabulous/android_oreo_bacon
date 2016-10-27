@@ -2498,3 +2498,24 @@ cleanup:
     return (wifi_error)ret;
 
 }
+
+wifi_error wifi_get_roaming_capabilities(wifi_interface_handle iface,
+                                         wifi_roaming_capabilities *caps)
+{
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!caps) {
+        ALOGE("%s: Invalid Buffer provided. Exit", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    if (!info) {
+        ALOGE("%s: hal_info is NULL", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    memcpy(caps, &info->capa.roaming_capa, sizeof(wifi_roaming_capabilities));
+
+    return WIFI_SUCCESS;
+}
