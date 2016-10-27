@@ -349,7 +349,6 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_get_driver_version = wifi_get_driver_version;
     fn->wifi_set_passpoint_list = wifi_set_passpoint_list;
     fn->wifi_reset_passpoint_list = wifi_reset_passpoint_list;
-    fn->wifi_set_bssid_blacklist = wifi_set_bssid_blacklist;
     fn->wifi_set_lci = wifi_set_lci;
     fn->wifi_set_lcr = wifi_set_lcr;
     fn->wifi_start_sending_offloaded_packet =
