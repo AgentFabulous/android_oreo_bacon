@@ -28,6 +28,12 @@
 
 #define GSCAN_EVENT_WAIT_TIME_SECONDS 4
 
+/* BSSID blacklist */
+typedef struct {
+    int num_bssid;                           // number of blacklisted BSSIDs
+    mac_addr bssids[MAX_BLACKLIST_BSSID];    // blacklisted BSSIDs
+} wifi_bssid_params;
+
 /* Used to handle gscan command events from driver/firmware.*/
 typedef struct gscan_event_handlers_s {
     GScanCommandEventHandler *gscanStartCmdEventHandler;
