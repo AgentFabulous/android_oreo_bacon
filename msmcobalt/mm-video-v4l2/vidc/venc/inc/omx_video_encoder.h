@@ -31,11 +31,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <unistd.h>
 #include "omx_video_base.h"
-#ifdef _MSM8974_
 #include "video_encoder_device_v4l2.h"
-#else
-#include "video_encoder_device.h"
-#endif
 
 extern "C" {
     OMX_API void * get_omx_component_factory_fn(void);
