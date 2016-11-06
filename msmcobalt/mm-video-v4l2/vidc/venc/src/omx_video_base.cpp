@@ -5114,6 +5114,12 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
 #ifdef _MSM8974_
                 if (!dev_set_format(NV12_128m))
                     DEBUG_PRINT_ERROR("cannot set color format");
+
+                dev_get_buf_req (&m_sInPortDef.nBufferCountMin,
+                    &m_sInPortDef.nBufferCountActual,
+                    &m_sInPortDef.nBufferSize,
+                    m_sInPortDef.nPortIndex);
+
 #endif
             }
         }
