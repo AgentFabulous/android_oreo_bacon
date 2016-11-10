@@ -37,6 +37,7 @@
 
 #include "nl80211_copy.h"
 #include "common.h"
+#include "qca-vendor.h"
 #include "cpp_bindings.h"
 #include "link_layer_stats.h"
 
