@@ -590,7 +590,356 @@ wifi_error nan_get_capabilities(transaction_id id,
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
+    }
+cleanup:
+    delete nanCommand;
+    return (wifi_error)ret;
+}
+
+wifi_error nan_initialize_vendor_cmd(wifi_interface_handle iface,
+                                     NanCommand **nanCommand)
+{
+    int ret = 0;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+
+    if (nanCommand == NULL) {
+        ALOGE("%s: Error nanCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    *nanCommand = new NanCommand(wifiHandle,
+                                 0,
+                                 OUI_QCA,
+                                 QCA_NL80211_VENDOR_SUBCMD_NDP);
+    if (*nanCommand == NULL) {
+        ALOGE("%s: Object creation failed", __FUNCTION__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    /* Create the message */
+    ret = (*nanCommand)->create();
+    if (ret < 0)
+        goto cleanup;
+
+    ret = (*nanCommand)->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    return WIFI_SUCCESS;
+cleanup:
+    delete *nanCommand;
+    return (wifi_error)ret;
+}
+
+wifi_error nan_data_interface_create(transaction_id id,
+                                     wifi_interface_handle iface,
+                                     char* iface_name)
+{
+    int ret = WIFI_SUCCESS;
+    struct nlattr *nlData;
+    NanCommand *nanCommand = NULL;
+
+    if (iface_name == NULL) {
+        ALOGE("%s: Invalid Nan Data Interface Name. \n", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    ret = nan_initialize_vendor_cmd(iface,
+                                    &nanCommand);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __FUNCTION__);
+        return (wifi_error)ret;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (nanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
+            QCA_WLAN_VENDOR_ATTR_NDP_INTERFACE_CREATE) ||
+        nanCommand->put_u16(
+            QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID,
+            id) ||
+        nanCommand->put_string(
+            QCA_WLAN_VENDOR_ATTR_NDP_IFACE_STR,
+            iface_name)) {
+        goto cleanup;
+    }
+
+    nanCommand->attr_end(nlData);
+    ret = nanCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
+    }
+cleanup:
+    delete nanCommand;
+    return (wifi_error)ret;
+}
+
+wifi_error nan_data_interface_delete(transaction_id id,
+                                     wifi_interface_handle iface,
+                                     char* iface_name)
+{
+    int ret = WIFI_SUCCESS;
+    struct nlattr *nlData;
+    NanCommand *nanCommand = NULL;
+
+    if (iface_name == NULL) {
+        ALOGE("%s: Invalid Nan Data Interface Name. \n", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+    ret = nan_initialize_vendor_cmd(iface,
+                                    &nanCommand);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __FUNCTION__);
+        return (wifi_error)ret;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (nanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
+            QCA_WLAN_VENDOR_ATTR_NDP_INTERFACE_DELETE) ||
+        nanCommand->put_u16(
+            QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID,
+            id) ||
+        nanCommand->put_string(
+            QCA_WLAN_VENDOR_ATTR_NDP_IFACE_STR,
+            iface_name)) {
+        goto cleanup;
+    }
+
+    nanCommand->attr_end(nlData);
+
+    ret = nanCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
+    }
+cleanup:
+    delete nanCommand;
+    return (wifi_error)ret;
+}
+
+wifi_error nan_data_request_initiator(transaction_id id,
+                                      wifi_interface_handle iface,
+                                      NanDataPathInitiatorRequest* msg)
+{
+    int ret = WIFI_SUCCESS;
+    struct nlattr *nlData, *nlCfgSecurity, *nlCfgQos;
+    NanCommand *nanCommand = NULL;
+
+    if (msg == NULL)
+        return WIFI_ERROR_INVALID_ARGS;
+
+    ret = nan_initialize_vendor_cmd(iface,
+                                    &nanCommand);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __FUNCTION__);
+        return (wifi_error)ret;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (nanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
+            QCA_WLAN_VENDOR_ATTR_NDP_INITIATOR_REQUEST) ||
+        nanCommand->put_u16(
+            QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID,
+            id) ||
+        nanCommand->put_u16(
+            QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_INSTANCE_ID,
+            msg->service_instance_id) ||
+        nanCommand->put_bytes(
+            QCA_WLAN_VENDOR_ATTR_NDP_PEER_DISCOVERY_MAC_ADDR,
+            (char *)msg->peer_disc_mac_addr,
+            NAN_MAC_ADDR_LEN) ||
+        nanCommand->put_string(
+            QCA_WLAN_VENDOR_ATTR_NDP_IFACE_STR,
+            msg->ndp_iface)) {
+        goto cleanup;
+    }
+
+    if (msg->channel_request_type != NAN_DP_CHANNEL_NOT_REQUESTED) {
+        if (nanCommand->put_u32 (
+                QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL_CONFIG,
+                msg->channel_request_type) ||
+            nanCommand->put_u32(
+                QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL,
+                msg->channel))
+            goto cleanup;
+    }
+
+    if (msg->app_info.ndp_app_info_len != 0) {
+        if (nanCommand->put_bytes(
+                QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO,
+                (char *)msg->app_info.ndp_app_info,
+                msg->app_info.ndp_app_info_len)) {
+            goto cleanup;
+        }
+    }
+    if (msg->ndp_cfg.security_cfg == NAN_DP_CONFIG_SECURITY) {
+        nlCfgSecurity =
+            nanCommand->attr_start(QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_SECURITY);
+        if (!nlCfgSecurity)
+            goto cleanup;
+
+        if (nanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_NDP_SECURITY_TYPE,
+            0)) {
+            goto cleanup;
+        }
+        nanCommand->attr_end(nlCfgSecurity);
+    }
+    if (msg->ndp_cfg.qos_cfg == NAN_DP_CONFIG_QOS) {
+        nlCfgQos =
+            nanCommand->attr_start(QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_QOS);
+        if (!nlCfgQos)
+            goto cleanup;
+        /* TBD Qos Info */
+        nanCommand->attr_end(nlCfgQos);
+    }
+    nanCommand->attr_end(nlData);
+
+    ret = nanCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
+    }
+cleanup:
+    delete nanCommand;
+    return (wifi_error)ret;
+}
+
+wifi_error nan_data_indication_response(transaction_id id,
+                                        wifi_interface_handle iface,
+                                        NanDataPathIndicationResponse* msg)
+{
+    int ret = WIFI_SUCCESS;
+    struct nlattr *nlData, *nlCfgSecurity, *nlCfgQos;
+    NanCommand *nanCommand = NULL;
+
+    if (msg == NULL)
+        return WIFI_ERROR_INVALID_ARGS;
+
+    ret = nan_initialize_vendor_cmd(iface,
+                                    &nanCommand);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __FUNCTION__);
+        return (wifi_error)ret;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (nanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
+            QCA_WLAN_VENDOR_ATTR_NDP_RESPONDER_REQUEST) ||
+        nanCommand->put_u16(
+            QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID,
+            id) ||
+        nanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID,
+            msg->ndp_instance_id) ||
+        nanCommand->put_string(
+            QCA_WLAN_VENDOR_ATTR_NDP_IFACE_STR,
+            msg->ndp_iface) ||
+        nanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_NDP_RESPONSE_CODE,
+            msg->rsp_code)) {
+        goto cleanup;
+    }
+    if (msg->app_info.ndp_app_info_len != 0) {
+        if (nanCommand->put_bytes(
+                QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO,
+                (char *)msg->app_info.ndp_app_info,
+                msg->app_info.ndp_app_info_len)) {
+            goto cleanup;
+        }
+    }
+    if (msg->ndp_cfg.security_cfg == NAN_DP_CONFIG_SECURITY) {
+        nlCfgSecurity =
+            nanCommand->attr_start(QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_SECURITY);
+        if (!nlCfgSecurity)
+            goto cleanup;
+        /* Setting value to 0 for now */
+        if (nanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_NDP_SECURITY_TYPE,
+            0)) {
+            goto cleanup;
+        }
+        nanCommand->attr_end(nlCfgSecurity);
+    }
+    if (msg->ndp_cfg.qos_cfg == NAN_DP_CONFIG_QOS) {
+        nlCfgQos =
+            nanCommand->attr_start(QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_QOS);
+        if (!nlCfgQos)
+            goto cleanup;
+
+        /* TBD Qos Info */
+        nanCommand->attr_end(nlCfgQos);
+    }
+    nanCommand->attr_end(nlData);
+
+    ret = nanCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
+    }
+cleanup:
+    delete nanCommand;
+    return (wifi_error)ret;
+}
+
+wifi_error nan_data_end(transaction_id id,
+                        wifi_interface_handle iface,
+                        NanDataPathEndRequest* msg)
+{
+    int ret = WIFI_SUCCESS;
+    struct nlattr *nlData;
+    NanCommand *nanCommand = NULL;
+
+    if (msg == NULL)
+        return WIFI_ERROR_INVALID_ARGS;
+
+    ret = nan_initialize_vendor_cmd(iface,
+                                    &nanCommand);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __FUNCTION__);
+        return (wifi_error)ret;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (nanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
+            QCA_WLAN_VENDOR_ATTR_NDP_END_REQUEST) ||
+        nanCommand->put_u16(
+            QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID,
+            id) ||
+        nanCommand->put_bytes(
+            QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID_ARRAY,
+            (char *)msg->ndp_instance_id,
+            msg->num_ndp_instances * sizeof(u32))) {
+        goto cleanup;
+    }
+    nanCommand->attr_end(nlData);
+
+    ret = nanCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
     }
 cleanup:
     delete nanCommand;
@@ -621,9 +970,7 @@ NanCommand* NanCommand::instance(wifi_handle handle)
                                              QCA_NL80211_VENDOR_SUBCMD_NAN);
         ALOGV("NanCommand %p created", mNanCommandInstance);
         return mNanCommandInstance;
-    }
-    else
-    {
+    } else {
         if (handle != getWifiHandle(mNanCommandInstance->mInfo)) {
             /* upper layer must have cleaned up the handle and reinitialized,
                so we need to update the same */
@@ -715,15 +1062,52 @@ int NanCommand::handleEvent(WifiEvent &event)
             //the response callback handler with the populated
             //NanResponseMsg
             handleNanResponse();
-        }
-        else {
+        } else {
             //handleNanIndication will parse the data and call
             //the corresponding Indication callback handler
             //with the corresponding populated Indication event
             handleNanIndication();
         }
-    }
-    else {
+    } else if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NDP) {
+        // Parse the vendordata and get the NAN attribute
+        u32 ndpCmdType;
+        struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_AFTER_LAST + 1];
+        nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_NDP_MAX,
+                  (struct nlattr *)mVendorData,
+                  mDataLen, NULL);
+
+        if (tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD]) {
+            ndpCmdType =
+                nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD]);
+                ALOGD("%s: NDP Cmd Type : val 0x%x",
+                      __FUNCTION__, ndpCmdType);
+                switch (ndpCmdType) {
+                case QCA_WLAN_VENDOR_ATTR_NDP_INTERFACE_CREATE:
+                    handleNdpResponse(NAN_DP_INTERFACE_CREATE, tb_vendor);
+                    break;
+                case QCA_WLAN_VENDOR_ATTR_NDP_INTERFACE_DELETE:
+                    handleNdpResponse(NAN_DP_INTERFACE_DELETE, tb_vendor);
+                    break;
+                case QCA_WLAN_VENDOR_ATTR_NDP_INITIATOR_RESPONSE:
+                    handleNdpResponse(NAN_DP_INITIATOR_RESPONSE, tb_vendor);
+                    break;
+                case QCA_WLAN_VENDOR_ATTR_NDP_RESPONDER_RESPONSE:
+                    handleNdpResponse(NAN_DP_RESPONDER_RESPONSE, tb_vendor);
+                    break;
+                case QCA_WLAN_VENDOR_ATTR_NDP_END_RESPONSE:
+                    handleNdpResponse(NAN_DP_END, tb_vendor);
+                    break;
+                case QCA_WLAN_VENDOR_ATTR_NDP_DATA_REQUEST_IND:
+                case QCA_WLAN_VENDOR_ATTR_NDP_CONFIRM_IND:
+                case QCA_WLAN_VENDOR_ATTR_NDP_END_IND:
+                    handleNdpIndication(ndpCmdType, tb_vendor);
+                    break;
+                default:
+                    ALOGE("%s: Invalid NDP subcmd response received %d",
+                          __FUNCTION__, ndpCmdType);
+                }
+        }
+    } else {
         //error case should not happen print log
         ALOGE("%s: Wrong NAN subcmd received %d", __func__, mSubcmd);
     }
@@ -798,13 +1182,10 @@ u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv)
 
     ALOGV("READ TLV length %u, readLen %u", pOutTlv->length, readLen);
 
-    if (pOutTlv->length)
-    {
+    if (pOutTlv->length) {
         pOutTlv->value = pInTlv;
         readLen += pOutTlv->length;
-    }
-    else
-    {
+    } else {
         pOutTlv->value = NULL;
     }
 

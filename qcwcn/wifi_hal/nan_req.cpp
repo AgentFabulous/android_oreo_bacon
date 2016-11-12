@@ -858,8 +858,7 @@ int NanCommand::putNanTCA(transaction_id id, const NanTCARequest *pReq)
     if (pReq->tca_type == NAN_TCA_ID_CLUSTER_SIZE) {
         tlvs = addTlv(NAN_TLV_TYPE_CLUSTER_SIZE_REQ, sizeof(tcaReqParams),
                       (const u8*)&tcaReqParams[0], tlvs);
-    }
-    else {
+    } else {
         ALOGE("%s: Unrecognized tca_type:%u", __FUNCTION__, pReq->tca_type);
         cleanup();
         return WIFI_ERROR_INVALID_ARGS;
