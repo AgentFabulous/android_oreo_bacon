@@ -244,6 +244,8 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
                        pFwRsp->max_ndp_sessions;
             pRsp->body.nan_capabilities.max_app_info_len = \
                        pFwRsp->max_app_info_len;
+            pRsp->body.nan_capabilities.max_queued_transmit_followup_msgs = \
+                       pFwRsp->max_queued_transmit_followup_msgs;
             break;
         }
         default:
