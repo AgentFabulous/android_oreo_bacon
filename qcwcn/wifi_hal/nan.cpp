@@ -1006,11 +1006,20 @@ int NanCommand::setCallbackHandler(NanCallbackHandler nHandler)
 {
     int res = 0;
     mHandler = nHandler;
-    res = registerVendorHandler(mVendor_id, mSubcmd);
+    res = registerVendorHandler(mVendor_id, QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (res != 0) {
         //error case should not happen print log
-        ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x subcmd=%u",
-              __func__, mVendor_id, mSubcmd);
+        ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x"
+              "subcmd=QCA_NL80211_VENDOR_SUBCMD_NAN", __FUNCTION__, mVendor_id);
+        return res;
+    }
+
+    res = registerVendorHandler(mVendor_id, QCA_NL80211_VENDOR_SUBCMD_NDP);
+    if (res != 0) {
+        //error case should not happen print log
+        ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x"
+              "subcmd=QCA_NL80211_VENDOR_SUBCMD_NDP", __FUNCTION__, mVendor_id);
+        return res;
     }
     return res;
 }
