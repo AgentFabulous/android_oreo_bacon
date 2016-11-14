@@ -116,6 +116,15 @@ int NanCommand::handleNanIndication()
         }
         break;
 
+    case NAN_INDICATION_SELF_TRANSMIT_FOLLOWUP:
+        NanTransmitFollowupInd transmitFollowupInd;
+        memset(&transmitFollowupInd, 0, sizeof(NanTransmitFollowupInd));
+        res = getNanTransmitFollowupInd(&transmitFollowupInd);
+        if (!res && mHandler.EventTransmitFollowup) {
+            (*mHandler.EventTransmitFollowup)(&transmitFollowupInd);
+        }
+        break;
+
     default:
         ALOGE("handleNanIndication error invalid msg_id:%u", msg_id);
         res = (int)WIFI_ERROR_INVALID_REQUEST_ID;
@@ -157,6 +166,8 @@ NanIndicationType NanCommand::getIndicationType()
         return NAN_INDICATION_TCA;
     case NAN_MSG_ID_BEACON_SDF_IND:
         return NAN_INDICATION_BEACON_SDF_PAYLOAD;
+    case NAN_MSG_ID_SELF_TRANSMIT_FOLLOWUP_IND:
+        return NAN_INDICATION_SELF_TRANSMIT_FOLLOWUP;
     default:
         return NAN_INDICATION_UNKNOWN;
     }
@@ -791,6 +802,20 @@ int NanCommand::getNanStaParameter(wifi_interface_handle iface,
 cleanup:
     mStaParam = NULL;
     return (int)ret;
+}
+
+int NanCommand::getNanTransmitFollowupInd(NanTransmitFollowupInd *event)
+{
+    if (event == NULL || mNanVendorEvent == NULL) {
+        ALOGE("%s: Invalid input argument event:%p mNanVendorEvent:%p",
+              __func__, event, mNanVendorEvent);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    pNanSelfTransmitFollowupIndMsg pRsp = (pNanSelfTransmitFollowupIndMsg)mNanVendorEvent;
+    event->id = pRsp->fwHeader.transactionId;
+    event->reason = (NanStatusType)pRsp->reason;
+    return WIFI_SUCCESS;
 }
 
 //Function which calls the necessaryIndication callback
