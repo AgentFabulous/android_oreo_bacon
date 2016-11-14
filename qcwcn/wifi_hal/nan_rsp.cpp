@@ -168,9 +168,8 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
                                            (char *)outputTlv.value,
                                            &pRsp->body.stats_response);
                 }
-            }
-            else
-                ALOGV("%s: No TLV's present",__func__);
+            } else
+                ALOGI("%s: No TLV's present",__func__);
             break;
         }
         case NAN_MSG_ID_ENABLE_RSP:
