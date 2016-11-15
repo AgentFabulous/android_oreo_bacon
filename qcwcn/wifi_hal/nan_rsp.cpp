@@ -50,6 +50,362 @@ int NanCommand::isNanResponse()
     }
 }
 
+struct verboseTlv {
+    NanTlvType tlvType;
+    char strTlv[NAN_ERROR_STR_LEN];
+};
+
+struct verboseTlv tlvToStr[] = {
+    {NAN_TLV_TYPE_SDF_MATCH_FILTER, " SDF match filter"},
+    {NAN_TLV_TYPE_TX_MATCH_FILTER, " Tx match filter"},
+    {NAN_TLV_TYPE_RX_MATCH_FILTER, " Rx match filter"},
+    {NAN_TLV_TYPE_SERVICE_SPECIFIC_INFO,
+     " Service specific info"},
+    {NAN_TLV_TYPE_EXT_SERVICE_SPECIFIC_INFO,
+     " Extended Service specific info"},
+    {NAN_TLV_TYPE_VENDOR_SPECIFIC_ATTRIBUTE_TRANSMIT,
+     " Vendor specific attribute transmit"},
+    {NAN_TLV_TYPE_VENDOR_SPECIFIC_ATTRIBUTE_RECEIVE,
+     " Vendor specific attribute receive"},
+    {NAN_TLV_TYPE_POST_NAN_CONNECTIVITY_CAPABILITIES_RECEIVE,
+     " Post Nan connectivity capability receive"},
+    {NAN_TLV_TYPE_POST_NAN_DISCOVERY_ATTRIBUTE_RECEIVE,
+     " Post Nan discovery attribute receive"},
+    {NAN_TLV_TYPE_BEACON_SDF_PAYLOAD_RECEIVE,
+     " Beacon SDF payload receive"},
+
+    /* Configuration types */
+    {NAN_TLV_TYPE_CONFIG_FIRST, " Config first"},
+    {NAN_TLV_TYPE_24G_SUPPORT, " 2.4G support"},
+    {NAN_TLV_TYPE_24G_BEACON, " 2.4G beacon"},
+    {NAN_TLV_TYPE_24G_SDF, " 2.4G SDF"},
+    {NAN_TLV_TYPE_24G_RSSI_CLOSE, " 2.4G RSSI close"},
+    {NAN_TLV_TYPE_24G_RSSI_MIDDLE, " 2.4G RSSI middle"},
+    {NAN_TLV_TYPE_24G_RSSI_CLOSE_PROXIMITY,
+     " 2.4G RSSI close proximity"},
+    {NAN_TLV_TYPE_5G_SUPPORT, " 5G support"},
+    {NAN_TLV_TYPE_5G_BEACON, " 5G beacon"},
+    {NAN_TLV_TYPE_5G_SDF, " 5G SDF"},
+    {NAN_TLV_TYPE_5G_RSSI_CLOSE, " 5G RSSI close"},
+    {NAN_TLV_TYPE_5G_RSSI_MIDDLE, " 5G RSSI middle"},
+    {NAN_TLV_TYPE_5G_RSSI_CLOSE_PROXIMITY,
+     " 5G RSSI close proximity"},
+    {NAN_TLV_TYPE_SID_BEACON, " SID beacon"},
+    {NAN_TLV_TYPE_HOP_COUNT_LIMIT, " Hop count limit"},
+    {NAN_TLV_TYPE_MASTER_PREFERENCE, " Master preference"},
+    {NAN_TLV_TYPE_CLUSTER_ID_LOW, " Cluster ID low"},
+    {NAN_TLV_TYPE_CLUSTER_ID_HIGH, " Cluster ID high"},
+    {NAN_TLV_TYPE_RSSI_AVERAGING_WINDOW_SIZE,
+     " RSSI averaging window size"},
+    {NAN_TLV_TYPE_CLUSTER_OUI_NETWORK_ID,
+     " Cluster OUI network ID"},
+    {NAN_TLV_TYPE_SOURCE_MAC_ADDRESS,
+     " Source MAC address"},
+    {NAN_TLV_TYPE_CLUSTER_ATTRIBUTE_IN_SDF,
+     " Cluster attribute in SDF"},
+    {NAN_TLV_TYPE_SOCIAL_CHANNEL_SCAN_PARAMS,
+     " Social channel scan params"},
+    {NAN_TLV_TYPE_DEBUGGING_FLAGS, " Debugging flags"},
+    {NAN_TLV_TYPE_POST_NAN_CONNECTIVITY_CAPABILITIES_TRANSMIT,
+     " Post nan connectivity capabilities transmit"},
+    {NAN_TLV_TYPE_POST_NAN_DISCOVERY_ATTRIBUTE_TRANSMIT,
+     " Post nan discovery attribute transmit"},
+    {NAN_TLV_TYPE_FURTHER_AVAILABILITY_MAP,
+     " Further availability map"},
+    {NAN_TLV_TYPE_HOP_COUNT_FORCE, " Hop count force"},
+    {NAN_TLV_TYPE_RANDOM_FACTOR_FORCE,
+     " Random factor force"},
+    {NAN_TLV_TYPE_RANDOM_UPDATE_TIME,
+     " Random update time"},
+    {NAN_TLV_TYPE_EARLY_WAKEUP, " Early wakeup"},
+    {NAN_TLV_TYPE_PERIODIC_SCAN_INTERVAL,
+     " Periodic scan interval"},
+    {NAN_TLV_TYPE_DW_INTERVAL, " DW interval"},
+    {NAN_TLV_TYPE_DB_INTERVAL, " DB interval"},
+    {NAN_TLV_TYPE_FURTHER_AVAILABILITY,
+     " Further availability"},
+    {NAN_TLV_TYPE_24G_CHANNEL, " 2.4G channel"},
+    {NAN_TLV_TYPE_5G_CHANNEL, " 5G channel"},
+    {NAN_TLV_TYPE_CONFIG_LAST, " Config last"},
+
+    /* Attributes types */
+    {NAN_TLV_TYPE_ATTRS_FIRST, " Attributes first"},
+    {NAN_TLV_TYPE_AVAILABILITY_INTERVALS_MAP,
+     " Availability intervals map"},
+    {NAN_TLV_TYPE_WLAN_MESH_ID, " WLAN mesh ID"},
+    {NAN_TLV_TYPE_MAC_ADDRESS, " MAC address"},
+    {NAN_TLV_TYPE_RECEIVED_RSSI_VALUE,
+     " Received RSSI value"},
+    {NAN_TLV_TYPE_CLUSTER_ATTRIBUTE,
+     " Cluster attribute"},
+    {NAN_TLV_TYPE_WLAN_INFRA_SSID, " WLAN infra SSID"},
+    {NAN_TLV_TYPE_ATTRS_LAST, " Attributes last"},
+
+    /* Events Type */
+    {NAN_TLV_TYPE_EVENTS_FIRST, " Events first"},
+    {NAN_TLV_TYPE_EVENT_SELF_STATION_MAC_ADDRESS,
+     " Event Self station MAC address"},
+    {NAN_TLV_TYPE_EVENT_STARTED_CLUSTER,
+     " Event started cluster"},
+    {NAN_TLV_TYPE_EVENT_JOINED_CLUSTER,
+     " Event joined cluster"},
+    {NAN_TLV_TYPE_EVENT_CLUSTER_SCAN_RESULTS,
+     " Event cluster scan results"},
+    {NAN_TLV_TYPE_FAW_MEM_AVAIL,
+     " FAW memory availability"},
+    {NAN_TLV_TYPE_EVENTS_LAST, " Events last"},
+
+    /* TCA types */
+    {NAN_TLV_TYPE_TCA_FIRST, " TCA-Threshold Crossing Alert first"},
+    {NAN_TLV_TYPE_CLUSTER_SIZE_REQ,
+     " Cluster size request"},
+    {NAN_TLV_TYPE_CLUSTER_SIZE_RSP,
+     " Cluster size response"},
+    {NAN_TLV_TYPE_TCA_LAST, " TCA last"},
+
+    /* Statistics types */
+    {NAN_TLV_TYPE_STATS_FIRST, " Stats first"},
+    {NAN_TLV_TYPE_DE_PUBLISH_STATS,
+     " Discovery engine publish stats"},
+    {NAN_TLV_TYPE_DE_SUBSCRIBE_STATS,
+     " Discovery engine subscribe stats"},
+    {NAN_TLV_TYPE_DE_MAC_STATS,
+     " Discovery engine MAC stats"},
+    {NAN_TLV_TYPE_DE_TIMING_SYNC_STATS,
+     " Discovery engine timing sync stats"},
+    {NAN_TLV_TYPE_DE_DW_STATS,
+     " Discovery engine DW stats"},
+    {NAN_TLV_TYPE_DE_STATS, " Discovery engine stats"},
+    {NAN_TLV_TYPE_STATS_LAST, " Stats last"},
+
+    {NAN_TLV_TYPE_LAST, " Last"}
+};
+
+struct errorCode {
+    NanStatusType frameworkError;
+    NanInternalStatusType firmwareError;
+    char nan_error[NAN_ERROR_STR_LEN];
+};
+
+struct errorCode errorCodeTranslation[] = {
+    {NAN_STATUS_SUCCESS, NAN_I_STATUS_SUCCESS,
+     "NAN status success"},
+
+    {NAN_STATUS_INTERNAL_FAILURE, NAN_I_STATUS_DE_FAILURE,
+     "NAN Discovery engine failure"},
+
+    {NAN_STATUS_INVALID_PUBLISH_SUBSCRIBE_ID, NAN_I_STATUS_INVALID_HANDLE,
+     "Invalid Publish/Subscribe ID"},
+
+    {NAN_STATUS_NO_RESOURCE_AVAILABLE, NAN_I_STATUS_NO_SPACE_AVAILABLE,
+     "No space available"},
+
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_PUBLISH_TYPE,
+     "Invalid Publish type, can be 0 or 1"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_TX_TYPE,
+     "Invalid Tx type"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_MSG_VERSION,
+     "Invalid internal message version"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_MSG_LEN,
+     "Invalid message length"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_MSG_ID,
+     "Invalid message ID"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_MATCH_ALGORITHM,
+     "Invalid matching algorithm, can be 0(match once), 1(match continuous) or 2(match never)"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_TLV_LEN,
+     "Invalid TLV length"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_TLV_TYPE,
+     "Invalid TLV type"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_MISSING_TLV_TYPE,
+     "Missing TLV type"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_TOTAL_TLVS_LEN,
+     "Invalid total TLV length"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_TLV_VALUE,
+     "Invalid TLV value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_TX_PRIORITY,
+     "Invalid Tx priority"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_CONNECTION_MAP,
+     "Invalid connection map"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_THRESHOLD_CROSSING_ALERT_ID,
+     "Invalid TCA-Threshold Crossing Alert ID"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_STATS_ID,
+     "Invalid STATS ID"},
+
+    {NAN_STATUS_PROTOCOL_FAILURE, NAN_I_STATUS_TX_FAIL,
+     "Tx Fail"},
+
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_RSSI_CLOSE_VALUE,
+     "Invalid RSSI close value range is 20dbm to 60dbm"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_RSSI_MIDDLE_VALUE,
+     "Invalid RSSI middle value range is 20dbm to 75dbm"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_HOP_COUNT_LIMIT,
+     "Invalid hop count limit, max hop count limit is 5"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_HIGH_CLUSTER_ID_VALUE,
+     "Invalid cluster ID value. Please set the cluster id high greater than the cluster id low"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_BACKGROUND_SCAN_PERIOD,
+     "Invalid background scan period. The range is 10 to 30 milliseconds"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_SCAN_CHANNEL,
+     "Invalid scan channel. Only valid channels are the NAN social channels"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_POST_NAN_CONNECTIVITY_CAPABILITIES_BITMAP,
+     "Invalid post nan connectivity bitmap"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_FURTHER_AVAILABILITY_MAP_NUMCHAN_VALUE,
+     "Invalid further availability map number of channel value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_FURTHER_AVAILABILITY_MAP_DURATION_VALUE,
+     "Invalid further availability map duration value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_FURTHER_AVAILABILITY_MAP_CLASS_VALUE,
+     "Invalid further availability map class value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_FURTHER_AVAILABILITY_MAP_CHANNEL_VALUE,
+     "Invalid further availability map channel value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_FURTHER_AVAILABILITY_MAP_AVAILABILITY_INTERVAL_BITMAP_VALUE,
+     "Invalid further availability map availability interval bitmap value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_FURTHER_AVAILABILITY_MAP_MAP_ID,
+     "Invalid further availability map map ID"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_POST_NAN_DISCOVERY_CONN_TYPE_VALUE,
+     "Invalid post nan discovery connection type value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_POST_NAN_DISCOVERY_DEVICE_ROLE_VALUE,
+     "Invalid post nan discovery device role value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_POST_NAN_DISCOVERY_DURATION_VALUE,
+     "Invalid post nan discovery duration value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_POST_NAN_DISCOVERY_BITMAP_VALUE,
+     "Invalid post nan discovery bitmap value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_MISSING_FUTHER_AVAILABILITY_MAP,
+     "Missing further availability map"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_BAND_CONFIG_FLAGS,
+     "Invalid band configuration flags"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_RANDOM_FACTOR_UPDATE_TIME_VALUE,
+     "Invalid random factor update time value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_ONGOING_SCAN_PERIOD,
+     "Invalid ongoing scan period"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_DW_INTERVAL_VALUE,
+     "Invalid DW interval value"},
+    {NAN_STATUS_INVALID_PARAM, NAN_I_STATUS_INVALID_DB_INTERVAL_VALUE,
+     "Invalid DB interval value"},
+
+    {NAN_STATUS_SUCCESS, NAN_I_PUBLISH_SUBSCRIBE_TERMINATED_REASON_TIMEOUT,
+     "Terminated Reason: Timeout"},
+    {NAN_STATUS_SUCCESS, NAN_I_PUBLISH_SUBSCRIBE_TERMINATED_REASON_USER_REQUEST,
+     "Terminated Reason: User Request"},
+    {NAN_STATUS_SUCCESS, NAN_I_PUBLISH_SUBSCRIBE_TERMINATED_REASON_COUNT_REACHED,
+     "Terminated Reason: Count Reached"},
+
+    {NAN_STATUS_INVALID_REQUESTOR_INSTANCE_ID, NAN_I_STATUS_INVALID_REQUESTER_INSTANCE_ID,
+     "Invalid match handle"},
+    {NAN_STATUS_NAN_NOT_ALLOWED, NAN_I_STATUS_NAN_NOT_ALLOWED,
+     "Nan not allowed"},
+    {NAN_STATUS_NO_OTA_ACK, NAN_I_STATUS_NO_OTA_ACK,
+     "No OTA ack"},
+    {NAN_STATUS_ALREADY_ENABLED, NAN_I_STATUS_NAN_ALREADY_ENABLED,
+     "NAN is Already enabled"},
+    {NAN_STATUS_FOLLOWUP_QUEUE_FULL, NAN_I_STATUS_FOLLOWUP_QUEUE_FULL,
+     "Follow-up queue full"},
+
+    {NAN_STATUS_UNSUPPORTED_CONCURRENCY_NAN_DISABLED, NDP_I_UNSUPPORTED_CONCURRENCY,
+     "Unsupported Concurrency"},
+
+    {NAN_STATUS_INTERNAL_FAILURE, NDP_I_NAN_DATA_IFACE_CREATE_FAILED,
+     "NAN data interface create failed"},
+    {NAN_STATUS_INTERNAL_FAILURE, NDP_I_NAN_DATA_IFACE_DELETE_FAILED,
+     "NAN data interface delete failed"},
+    {NAN_STATUS_INTERNAL_FAILURE, NDP_I_DATA_INITIATOR_REQUEST_FAILED,
+     "NAN data initiator request failed"},
+    {NAN_STATUS_INTERNAL_FAILURE, NDP_I_DATA_RESPONDER_REQUEST_FAILED,
+     "NAN data responder request failed"},
+
+    {NAN_STATUS_INVALID_NDP_ID, NDP_I_INVALID_NDP_INSTANCE_ID,
+     "Invalid NDP instance ID"},
+
+    {NAN_STATUS_INVALID_PARAM, NDP_I_INVALID_RESPONSE_CODE,
+     "Invalid response code"},
+    {NAN_STATUS_INVALID_PARAM, NDP_I_INVALID_APP_INFO_LEN,
+     "Invalid app info length"},
+
+
+    {NAN_STATUS_INVALID_SERVICE_INSTANCE_ID, NDP_I_INVALID_SERVICE_INSTANCE_ID,
+     "Invalid service instance ID"},
+
+    {NAN_STATUS_PROTOCOL_FAILURE, NDP_I_MGMT_FRAME_REQUEST_FAILED,
+     "Management frame request failed"},
+    {NAN_STATUS_PROTOCOL_FAILURE, NDP_I_MGMT_FRAME_RESPONSE_FAILED,
+     "Management frame response failed"},
+    {NAN_STATUS_PROTOCOL_FAILURE, NDP_I_MGMT_FRAME_CONFIRM_FAILED,
+     "Management frame confirm failed"},
+
+    {NAN_STATUS_INTERNAL_FAILURE, NDP_I_END_FAILED,
+     "NDP end failed"},
+
+    {NAN_STATUS_PROTOCOL_FAILURE, NDP_I_MGMT_FRAME_END_REQUEST_FAILED,
+     "Management frame end request failed"},
+
+    {NAN_STATUS_INTERNAL_FAILURE, NDP_I_VENDOR_SPECIFIC_ERROR,
+     "Vendor specific error"}
+};
+
+void NanCommand::NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
+                                     u32 valueRcvd,
+                                     void* pResponse)
+{
+    int i = 0;
+    u16 msg_id; /* Based on the message_id in the header determine the Indication type */
+    NanResponseMsg *pRsp;
+    NanPublishTerminatedInd* pRspInd;
+    NanDisabledInd* pRspdInd;
+
+    if (isNanResponse()) {
+        pRsp = (NanResponseMsg*)pResponse;
+        for (i = 0; i < (int)(sizeof(errorCodeTranslation)/ sizeof(errorCode)); i++) {
+                if (errorCodeTranslation[i].firmwareError == firmwareErrorRecvd) {
+                        pRsp->status =  errorCodeTranslation[i].frameworkError;
+                        strlcpy(pRsp->nan_error, errorCodeTranslation[i].nan_error, NAN_ERROR_STR_LEN);
+                        break;
+                }
+        }
+        if (i == (int)(sizeof(errorCodeTranslation)/sizeof(errorCode))) {
+                pRsp->status =  NAN_STATUS_INTERNAL_FAILURE;
+                strlcpy(pRsp->nan_error, "NAN Discovery engine failure", NAN_ERROR_STR_LEN);
+        }
+        ALOGD("%s: Status : %d", __FUNCTION__, pRsp->status);
+        ALOGD("%s: Value : %s", __FUNCTION__, pRsp->nan_error);
+    } else {
+        msg_id = getIndicationType();
+
+        switch(msg_id) {
+        case NAN_INDICATION_PUBLISH_TERMINATED:
+        case NAN_INDICATION_SUBSCRIBE_TERMINATED:
+        case NAN_INDICATION_SELF_TRANSMIT_FOLLOWUP:
+                pRspInd = (NanPublishTerminatedInd*)pResponse;
+                for (i = 0; i < (int)(sizeof(errorCodeTranslation)/ sizeof(errorCode)); i++) {
+                        if (errorCodeTranslation[i].firmwareError == firmwareErrorRecvd) {
+                                pRspInd->reason =  errorCodeTranslation[i].frameworkError;
+                                strlcpy(pRspInd->nan_reason, errorCodeTranslation[i].nan_error, NAN_ERROR_STR_LEN);
+                                break;
+                        }
+                }
+                if (i == (int)(sizeof(errorCodeTranslation)/sizeof(errorCode))) {
+                        pRspInd->reason =  NAN_STATUS_INTERNAL_FAILURE;
+                        strlcpy(pRspInd->nan_reason, "NAN Discovery engine failure", NAN_ERROR_STR_LEN);
+                }
+                ALOGD("%s: Status : %d", __FUNCTION__, pRspInd->reason);
+                ALOGD("%s: Value : %s", __FUNCTION__, pRspInd->nan_reason);
+                break;
+        case NAN_INDICATION_DISABLED:
+                pRspdInd = (NanDisabledInd*)pResponse;
+                for (i = 0; i < (int)(sizeof(errorCodeTranslation)/ sizeof(errorCode)); i++) {
+                        if (errorCodeTranslation[i].firmwareError == firmwareErrorRecvd) {
+                                pRspdInd->reason =  errorCodeTranslation[i].frameworkError;
+                                strlcpy(pRspdInd->nan_reason, errorCodeTranslation[i].nan_error, NAN_ERROR_STR_LEN);
+                                break;
+                        }
+                }
+                if (i == (int)(sizeof(errorCodeTranslation)/sizeof(errorCode))) {
+                        pRspdInd->reason =  NAN_STATUS_INTERNAL_FAILURE;
+                        strlcpy(pRspdInd->nan_reason, "NAN Discovery engine failure", NAN_ERROR_STR_LEN);
+                }
+                ALOGD("%s: Status : %d", __FUNCTION__, pRspdInd->reason);
+                ALOGD("%s: Value : %s", __FUNCTION__, pRspdInd->nan_reason);
+                break;
+        }
+    }
+}
 
 int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
 {
@@ -66,8 +422,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanErrorRspMsg pFwRsp = \
                 (pNanErrorRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = pFwRsp->value;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, pFwRsp->value, pRsp);
             pRsp->response_type = NAN_RESPONSE_ERROR;
             break;
         }
@@ -76,8 +431,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanConfigurationRspMsg pFwRsp = \
                 (pNanConfigurationRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = pFwRsp->value;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, pFwRsp->value, pRsp);
             pRsp->response_type = NAN_RESPONSE_CONFIG;
         }
         break;
@@ -86,8 +440,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanPublishServiceCancelRspMsg pFwRsp = \
                 (pNanPublishServiceCancelRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = pFwRsp->value;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, pFwRsp->value, pRsp);
             pRsp->response_type = NAN_RESPONSE_PUBLISH_CANCEL;
             pRsp->body.publish_response.publish_id = \
                 pFwRsp->fwHeader.handle;
@@ -98,8 +451,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanPublishServiceRspMsg pFwRsp = \
                 (pNanPublishServiceRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = pFwRsp->value;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, pFwRsp->value, pRsp);
             pRsp->response_type = NAN_RESPONSE_PUBLISH;
             pRsp->body.publish_response.publish_id = \
                 pFwRsp->fwHeader.handle;
@@ -110,8 +462,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanSubscribeServiceRspMsg pFwRsp = \
                 (pNanSubscribeServiceRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = pFwRsp->value;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, pFwRsp->value, pRsp);
             pRsp->response_type = NAN_RESPONSE_SUBSCRIBE;
             pRsp->body.subscribe_response.subscribe_id = \
                 pFwRsp->fwHeader.handle;
@@ -122,8 +473,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanSubscribeServiceCancelRspMsg pFwRsp = \
                 (pNanSubscribeServiceCancelRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = pFwRsp->value;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, pFwRsp->value, pRsp);
             pRsp->response_type = NAN_RESPONSE_SUBSCRIBE_CANCEL;
             pRsp->body.subscribe_response.subscribe_id = \
                 pFwRsp->fwHeader.handle;
@@ -134,8 +484,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanTransmitFollowupRspMsg pFwRsp = \
                 (pNanTransmitFollowupRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = pFwRsp->value;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, pFwRsp->value, pRsp);
             pRsp->response_type = NAN_RESPONSE_TRANSMIT_FOLLOWUP;
             break;
         }
@@ -144,8 +493,8 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanStatsRspMsg pFwRsp = \
                 (pNanStatsRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->statsRspParams.status;
-            pRsp->value = pFwRsp->statsRspParams.value;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->statsRspParams.status,
+                                            pFwRsp->statsRspParams.value, pRsp);
             pRsp->response_type = NAN_RESPONSE_STATS;
             pRsp->body.stats_response.stats_type = \
                 (NanStatsType)pFwRsp->statsRspParams.statsType;
@@ -169,7 +518,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
                                            &pRsp->body.stats_response);
                 }
             } else
-                ALOGI("%s: No TLV's present",__func__);
+                ALOGV("%s: No TLV's present",__func__);
             break;
         }
         case NAN_MSG_ID_ENABLE_RSP:
@@ -177,8 +526,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanEnableRspMsg pFwRsp = \
                 (pNanEnableRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = pFwRsp->value;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, pFwRsp->value, pRsp);
             pRsp->response_type = NAN_RESPONSE_ENABLED;
             break;
         }
@@ -187,8 +535,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanDisableRspMsg pFwRsp = \
                 (pNanDisableRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = 0;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, 0, pRsp);
             pRsp->response_type = NAN_RESPONSE_DISABLED;
             break;
         }
@@ -197,8 +544,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanTcaRspMsg pFwRsp = \
                 (pNanTcaRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = pFwRsp->value;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, pFwRsp->value, pRsp);
             pRsp->response_type = NAN_RESPONSE_TCA;
             break;
         }
@@ -207,8 +553,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanBeaconSdfPayloadRspMsg pFwRsp = \
                 (pNanBeaconSdfPayloadRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = 0;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, 0, pRsp);
             pRsp->response_type = NAN_RESPONSE_BEACON_SDF_PAYLOAD;
             break;
         }
@@ -217,8 +562,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             pNanCapabilitiesRspMsg pFwRsp = \
                 (pNanCapabilitiesRspMsg)mNanVendorEvent;
             *id = (transaction_id)pFwRsp->fwHeader.transactionId;
-            pRsp->status = (NanStatusType)pFwRsp->status;
-            pRsp->value = pFwRsp->value;
+            NanErrorTranslation((NanInternalStatusType)pFwRsp->status, pFwRsp->value, pRsp);
             pRsp->response_type = NAN_GET_CAPABILITIES;
             pRsp->body.nan_capabilities.max_concurrent_nan_clusters = \
                         pFwRsp->max_concurrent_nan_clusters;
@@ -268,8 +612,8 @@ int NanCommand::handleNanResponse()
     //get the rsp_data
     ret = getNanResponse(&id, &rsp_data);
 
-    ALOGI("handleNanResponse ret:%d status:%u value:%u response_type:%u",
-          ret, rsp_data.status, rsp_data.value, rsp_data.response_type);
+    ALOGI("handleNanResponse ret:%d status:%u value:%s response_type:%u",
+          ret, rsp_data.status, rsp_data.nan_error, rsp_data.response_type);
     if (ret == 0 && (rsp_data.response_type == NAN_RESPONSE_STATS) &&
         (mStaParam != NULL) &&
         (rsp_data.body.stats_response.stats_type == NAN_STATS_ID_DE_TIMING_SYNC)) {
@@ -536,13 +880,11 @@ int NanCommand::handleNdpResponse(NanResponseType ndpCmdType,
 
     id = nla_get_u16(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_TRANSACTION_ID]);
     ALOGD("%s: Transaction id : val %d", __FUNCTION__, id);
-    rsp_data.status =
-        (NanStatusType)nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_DRV_RESPONSE_STATUS_TYPE]);
-    ALOGD("%s: Status : %d", __FUNCTION__, rsp_data.status);
-    rsp_data.value =
-        nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_DRV_RETURN_VALUE]);
-    ALOGD("%s: Value : %d", __FUNCTION__, rsp_data.value);
+
+    NanErrorTranslation((NanInternalStatusType)nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_DRV_RESPONSE_STATUS_TYPE]),
+                        nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_DRV_RETURN_VALUE]), &rsp_data);
     rsp_data.response_type = ndpCmdType;
+
     if (ndpCmdType == NAN_DP_INITIATOR_RESPONSE)
     {
         if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID])
