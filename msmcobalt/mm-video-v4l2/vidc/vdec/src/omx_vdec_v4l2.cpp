@@ -124,7 +124,8 @@ extern "C" {
 #define EXTRADATA_IDX(__num_planes) ((__num_planes) ? (__num_planes) - 1 : 0)
 #define ALIGN(x, to_align) ((((unsigned) x) + (to_align - 1)) & ~(to_align - 1))
 
-#define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA | OMX_FRAMEPACK_EXTRADATA | OMX_OUTPUTCROP_EXTRADATA | OMX_DISPLAY_INFO_EXTRADATA)
+#define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA | OMX_FRAMEPACK_EXTRADATA | OMX_OUTPUTCROP_EXTRADATA \
+                           | OMX_DISPLAY_INFO_EXTRADATA | OMX_HDR_COLOR_INFO_EXTRADATA)
 #define DEFAULT_CONCEAL_COLOR "32784" //0x8010, black by default
 
 #ifndef ION_FLAG_CP_BITSTREAM
@@ -621,6 +622,9 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     prev_ts_actual(LLONG_MAX),
     rst_prev_ts(true),
     frm_int(0),
+    m_fps_received(0),
+    m_fps_prev(0),
+    m_drc_enable(0),
     in_reconfig(false),
     m_display_id(NULL),
     client_extradata(0),
@@ -664,8 +668,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     if (perf_flag) {
         DEBUG_PRINT_HIGH("vidc.dec.debug.perf is %d", perf_flag);
         dec_time.start();
-        proc_frms = latency = 0;
     }
+    proc_frms = latency = 0;
     prev_n_filled_len = 0;
     property_value[0] = '\0';
     property_get("vidc.dec.debug.ts", property_value, "0");
@@ -719,6 +723,13 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_disable_dynamic_buf_mode = atoi(property_value);
     DEBUG_PRINT_HIGH("vidc.dec.debug.dyn.disabled value is %d",m_disable_dynamic_buf_mode);
 
+    property_value[0] = '\0';
+    property_get("vidc.dec.drc.enable", property_value, "0");
+    if (atoi(property_value)) {
+        m_drc_enable = true;
+        DEBUG_PRINT_HIGH("DRC enabled");
+    }
+
 #ifdef _UBWC_
     property_value[0] = '\0';
     property_get("debug.gralloc.gfx_ubwc_disable", property_value, "0");
@@ -737,6 +748,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     memset(&m_custom_buffersize, 0, sizeof(m_custom_buffersize));
     memset(&m_client_color_space, 0, sizeof(DescribeColorAspectsParams));
     memset(&m_internal_color_space, 0, sizeof(DescribeColorAspectsParams));
+    memset(&m_client_hdr_info, 0, sizeof(DescribeHDRStaticInfoParams));
+    memset(&m_internal_hdr_info, 0, sizeof(DescribeHDRStaticInfoParams));
     m_demux_entries = 0;
     msg_thread_id = 0;
     async_thread_id = 0;
@@ -797,6 +810,11 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_internal_color_space.sAspects.mMatrixCoeffs = ColorAspects::MatrixUnspecified;
     m_internal_color_space.sAspects.mTransfer = ColorAspects::TransferUnspecified;
     m_internal_color_space.nSize = sizeof(DescribeColorAspectsParams);
+
+    m_client_hdr_info.nPortIndex = (OMX_U32)OMX_CORE_INPUT_PORT_INDEX;
+    m_internal_hdr_info.nPortIndex = (OMX_U32)OMX_CORE_OUTPUT_PORT_INDEX;
+    m_change_client_hdr_info = false;
+    pthread_mutex_init(&m_hdr_info_client_lock, NULL);
 }
 
 static const int event_type[] = {
@@ -911,6 +929,7 @@ omx_vdec::~omx_vdec()
     pthread_mutex_destroy(&c_lock);
     pthread_mutex_destroy(&buf_lock);
     sem_destroy(&m_cmd_lock);
+    pthread_mutex_destroy(&m_hdr_info_client_lock);
     if (perf_flag) {
         DEBUG_PRINT_HIGH("--> TOTAL PROCESSING TIME");
         dec_time.end();
@@ -1676,6 +1695,8 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                                     pThis->rectangle.nWidth, pThis->rectangle.nHeight);
                                         } else if (p2 == OMX_QTIIndexConfigDescribeColorAspects) {
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_QTIIndexConfigDescribeColorAspects");
+                                        } else if (p2 == OMX_QTIIndexConfigDescribeHDRColorInfo) {
+                                            DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_QTIIndexConfigDescribeHDRcolorinfo");
                                         } else {
                                             DEBUG_PRINT_ERROR("Rxd Invalid PORT_RECONFIG event (%lu)", p2);
                                             break;
@@ -1771,11 +1792,12 @@ int omx_vdec::update_resolution(int width, int height, int stride, int scan_line
     drv_ctx.video_resolution.frame_width = width;
     drv_ctx.video_resolution.scan_lines = scan_lines;
     drv_ctx.video_resolution.stride = stride;
-    if(!is_down_scalar_enabled) {
-        rectangle.nLeft = 0;
-        rectangle.nTop = 0;
-        rectangle.nWidth = drv_ctx.video_resolution.frame_width;
-        rectangle.nHeight = drv_ctx.video_resolution.frame_height;
+
+    if (!is_down_scalar_enabled) {
+        rectangle.nLeft = m_extradata_info.output_crop_rect.nLeft;
+        rectangle.nTop = m_extradata_info.output_crop_rect.nTop;
+        rectangle.nWidth = m_extradata_info.output_crop_rect.nWidth;
+        rectangle.nHeight = m_extradata_info.output_crop_rect.nHeight;
     }
     return format_changed;
 }
@@ -2355,7 +2377,12 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
                     fdesc.pixelformat, fdesc.flags);
             fdesc.index++;
         }
+        m_extradata_info.output_crop_rect.nLeft = 0;
+        m_extradata_info.output_crop_rect.nTop = 0;
+        m_extradata_info.output_crop_rect.nWidth = 320;
+        m_extradata_info.output_crop_rect.nHeight = 240;
         update_resolution(320, 240, 320, 240);
+
         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
         fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
@@ -3981,6 +4008,11 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                            rectangle.nWidth = portDefn->format.video.nFrameWidth;
                                            rectangle.nHeight = portDefn->format.video.nFrameHeight;
 
+                                           m_extradata_info.output_crop_rect.nLeft = 0;
+                                           m_extradata_info.output_crop_rect.nTop = 0;
+                                           m_extradata_info.output_crop_rect.nWidth = rectangle.nWidth;
+                                           m_extradata_info.output_crop_rect.nHeight = rectangle.nHeight;
+
                                            eRet = is_video_session_supported();
                                            if (eRet)
                                                break;
@@ -4088,6 +4120,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                        // Frame rate only should be set if this is a "known value" or to
                                        // activate ts prediction logic (arbitrary mode only) sending input
                                        // timestamps with max value (LLONG_MAX).
+                                       m_fps_received = portDefn->format.video.xFramerate;
                                        DEBUG_PRINT_HIGH("set_parameter: frame rate set by omx client : %u",
                                                (unsigned int)portDefn->format.video.xFramerate >> 16);
                                        Q16ToFraction(portDefn->format.video.xFramerate, drv_ctx.frame_rate.fps_numerator,
@@ -4143,6 +4176,12 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                                        "for adaptive-playback/smooth-streaming",
                                                        (unsigned int)frameWidth, (unsigned int)frameHeight);
                                            }
+
+                                           m_extradata_info.output_crop_rect.nLeft = 0;
+                                           m_extradata_info.output_crop_rect.nTop = 0;
+                                           m_extradata_info.output_crop_rect.nWidth = frameWidth;
+                                           m_extradata_info.output_crop_rect.nHeight = frameHeight;
+
                                            update_resolution(frameWidth, frameHeight,
                                                    frameWidth, frameHeight);
                                            eRet = is_video_session_supported();
@@ -5160,10 +5199,31 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
 
             break;
         }
-        default: {
-                 DEBUG_PRINT_ERROR("get_config: unknown param %d",configIndex);
-                 eRet = OMX_ErrorBadParameter;
-             }
+        case OMX_QTIIndexConfigDescribeHDRColorInfo:
+        {
+            VALIDATE_OMX_PARAM_DATA(configData, DescribeHDRStaticInfoParams);
+            DescribeHDRStaticInfoParams *params = (DescribeHDRStaticInfoParams *)configData;
+            auto_lock lock(m_hdr_info_client_lock);
+
+            print_debug_hdr_color_info(&(m_client_hdr_info.sInfo), "GetConfig Client HDR");
+            print_debug_hdr_color_info(&(m_internal_hdr_info.sInfo), "GetConfig Internal HDR");
+
+            if (m_change_client_hdr_info) {
+                DEBUG_PRINT_LOW("Updating Client's HDR Info with internal");
+                memcpy(&m_client_hdr_info.sInfo,
+                       &m_internal_hdr_info.sInfo, sizeof(HDRStaticInfo));
+                m_change_client_hdr_info = false;
+            }
+
+            memcpy(&(params->sInfo), &(m_client_hdr_info.sInfo), sizeof(HDRStaticInfo));
+
+            break;
+        }
+        default:
+        {
+            DEBUG_PRINT_ERROR("get_config: unknown param %d",configIndex);
+            eRet = OMX_ErrorBadParameter;
+        }
 
     }
 
@@ -5238,7 +5298,9 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
 
         if (config->nPortIndex == OMX_CORE_INPUT_PORT_INDEX) {
             if (config->bEnabled) {
-                if ((config->nFps >> 16) > 0) {
+                if ((config->nFps >> 16) > 0 &&
+                        (config->nFps >> 16) <= MAX_SUPPORTED_FPS) {
+                    m_fps_received = config->nFps;
                     DEBUG_PRINT_HIGH("set_config: frame rate set by omx client : %u",
                             (unsigned int)config->nFps >> 16);
                     Q16ToFraction(config->nFps, drv_ctx.frame_rate.fps_numerator,
@@ -5384,6 +5446,20 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         print_debug_color_aspects(&(params->sAspects), "Set Config");
         memcpy(&m_client_color_space, params, sizeof(DescribeColorAspectsParams));
         return ret;
+    } else if ((int)configIndex == (int)OMX_QTIIndexConfigDescribeHDRColorInfo) {
+        VALIDATE_OMX_PARAM_DATA(configData, DescribeHDRStaticInfoParams);
+        DescribeHDRStaticInfoParams *params = (DescribeHDRStaticInfoParams *)configData;
+        if (!DEFAULT_EXTRADATA & OMX_HDR_COLOR_INFO_EXTRADATA) {
+            ret = enable_extradata(OMX_HDR_COLOR_INFO_EXTRADATA, true, true);
+            if (ret != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("Failed to enable OMX_HDR_COLOR_INFO_EXTRADATA");
+                return ret;
+            }
+        }
+
+        print_debug_hdr_color_info(&(params->sInfo), "Set Config HDR");
+        memcpy(&m_client_hdr_info, params, sizeof(DescribeHDRStaticInfoParams));
+        return ret;
     }
 
     return OMX_ErrorNotImplemented;
@@ -5472,6 +5548,8 @@ OMX_ERRORTYPE  omx_vdec::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexParamVideoClientExtradata;
     } else if (extn_equals(paramName, "OMX.google.android.index.describeColorAspects")) {
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeColorAspects;
+    } else if (extn_equals(paramName, "OMX.google.android.index.describeHDRStaticInfo")) {
+        *indexType = (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeHDRColorInfo;
     } else {
         DEBUG_PRINT_ERROR("Extension: %s not implemented", paramName);
         return OMX_ErrorNotImplemented;
@@ -5592,7 +5670,6 @@ void omx_vdec::free_extradata()
         close(drv_ctx.extradata_info.ion.fd_ion_data.fd);
         free_ion_memory(&drv_ctx.extradata_info.ion);
     }
-    memset(&drv_ctx.extradata_info, 0, sizeof(drv_ctx.extradata_info));
 #endif
     if (m_other_extradata) {
         free(m_other_extradata);
@@ -8233,15 +8310,15 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
             else
                 set_frame_rate(buffer->nTimeStamp);
 
+            proc_frms++;
             if (perf_flag) {
-                if (!proc_frms) {
+                if (1 == proc_frms) {
                     dec_time.stop();
                     latency = dec_time.processing_time_us() - latency;
                     DEBUG_PRINT_HIGH(">>> FBD Metrics: Latency(%.2f)mS", latency / 1e3);
                     dec_time.start();
                     fps_metrics.start();
                 }
-                proc_frms++;
                 if (buffer->nFlags & OMX_BUFFERFLAG_EOS) {
                     OMX_U64 proc_time = 0;
                     fps_metrics.stop();
@@ -8249,13 +8326,13 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
                     DEBUG_PRINT_HIGH(">>> FBD Metrics: proc_frms(%u) proc_time(%.2f)S fps(%.2f)",
                             (unsigned int)proc_frms, (float)proc_time / 1e6,
                             (float)(1e6 * proc_frms) / proc_time);
-                    proc_frms = 0;
                 }
             }
         }
         if (buffer->nFlags & OMX_BUFFERFLAG_EOS) {
             prev_ts = LLONG_MAX;
             rst_prev_ts = true;
+            proc_frms = 0;
         }
 
         pPMEMInfo = (OMX_QCOM_PLATFORM_PRIVATE_PMEM_INFO *)
@@ -8298,10 +8375,31 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         }
 
         // add current framerate to gralloc meta data
-        if (m_enable_android_native_buffers && m_out_mem_ptr) {
+        if (buffer->nFilledLen > 0 && m_drc_enable && m_enable_android_native_buffers && m_out_mem_ptr) {
+            //If valid fps was received, directly send it to display for the 1st fbd.
+            //Otherwise, calculate fps using fbd timestamps,
+            //  when received 2 fbds, send a coarse fps,
+            //  when received 30 fbds, update fps again as it should be
+            //  more accurate than the one when only 2 fbds received.
+            //For other frames, set value 0 to inform that refresh rate has no update
+            float refresh_rate = m_fps_prev;
+            if (m_fps_received) {
+                if (1 == proc_frms) {
+                    refresh_rate = m_fps_received / (float)(1<<16);
+                }
+            } else {
+                if (2 == proc_frms || 30 == proc_frms) {
+                    refresh_rate = drv_ctx.frame_rate.fps_numerator / (float) drv_ctx.frame_rate.fps_denominator;
+                }
+            }
+            if (refresh_rate > 60) {
+                refresh_rate = 60;
+            }
+            DEBUG_PRINT_LOW("frc set refresh_rate %f, frame %d", refresh_rate, proc_frms);
             OMX_U32 buf_index = buffer - m_out_mem_ptr;
             setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
-                         UPDATE_REFRESH_RATE, (void*)&current_framerate);
+                         UPDATE_REFRESH_RATE, (void*)&refresh_rate);
+            m_fps_prev = refresh_rate;
         }
 
         if (buffer->nFilledLen && m_enable_android_native_buffers && m_out_mem_ptr) {
@@ -8701,6 +8799,15 @@ int omx_vdec::async_message_process (void *context, void* message)
                            vdec_msg->msgdata.output_frame.framesize.bottom = plane[0].reserved[3] + plane[0].reserved[5];
                            vdec_msg->msgdata.output_frame.picsize.frame_width = plane[0].reserved[6];
                            vdec_msg->msgdata.output_frame.picsize.frame_height = plane[0].reserved[7];
+
+                           /* Copy these values back to OMX internal variables to make both handlign same*/
+
+                           omx->m_extradata_info.output_crop_rect.nLeft = vdec_msg->msgdata.output_frame.framesize.left;
+                           omx->m_extradata_info.output_crop_rect.nTop = vdec_msg->msgdata.output_frame.framesize.top;
+                           omx->m_extradata_info.output_crop_rect.nWidth = vdec_msg->msgdata.output_frame.framesize.right;
+                           omx->m_extradata_info.output_crop_rect.nHeight = vdec_msg->msgdata.output_frame.framesize.bottom;
+                           omx->m_extradata_info.output_width = vdec_msg->msgdata.output_frame.picsize.frame_width;
+                           omx->m_extradata_info.output_height = vdec_msg->msgdata.output_frame.picsize.frame_height;
                        }
                    }
 
@@ -9931,13 +10038,6 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
     portDefn->nVersion.nVersion = OMX_SPEC_VERSION;
     portDefn->nSize = sizeof(OMX_PARAM_PORTDEFINITIONTYPE);
     portDefn->eDomain    = OMX_PortDomainVideo;
-    if (drv_ctx.frame_rate.fps_denominator > 0)
-        portDefn->format.video.xFramerate = (drv_ctx.frame_rate.fps_numerator /
-            drv_ctx.frame_rate.fps_denominator) << 16; //Q16 format
-    else {
-        DEBUG_PRINT_ERROR("Error: Divide by zero");
-        return OMX_ErrorBadParameter;
-    }
     memset(&fmt, 0x0, sizeof(struct v4l2_format));
     if (0 == portDefn->nPortIndex) {
         portDefn->eDir =  OMX_DirInput;
@@ -9946,6 +10046,9 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
         portDefn->nBufferSize        = drv_ctx.ip_buf.buffer_size;
         portDefn->format.video.eColorFormat = OMX_COLOR_FormatUnused;
         portDefn->format.video.eCompressionFormat = eCompressionFormat;
+        //for input port, always report the fps value set by client,
+        //to distinguish whether client got valid fps from parser.
+        portDefn->format.video.xFramerate = m_fps_received;
         portDefn->bEnabled   = m_inp_bEnabled;
         portDefn->bPopulated = m_inp_bPopulated;
 
@@ -9985,6 +10088,13 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
         portDefn->nBufferCountActual = drv_ctx.op_buf.actualcount;
         portDefn->nBufferCountMin    = drv_ctx.op_buf.mincount;
         portDefn->format.video.eCompressionFormat = OMX_VIDEO_CodingUnused;
+        if (drv_ctx.frame_rate.fps_denominator > 0)
+            portDefn->format.video.xFramerate = (drv_ctx.frame_rate.fps_numerator /
+                drv_ctx.frame_rate.fps_denominator) << 16; //Q16 format
+        else {
+            DEBUG_PRINT_ERROR("Error: Divide by zero");
+            return OMX_ErrorBadParameter;
+        }
         portDefn->bEnabled   = m_out_bEnabled;
         portDefn->bPopulated = m_out_bPopulated;
         if (!client_buffers.get_color_format(portDefn->format.video.eColorFormat)) {
@@ -10403,7 +10513,7 @@ void omx_vdec::print_debug_color_aspects(ColorAspects *aspects, const char *pref
                 prefix, aspects->mPrimaries, aspects->mRange, aspects->mTransfer, aspects->mMatrixCoeffs);
 }
 
-void omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
+bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
 {
     ColorSpace_t color_space = ITU_R_601;
     ColorAspects tempAspects;
@@ -10556,14 +10666,16 @@ void omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
         memcpy(&(m_internal_color_space.sAspects), aspects, sizeof(ColorAspects));
         m_internal_color_space.bDataSpaceChanged = OMX_TRUE;
 
-        DEBUG_PRINT_HIGH("Initiating PORT Reconfig");
+        DEBUG_PRINT_HIGH("Initiating PORT Reconfig due to Color Aspects Change");
         print_debug_color_aspects(&(m_internal_color_space.sAspects), "Internal");
         print_debug_color_aspects(&(m_client_color_space.sAspects), "Client");
 
         post_event(OMX_CORE_OUTPUT_PORT_INDEX,
                 OMX_QTIIndexConfigDescribeColorAspects,
                 OMX_COMPONENT_GENERATE_PORT_RECONFIG);
+        return true;
     }
+    return false;
 }
 
 void omx_vdec::set_colorspace_in_handle(ColorSpace_t color_space, unsigned int buf_index) {
@@ -10578,6 +10690,78 @@ void omx_vdec::set_colorspace_in_handle(ColorSpace_t color_space, unsigned int b
     }
 }
 
+void omx_vdec::print_debug_hdr_color_info(HDRStaticInfo *hdr_info, const char *prefix)
+{
+    if (!hdr_info->mID) {
+        DEBUG_PRINT_LOW("%s : HDRstaticinfo MDC: mR.x = %d mR.y = %d", prefix,
+                         hdr_info->sType1.mR.x, hdr_info->sType1.mR.y);
+        DEBUG_PRINT_LOW("%s : HDRstaticinfo MDC: mG.x = %d mG.y = %d", prefix,
+                         hdr_info->sType1.mG.x, hdr_info->sType1.mG.y);
+        DEBUG_PRINT_LOW("%s : HDRstaticinfo MDC: mB.x = %d mB.y = %d", prefix,
+                         hdr_info->sType1.mB.x, hdr_info->sType1.mB.y);
+        DEBUG_PRINT_LOW("%s : HDRstaticinfo MDC: mW.x = %d mW.y = %d", prefix,
+                         hdr_info->sType1.mW.x, hdr_info->sType1.mW.y);
+        DEBUG_PRINT_LOW("%s : HDRstaticinfo MDC: maxDispLum = %d minDispLum = %d", prefix,
+                         hdr_info->sType1.mMaxDisplayLuminance, hdr_info->sType1.mMinDisplayLuminance);
+        DEBUG_PRINT_LOW("%s : HDRstaticinfo CLL: CLL = %d FLL = %d", prefix,
+                        hdr_info->sType1.mMaxContentLightLevel, hdr_info->sType1.mMaxFrameAverageLightLevel);
+    }
+
+}
+
+
+
+bool omx_vdec::handle_content_light_level_info(void* data)
+{
+    struct msm_vidc_content_light_level_sei_payload *light_level_payload =
+        (msm_vidc_content_light_level_sei_payload*)(data);
+
+    if ((m_internal_hdr_info.sInfo.sType1.mMaxContentLightLevel != light_level_payload->nMaxContentLight) ||
+        (m_internal_hdr_info.sInfo.sType1.mMaxFrameAverageLightLevel != light_level_payload->nMaxPicAverageLight)) {
+        m_internal_hdr_info.sInfo.sType1.mMaxContentLightLevel = light_level_payload->nMaxContentLight;
+        m_internal_hdr_info.sInfo.sType1.mMaxFrameAverageLightLevel = light_level_payload->nMaxPicAverageLight;
+        return true;
+    }
+    return false;
+}
+
+bool omx_vdec::handle_mastering_display_color_info(void* data)
+{
+    struct msm_vidc_mastering_display_colour_sei_payload *mastering_display_payload =
+        (msm_vidc_mastering_display_colour_sei_payload*)(data);
+    HDRStaticInfo* hdr_info = &m_internal_hdr_info.sInfo;
+    bool internal_disp_changed_flag = false;
+
+    internal_disp_changed_flag  = (hdr_info->sType1.mR.x != mastering_display_payload->nDisplayPrimariesX[0]) ||
+        (hdr_info->sType1.mR.y != mastering_display_payload->nDisplayPrimariesY[0]);
+    internal_disp_changed_flag |= (hdr_info->sType1.mG.x != mastering_display_payload->nDisplayPrimariesX[1]) ||
+        (hdr_info->sType1.mG.y != mastering_display_payload->nDisplayPrimariesY[1]);
+    internal_disp_changed_flag |= (hdr_info->sType1.mB.x != mastering_display_payload->nDisplayPrimariesX[2]) ||
+        (hdr_info->sType1.mB.y != mastering_display_payload->nDisplayPrimariesY[2]);
+
+    internal_disp_changed_flag |= (hdr_info->sType1.mW.x != mastering_display_payload->nWhitePointX) ||
+        (hdr_info->sType1.mW.y != mastering_display_payload->nWhitePointY);
+
+    internal_disp_changed_flag != (hdr_info->sType1.mMaxDisplayLuminance != mastering_display_payload->nMaxDisplayMasteringLuminance) ||
+        (hdr_info->sType1.mMinDisplayLuminance != mastering_display_payload->nMinDisplayMasteringLuminance);
+
+    if (internal_disp_changed_flag) {
+        hdr_info->sType1.mR.x = mastering_display_payload->nDisplayPrimariesX[0];
+        hdr_info->sType1.mR.y = mastering_display_payload->nDisplayPrimariesY[0];
+        hdr_info->sType1.mG.x = mastering_display_payload->nDisplayPrimariesX[1];
+        hdr_info->sType1.mG.y = mastering_display_payload->nDisplayPrimariesY[1];
+        hdr_info->sType1.mB.x = mastering_display_payload->nDisplayPrimariesX[2];
+        hdr_info->sType1.mB.y = mastering_display_payload->nDisplayPrimariesY[2];
+        hdr_info->sType1.mW.x = mastering_display_payload->nWhitePointX;
+        hdr_info->sType1.mW.y = mastering_display_payload->nWhitePointY;
+
+        hdr_info->sType1.mMaxDisplayLuminance = mastering_display_payload->nMaxDisplayMasteringLuminance;
+        hdr_info->sType1.mMinDisplayLuminance = mastering_display_payload->nMinDisplayMasteringLuminance;
+    }
+
+    return internal_disp_changed_flag;
+}
+
 void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
 {
     OMX_OTHER_EXTRADATATYPE *p_extra = NULL, *p_sei = NULL, *p_vui = NULL, *p_client_extra = NULL;
@@ -10589,7 +10773,8 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     OMX_U32 num_MB_in_frame;
     OMX_U32 recovery_sei_flags = 1;
     int enable = OMX_InterlaceFrameProgressive;
-
+    bool internal_hdr_info_changed_flag = false;
+    bool color_event = false;
     if (output_flush_progress)
         return;
 
@@ -10789,7 +10974,7 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 case MSM_VIDC_EXTRADATA_VUI_DISPLAY_INFO:
                 case MSM_VIDC_EXTRADATA_VC1_SEQDISP:
                 case MSM_VIDC_EXTRADATA_VPX_COLORSPACE_INFO:
-                        handle_color_space_info((void *)data->data, buf_index);
+                    color_event = handle_color_space_info((void *)data->data, buf_index);
                     break;
                 case MSM_VIDC_EXTRADATA_S3D_FRAME_PACKING:
                     struct msm_vidc_s3d_frame_packing_payload *s3d_frame_packing_payload;
@@ -10870,6 +11055,12 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                         }
                     }
                     break;
+                case MSM_VIDC_EXTRADATA_CONTENT_LIGHT_LEVEL_SEI:
+                    internal_hdr_info_changed_flag |= handle_content_light_level_info((void*)data->data);
+                    break;
+                case MSM_VIDC_EXTRADATA_MASTERING_DISPLAY_COLOUR_SEI:
+                    internal_hdr_info_changed_flag |= handle_mastering_display_color_info((void*)data->data);
+                    break;
                 default:
                     DEBUG_PRINT_LOW("Unrecognized extradata");
                     goto unrecognized_extradata;
@@ -10900,6 +11091,20 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
             }
         }
+
+        if(internal_hdr_info_changed_flag) {
+            print_debug_hdr_color_info(&(m_internal_hdr_info.sInfo), "Internal");
+            print_debug_hdr_color_info(&(m_client_hdr_info.sInfo), "Client");
+            auto_lock lock(m_hdr_info_client_lock);
+            m_change_client_hdr_info = true;
+            if(!color_event) {
+                DEBUG_PRINT_HIGH("Initiating PORT Reconfig due to HDR Info Change");
+                post_event(OMX_CORE_OUTPUT_PORT_INDEX,
+                           OMX_QTIIndexConfigDescribeHDRColorInfo,
+                           OMX_COMPONENT_GENERATE_PORT_RECONFIG);
+            }
+        }
+
     }
 unrecognized_extradata:
     if (client_extradata && p_extra) {
@@ -10922,7 +11127,7 @@ unrecognized_extradata:
     return;
 }
 
-OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U32 requested_extradata,
+OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
         bool is_internal, bool enable)
 {
     OMX_ERRORTYPE ret = OMX_ErrorNone;
@@ -11072,6 +11277,20 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U32 requested_extradata,
 
             if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
                 DEBUG_PRINT_HIGH("Failed to set Display info extradata");
+            }
+        }
+        if (requested_extradata & OMX_HDR_COLOR_INFO_EXTRADATA) {
+            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
+            if (output_capability == V4L2_PIX_FMT_H264 ||
+                output_capability == V4L2_PIX_FMT_HEVC) {
+                control.value = V4L2_MPEG_VIDC_EXTRADATA_DISPLAY_COLOUR_SEI;
+                if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
+                    DEBUG_PRINT_HIGH("Failed to set Display Colour SEI extradata");
+                }
+                control.value = V4L2_MPEG_VIDC_EXTRADATA_CONTENT_LIGHT_LEVEL_SEI;
+                if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
+                    DEBUG_PRINT_HIGH("Failed to set Content Light Level SEI extradata");
+                }
             }
         }
     }
@@ -12471,6 +12690,11 @@ OMX_ERRORTYPE omx_vdec::enable_adaptive_playback(unsigned long nMaxFrameWidth,
      min_res_buf_count = drv_ctx.op_buf.mincount;
      DEBUG_PRINT_LOW("enable adaptive - upper limit buffer count = %lu for HxW %ux%u",
                      min_res_buf_count, m_decoder_capability.min_height, m_decoder_capability.min_width);
+
+     m_extradata_info.output_crop_rect.nLeft = 0;
+     m_extradata_info.output_crop_rect.nTop = 0;
+     m_extradata_info.output_crop_rect.nWidth = m_smoothstreaming_width;
+     m_extradata_info.output_crop_rect.nHeight = m_smoothstreaming_height;
 
      update_resolution(m_smoothstreaming_width, m_smoothstreaming_height,
                        m_smoothstreaming_width, m_smoothstreaming_height);

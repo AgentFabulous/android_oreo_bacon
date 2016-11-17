@@ -1720,6 +1720,13 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS * sizeof(OMX_U32));
                 break;
             }
+        case OMX_QTIIndexParamDisablePQ:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_DISABLETYPE);
+                handle->venc_set_param(paramData,
+                        (OMX_INDEXTYPE)OMX_QTIIndexParamDisablePQ);
+                break;
+            }
         case OMX_IndexParamVideoSliceFMO:
         default:
             {
@@ -1888,10 +1895,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     if (m_sIntraperiod.nBFrames != pParam->nBFrames) {
                         if(hier_b_enabled && m_state == OMX_StateLoaded) {
                             DEBUG_PRINT_INFO("B-frames setting is supported if HierB is enabled");
-                        }
-                        else {
-                            DEBUG_PRINT_HIGH("Dynamically changing B-frames not supported");
-                            return OMX_ErrorUnsupportedSetting;
                         }
                     }
                     if (handle->venc_set_config(configData, (OMX_INDEXTYPE) QOMX_IndexConfigVideoIntraperiod) != true) {
