@@ -62,9 +62,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MPEG4_SP_START 0
 #define MPEG4_ASP_START (MPEG4_SP_START + 10)
 #define H263_BP_START 0
-#define H264_BP_START 0
-#define H264_HP_START (H264_BP_START + 18)
-#define H264_MP_START (H264_BP_START + 36)
 #define HEVC_MAIN_START 0
 #define HEVC_MAIN10_START (HEVC_MAIN_START + 13)
 #define POLL_TIMEOUT 1000
@@ -72,7 +69,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define SZ_4K 0x1000
 #define SZ_1M 0x100000
-#define MAX_FPS_PQ 60
 
 /* MPEG4 profile and level table*/
 static const unsigned int mpeg4_profile_level_table[][MAX_PROFILE_PARAMS]= {
@@ -102,101 +98,26 @@ static const unsigned int mpeg4_profile_level_table[][MAX_PROFILE_PARAMS]= {
 
 /* H264 profile and level table*/
 static const unsigned int h264_profile_level_table[][MAX_PROFILE_PARAMS]= {
-    /*max mb per frame, max mb per sec, max bitrate, level, profile, dpbmbs*/
-    {99,1485,64000,OMX_VIDEO_AVCLevel1,OMX_VIDEO_AVCProfileBaseline,396},
-    {99,1485,128000,OMX_VIDEO_AVCLevel1b,OMX_VIDEO_AVCProfileBaseline,396},
-    {396,3000,192000,OMX_VIDEO_AVCLevel11,OMX_VIDEO_AVCProfileBaseline,900},
-    {396,6000,384000,OMX_VIDEO_AVCLevel12,OMX_VIDEO_AVCProfileBaseline,2376},
-    {396,11880,768000,OMX_VIDEO_AVCLevel13,OMX_VIDEO_AVCProfileBaseline,2376},
-    {396,11880,2000000,OMX_VIDEO_AVCLevel2,OMX_VIDEO_AVCProfileBaseline,2376},
-    {792,19800,4000000,OMX_VIDEO_AVCLevel21,OMX_VIDEO_AVCProfileBaseline,4752},
-    {1620,20250,4000000,OMX_VIDEO_AVCLevel22,OMX_VIDEO_AVCProfileBaseline,8100},
-    {1620,40500,10000000,OMX_VIDEO_AVCLevel3,OMX_VIDEO_AVCProfileBaseline,8100},
-    {3600,108000,14000000,OMX_VIDEO_AVCLevel31,OMX_VIDEO_AVCProfileBaseline,18000},
-    {5120,216000,20000000,OMX_VIDEO_AVCLevel32,OMX_VIDEO_AVCProfileBaseline,20480},
-    {8192,245760,20000000,OMX_VIDEO_AVCLevel4,OMX_VIDEO_AVCProfileBaseline,32768},
-    {8192,245760,50000000,OMX_VIDEO_AVCLevel41,OMX_VIDEO_AVCProfileBaseline,32768},
-    {8704,522240,50000000,OMX_VIDEO_AVCLevel42,OMX_VIDEO_AVCProfileBaseline,34816},
-    {22080,589824,135000000,OMX_VIDEO_AVCLevel5,OMX_VIDEO_AVCProfileBaseline,110400},
-    {36864,983040,240000000,OMX_VIDEO_AVCLevel51,OMX_VIDEO_AVCProfileBaseline,184320},
+    /*max mb per frame, max mb per sec, max bitrate, profile, ignore for h264, dpbmbs*/
+    {99,1485,64000,OMX_VIDEO_AVCLevel1,0,396},
+    {99,1485,128000,OMX_VIDEO_AVCLevel1b,0,396},
+    {396,3000,192000,OMX_VIDEO_AVCLevel11,0,900},
+    {396,6000,384000,OMX_VIDEO_AVCLevel12,0,2376},
+    {396,11880,768000,OMX_VIDEO_AVCLevel13,0,2376},
+    {396,11880,2000000,OMX_VIDEO_AVCLevel2,0,2376},
+    {792,19800,4000000,OMX_VIDEO_AVCLevel21,0,4752},
+    {1620,20250,4000000,OMX_VIDEO_AVCLevel22,0,8100},
+    {1620,40500,10000000,OMX_VIDEO_AVCLevel3,0,8100},
+    {3600,108000,14000000,OMX_VIDEO_AVCLevel31,0,18000},
+    {5120,216000,20000000,OMX_VIDEO_AVCLevel32,0,20480},
+    {8192,245760,20000000,OMX_VIDEO_AVCLevel4,0,32768},
+    {8192,245760,50000000,OMX_VIDEO_AVCLevel41,0,32768},
+    {8704,522240,50000000,OMX_VIDEO_AVCLevel42,0,34816},
+    {22080,589824,135000000,OMX_VIDEO_AVCLevel5,0,110400},
+    {36864,983040,240000000,OMX_VIDEO_AVCLevel51,0,184320},
+    {36864,2073600,240000000,OMX_VIDEO_AVCLevel52,0,184320},
     /* Please update H264_HP_START accordingly, while adding new element */
     {0,0,0,0,0,0},
-
-    {99,1485,64000,OMX_VIDEO_AVCLevel1, QOMX_VIDEO_AVCProfileConstrainedBaseline,396},
-    {99,1485,128000,OMX_VIDEO_AVCLevel1b, QOMX_VIDEO_AVCProfileConstrainedBaseline,396},
-    {396,3000,192000,OMX_VIDEO_AVCLevel11, QOMX_VIDEO_AVCProfileConstrainedBaseline,900},
-    {396,6000,384000,OMX_VIDEO_AVCLevel12, QOMX_VIDEO_AVCProfileConstrainedBaseline,2376},
-    {396,11880,768000,OMX_VIDEO_AVCLevel13, QOMX_VIDEO_AVCProfileConstrainedBaseline,2376},
-    {396,11880,2000000,OMX_VIDEO_AVCLevel2, QOMX_VIDEO_AVCProfileConstrainedBaseline,2376},
-    {792,19800,4000000,OMX_VIDEO_AVCLevel21, QOMX_VIDEO_AVCProfileConstrainedBaseline,4752},
-    {1620,20250,4000000,OMX_VIDEO_AVCLevel22, QOMX_VIDEO_AVCProfileConstrainedBaseline,8100},
-    {1620,40500,10000000,OMX_VIDEO_AVCLevel3, QOMX_VIDEO_AVCProfileConstrainedBaseline,8100},
-    {3600,108000,14000000,OMX_VIDEO_AVCLevel31, QOMX_VIDEO_AVCProfileConstrainedBaseline,18000},
-    {5120,216000,20000000,OMX_VIDEO_AVCLevel32, QOMX_VIDEO_AVCProfileConstrainedBaseline,20480},
-    {8192,245760,20000000,OMX_VIDEO_AVCLevel4, QOMX_VIDEO_AVCProfileConstrainedBaseline,32768},
-    {8192,245760,50000000,OMX_VIDEO_AVCLevel41, QOMX_VIDEO_AVCProfileConstrainedBaseline,32768},
-    {8704,522240,50000000,OMX_VIDEO_AVCLevel42, QOMX_VIDEO_AVCProfileConstrainedBaseline,34816},
-    {22080,589824,135000000,OMX_VIDEO_AVCLevel5, QOMX_VIDEO_AVCProfileConstrainedBaseline,110400},
-    {36864,983040,240000000,OMX_VIDEO_AVCLevel51, QOMX_VIDEO_AVCProfileConstrainedBaseline,184320},
-    /* Please update H264_HP_START accordingly, while adding new element */
-    {0,0,0,0,0,0},
-
-    {99,1485,80000,OMX_VIDEO_AVCLevel1,OMX_VIDEO_AVCProfileHigh,396},
-    {99,1485,200000,OMX_VIDEO_AVCLevel1b,OMX_VIDEO_AVCProfileHigh,396},
-    {396,3000,300000,OMX_VIDEO_AVCLevel11,OMX_VIDEO_AVCProfileHigh,900},
-    {396,6000,600000,OMX_VIDEO_AVCLevel12,OMX_VIDEO_AVCProfileHigh,2376},
-    {396,11880,1200000,OMX_VIDEO_AVCLevel13,OMX_VIDEO_AVCProfileHigh,2376},
-    {396,11880,3125000,OMX_VIDEO_AVCLevel2,OMX_VIDEO_AVCProfileHigh,2376},
-    {792,19800,6250000,OMX_VIDEO_AVCLevel21,OMX_VIDEO_AVCProfileHigh,4752},
-    {1620,20250,6250000,OMX_VIDEO_AVCLevel22,OMX_VIDEO_AVCProfileHigh,8100},
-    {1620,40500,15625000,OMX_VIDEO_AVCLevel3,OMX_VIDEO_AVCProfileHigh,8100},
-    {3600,108000,21875000,OMX_VIDEO_AVCLevel31,OMX_VIDEO_AVCProfileHigh,18000},
-    {5120,216000,31250000,OMX_VIDEO_AVCLevel32,OMX_VIDEO_AVCProfileHigh,20480},
-    {8192,245760,31250000,OMX_VIDEO_AVCLevel4,OMX_VIDEO_AVCProfileHigh,32768},
-    {8192,245760,62500000,OMX_VIDEO_AVCLevel41,OMX_VIDEO_AVCProfileHigh,32768},
-    {8704,522240,62500000,OMX_VIDEO_AVCLevel42,OMX_VIDEO_AVCProfileHigh,34816},
-    {22080,589824,168750000,OMX_VIDEO_AVCLevel5,OMX_VIDEO_AVCProfileHigh,110400},
-    {36864,983040,300000000,OMX_VIDEO_AVCLevel51,OMX_VIDEO_AVCProfileHigh,184320},
-    /* Please update H264_MP_START accordingly, while adding new element */
-    {0,0,0,0,0,0},
-
-    {99,1485,80000,OMX_VIDEO_AVCLevel1,QOMX_VIDEO_AVCProfileConstrainedHigh,396},
-    {99,1485,200000,OMX_VIDEO_AVCLevel1b, QOMX_VIDEO_AVCProfileConstrainedHigh,396},
-    {396,3000,300000,OMX_VIDEO_AVCLevel11, QOMX_VIDEO_AVCProfileConstrainedHigh,900},
-    {396,6000,600000,OMX_VIDEO_AVCLevel12, QOMX_VIDEO_AVCProfileConstrainedHigh,2376},
-    {396,11880,1200000,OMX_VIDEO_AVCLevel13, QOMX_VIDEO_AVCProfileConstrainedHigh,2376},
-    {396,11880,3125000,OMX_VIDEO_AVCLevel2, QOMX_VIDEO_AVCProfileConstrainedHigh,2376},
-    {792,19800,6250000,OMX_VIDEO_AVCLevel21, QOMX_VIDEO_AVCProfileConstrainedHigh,4752},
-    {1620,20250,6250000,OMX_VIDEO_AVCLevel22, QOMX_VIDEO_AVCProfileConstrainedHigh,8100},
-    {1620,40500,15625000,OMX_VIDEO_AVCLevel3, QOMX_VIDEO_AVCProfileConstrainedHigh,8100},
-    {3600,108000,21875000,OMX_VIDEO_AVCLevel31, QOMX_VIDEO_AVCProfileConstrainedHigh,18000},
-    {5120,216000,31250000,OMX_VIDEO_AVCLevel32, QOMX_VIDEO_AVCProfileConstrainedHigh,20480},
-    {8192,245760,31250000,OMX_VIDEO_AVCLevel4, QOMX_VIDEO_AVCProfileConstrainedHigh,32768},
-    {8192,245760,62500000,OMX_VIDEO_AVCLevel41, QOMX_VIDEO_AVCProfileConstrainedHigh,32768},
-    {8704,522240,62500000,OMX_VIDEO_AVCLevel42, QOMX_VIDEO_AVCProfileConstrainedHigh,34816},
-    {22080,589824,168750000,OMX_VIDEO_AVCLevel5, QOMX_VIDEO_AVCProfileConstrainedHigh,110400},
-    {36864,983040,300000000,OMX_VIDEO_AVCLevel51, QOMX_VIDEO_AVCProfileConstrainedHigh,184320},
-    /* Please update H264_MP_START accordingly, while adding new element */
-    {0,0,0,0,0,0},
-
-    {99,1485,64000,OMX_VIDEO_AVCLevel1,OMX_VIDEO_AVCProfileMain,396},
-    {99,1485,128000,OMX_VIDEO_AVCLevel1b,OMX_VIDEO_AVCProfileMain,396},
-    {396,3000,192000,OMX_VIDEO_AVCLevel11,OMX_VIDEO_AVCProfileMain,900},
-    {396,6000,384000,OMX_VIDEO_AVCLevel12,OMX_VIDEO_AVCProfileMain,2376},
-    {396,11880,768000,OMX_VIDEO_AVCLevel13,OMX_VIDEO_AVCProfileMain,2376},
-    {396,11880,2000000,OMX_VIDEO_AVCLevel2,OMX_VIDEO_AVCProfileMain,2376},
-    {792,19800,4000000,OMX_VIDEO_AVCLevel21,OMX_VIDEO_AVCProfileMain,4752},
-    {1620,20250,4000000,OMX_VIDEO_AVCLevel22,OMX_VIDEO_AVCProfileMain,8100},
-    {1620,40500,10000000,OMX_VIDEO_AVCLevel3,OMX_VIDEO_AVCProfileMain,8100},
-    {3600,108000,14000000,OMX_VIDEO_AVCLevel31,OMX_VIDEO_AVCProfileMain,18000},
-    {5120,216000,20000000,OMX_VIDEO_AVCLevel32,OMX_VIDEO_AVCProfileMain,20480},
-    {8192,245760,20000000,OMX_VIDEO_AVCLevel4,OMX_VIDEO_AVCProfileMain,32768},
-    {8192,245760,50000000,OMX_VIDEO_AVCLevel41,OMX_VIDEO_AVCProfileMain,32768},
-    {8704,522240,50000000,OMX_VIDEO_AVCLevel42,OMX_VIDEO_AVCProfileMain,34816},
-    {22080,589824,135000000,OMX_VIDEO_AVCLevel5,OMX_VIDEO_AVCProfileMain,110400},
-    {36864,983040,240000000,OMX_VIDEO_AVCLevel51,OMX_VIDEO_AVCProfileMain,184320},
-    {0,0,0,0,0,0}
-
 };
 
 /* H263 profile and level table*/
@@ -217,36 +138,23 @@ static const unsigned int h263_profile_level_table[][MAX_PROFILE_PARAMS]= {
 
 /* HEVC profile and level table*/
 static const unsigned int hevc_profile_level_table[][MAX_PROFILE_PARAMS]= {
-    /*max mb per frame, max mb per sec, max bitrate, level, profile*/
-    {99,1485,128000,OMX_VIDEO_HEVCMainTierLevel1,OMX_VIDEO_HEVCProfileMain,0},
-    {396,11880,1500000,OMX_VIDEO_HEVCMainTierLevel2,OMX_VIDEO_HEVCProfileMain,0},
-    {900,27000,3000000,OMX_VIDEO_HEVCMainTierLevel21,OMX_VIDEO_HEVCProfileMain,0},
-    {2025,60750,6000000,OMX_VIDEO_HEVCMainTierLevel3,OMX_VIDEO_HEVCProfileMain,0},
-    {8640,259200,10000000,OMX_VIDEO_HEVCMainTierLevel31,OMX_VIDEO_HEVCProfileMain,0},
-    {34560,1166400,12000000,OMX_VIDEO_HEVCMainTierLevel4,OMX_VIDEO_HEVCProfileMain,0},
-    {138240,4147200,20000000,OMX_VIDEO_HEVCMainTierLevel41,OMX_VIDEO_HEVCProfileMain,0},
-    {138240,8294400,25000000,OMX_VIDEO_HEVCMainTierLevel5,OMX_VIDEO_HEVCProfileMain,0},
-    {138240,4147200,40000000,OMX_VIDEO_HEVCMainTierLevel51,OMX_VIDEO_HEVCProfileMain,0},
-    {138240,4147200,50000000,OMX_VIDEO_HEVCHighTierLevel41,OMX_VIDEO_HEVCProfileMain,0},
-    {138240,4147200,100000000,OMX_VIDEO_HEVCHighTierLevel5,OMX_VIDEO_HEVCProfileMain,0},
-    {138240,4147200,160000000,OMX_VIDEO_HEVCHighTierLevel51,OMX_VIDEO_HEVCProfileMain,0},
-    {138240,4147200,240000000,OMX_VIDEO_HEVCHighTierLevel52,OMX_VIDEO_HEVCProfileMain,0},
+    /*max mb per frame, max mb per sec, max bitrate, level, ignore profile and dpbmbs for HEVC */
+    {99,1485,128000,OMX_VIDEO_HEVCMainTierLevel1,0,0},
+    {396,11880,1500000,OMX_VIDEO_HEVCMainTierLevel2,0,0},
+    {900,27000,3000000,OMX_VIDEO_HEVCMainTierLevel21,0,0},
+    {2025,60750,6000000,OMX_VIDEO_HEVCMainTierLevel3,0,0},
+    {8640,259200,10000000,OMX_VIDEO_HEVCMainTierLevel31,0,0},
+    {34560,1166400,12000000,OMX_VIDEO_HEVCMainTierLevel4,0,0},
+    {138240,4147200,20000000,OMX_VIDEO_HEVCMainTierLevel41,0,0},
+    {138240,8294400,25000000,OMX_VIDEO_HEVCMainTierLevel5,0,0},
+    {138240,4147200,40000000,OMX_VIDEO_HEVCMainTierLevel51,0,0},
+    {138240,4147200,50000000,OMX_VIDEO_HEVCHighTierLevel41,0,0},
+    {138240,4147200,100000000,OMX_VIDEO_HEVCHighTierLevel5,0,0},
+    {138240,4147200,160000000,OMX_VIDEO_HEVCHighTierLevel51,0,0},
+    {138240,4147200,240000000,OMX_VIDEO_HEVCHighTierLevel52,0,0},
     /* Please update HEVC_MAIN_START accordingly, while adding new element */
     {0,0,0,0,0},
 
-    {99,1485,128000,OMX_VIDEO_HEVCMainTierLevel1,OMX_VIDEO_HEVCProfileMain10,0},
-    {396,11880,1500000,OMX_VIDEO_HEVCMainTierLevel2,OMX_VIDEO_HEVCProfileMain10,0},
-    {900,27000,3000000,OMX_VIDEO_HEVCMainTierLevel21,OMX_VIDEO_HEVCProfileMain10,0},
-    {2025,60750,6000000,OMX_VIDEO_HEVCMainTierLevel3,OMX_VIDEO_HEVCProfileMain10,0},
-    {8640,259200,10000000,OMX_VIDEO_HEVCMainTierLevel31,OMX_VIDEO_HEVCProfileMain10,0},
-    {34560,1166400,12000000,OMX_VIDEO_HEVCMainTierLevel4,OMX_VIDEO_HEVCProfileMain10,0},
-    {138240,4147200,20000000,OMX_VIDEO_HEVCMainTierLevel41,OMX_VIDEO_HEVCProfileMain10,0},
-    {138240,8294400,25000000,OMX_VIDEO_HEVCMainTierLevel5,OMX_VIDEO_HEVCProfileMain10,0},
-    {138240,4147200,40000000,OMX_VIDEO_HEVCMainTierLevel51,OMX_VIDEO_HEVCProfileMain10,0},
-    {138240,4147200,50000000,OMX_VIDEO_HEVCHighTierLevel41,OMX_VIDEO_HEVCProfileMain10,0},
-    {138240,4147200,100000000,OMX_VIDEO_HEVCHighTierLevel5,OMX_VIDEO_HEVCProfileMain10,0},
-    {138240,4147200,160000000,OMX_VIDEO_HEVCHighTierLevel51,OMX_VIDEO_HEVCProfileMain10,0},
-    {0,0,0,0,0},
 };
 
 
@@ -346,14 +254,13 @@ venc_dev::venc_dev(class omx_venc *venc_class)
         is_csc_enabled = 0;
     }
 
-    is_pq_force_disable = 0;
 #ifdef _PQ_
     property_get("vidc.enc.disable.pq", property_value, "0");
     if(!(strncmp(property_value, "1", PROPERTY_VALUE_MAX)) ||
         !(strncmp(property_value, "true", PROPERTY_VALUE_MAX))) {
-        is_pq_force_disable = 1;
+        m_pq.is_pq_force_disable = 1;
     } else {
-        is_pq_force_disable = 0;
+        m_pq.is_pq_force_disable = 0;
     }
 #endif // _PQ_
 
@@ -1501,7 +1408,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
     }
 
 #ifdef _PQ_
-    if (codec == OMX_VIDEO_CodingAVC && !is_pq_force_disable) {
+    if (codec == OMX_VIDEO_CodingAVC && !m_pq.is_pq_force_disable) {
         m_pq.init(V4L2_DEFAULT_OUTPUT_COLOR_FMT);
         m_pq.get_caps();
     }
@@ -2594,6 +2501,16 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     DEBUG_PRINT_ERROR("set_param: Failed to configure temporal layers");
                     return false;
                 }
+                break;
+            }
+        case OMX_QTIIndexParamDisablePQ:
+            {
+                QOMX_DISABLETYPE * pParam = (QOMX_DISABLETYPE *)paramData;
+                DEBUG_PRINT_LOW("venc_set_param: OMX_QTIIndexParamDisablePQ: %d", pParam->bDisable);
+#ifdef _PQ_
+                if (pParam->bDisable)
+                    m_pq.is_pq_force_disable = true;
+#endif
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:
@@ -4051,7 +3968,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     }
 
 #ifdef _PQ_
-    if (!streaming[OUTPUT_PORT] && !is_pq_force_disable) {
+    if (!streaming[OUTPUT_PORT] && !m_pq.is_pq_force_disable) {
         /*
          * This is the place where all parameters for deciding
          * PQ enablement are available. Evaluate PQ for the final time.
@@ -4212,7 +4129,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             }
 
 #ifdef _PQ_
-            if (!streaming[OUTPUT_PORT] && !is_pq_force_disable) {
+            if (!streaming[OUTPUT_PORT] && !m_pq.is_pq_force_disable) {
                 m_pq.is_YUV_format_uncertain = false;
                 m_pq.reinit(m_sVenc_cfg.inputformat);
                 venc_try_enable_pq();
@@ -7386,7 +7303,7 @@ bool venc_dev::venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel)
 
 bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
 {
-    OMX_U32 new_profile = 0, new_level = 0;
+    OMX_U32 new_level = 0;
     unsigned const int *profile_tbl = NULL;
     OMX_U32 mb_per_frame, mb_per_sec;
     bool profile_level_found = false;
@@ -7475,17 +7392,12 @@ bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
             *eLevel = OMX_VIDEO_AVCLevelMax;
         }
 
-        if ((*eProfile == OMX_VIDEO_AVCProfileBaseline) ||
-            (*eProfile == QOMX_VIDEO_AVCProfileConstrainedBaseline)) {
-            profile_tbl = (unsigned int const *)h264_profile_level_table;
-        } else if ((*eProfile == OMX_VIDEO_AVCProfileHigh) ||
-            (*eProfile == QOMX_VIDEO_AVCProfileConstrainedHigh)) {
-            profile_tbl = (unsigned int const *)
-                (&h264_profile_level_table[H264_HP_START]);
-        } else if (*eProfile == OMX_VIDEO_AVCProfileMain) {
-            profile_tbl = (unsigned int const *)
-                (&h264_profile_level_table[H264_MP_START]);
-        } else {
+        profile_tbl = (unsigned int const *)h264_profile_level_table;
+        if ((*eProfile != OMX_VIDEO_AVCProfileBaseline) &&
+            (*eProfile != QOMX_VIDEO_AVCProfileConstrainedBaseline) &&
+            (*eProfile != OMX_VIDEO_AVCProfileHigh) &&
+            (*eProfile != QOMX_VIDEO_AVCProfileConstrainedHigh) &&
+            (*eProfile != OMX_VIDEO_AVCProfileMain)) {
             DEBUG_PRINT_LOW("Unsupported AVC profile type %u", (unsigned int)*eProfile);
             return false;
         }
@@ -7565,12 +7477,9 @@ bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
             *eLevel = OMX_VIDEO_HEVCLevelMax;
         }
 
-        if (*eProfile == OMX_VIDEO_HEVCProfileMain) {
-            profile_tbl = (unsigned int const *)hevc_profile_level_table;
-        } else if (*eProfile == OMX_VIDEO_HEVCProfileMain10) {
-            profile_tbl = (unsigned int const *)
-                (&hevc_profile_level_table[HEVC_MAIN10_START]);
-        } else {
+        profile_tbl = (unsigned int const *)hevc_profile_level_table;
+        if ((*eProfile != OMX_VIDEO_HEVCProfileMain) &&
+            (*eProfile != OMX_VIDEO_HEVCProfileMain10)) {
             DEBUG_PRINT_ERROR("Unsupported HEVC profile type %u", (unsigned int)*eProfile);
             return false;
         }
@@ -7591,7 +7500,6 @@ bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
 
         {
             new_level = profile_level.level;
-            new_profile = codec_profile.profile;
             return true;
         }
     }
@@ -7627,17 +7535,15 @@ bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
                     if (h264 && (ltr || hlayers || hybridp)) {
                         // Update profile and level to adapt to the LTR and Hier-p/Hybrid-HP settings
                         new_level = (int)profile_tbl[3];
-                        new_profile = (int)profile_tbl[4];
                         profile_level_found = true;
                         DEBUG_PRINT_LOW("Appropriate profile/level for LTR count: %u OR Hier-p: %u is %u/%u, maxDPB: %u",
-                                        ltrinfo.count, hier_layers.numlayers, (int)new_profile, (int)new_level,
+                                        ltrinfo.count, hier_layers.numlayers, (int)*eProfile, (int)new_level,
                                         MIN((unsigned int) (profile_tbl[5] / mb_per_frame), MAXDPB));
                         break;
                     } else {
                         new_level = (int)profile_tbl[3];
-                        new_profile = (int)profile_tbl[4];
                         profile_level_found = true;
-                        DEBUG_PRINT_LOW("Appropriate profile/level found %u/%u", (int) new_profile, (int) new_level);
+                        DEBUG_PRINT_LOW("Appropriate profile/level found %u/%u", (int) *eProfile, (int) new_level);
                         break;
                     }
                 }
@@ -7895,7 +7801,9 @@ void venc_dev::venc_try_enable_pq(void)
     resolution_supported = m_sVenc_cfg.input_height * m_sVenc_cfg.input_width <=
         m_pq.caps.max_width * m_pq.caps.max_height;
 
-    frame_rate_supported = (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <= MAX_FPS_PQ;
+    frame_rate_supported =
+        (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <=
+        (m_pq.caps.max_mb_per_sec / ((m_sVenc_cfg.input_height * m_sVenc_cfg.input_width) / 256));
 
     yuv_format_supported = ((m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV12)))
             || (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV21 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV21)))
@@ -7911,7 +7819,7 @@ void venc_dev::venc_try_enable_pq(void)
 
     /* Add future PQ conditions here */
 
-    enable = (!is_pq_force_disable   &&
+    enable = (!m_pq.is_pq_force_disable   &&
                codec_supported       &&
                rc_mode_supported     &&
                resolution_supported  &&
@@ -7922,7 +7830,7 @@ void venc_dev::venc_try_enable_pq(void)
                is_pq_handle_valid);
 
     DEBUG_PRINT_HIGH("PQ Condition : Force disable = %d Codec = %d, RC = %d, RES = %d, FPS = %d, YUV = %d, Non - Secure = %d, PQ lib = %d Non - VPE = %d PQ enable = %d",
-            is_pq_force_disable, codec_supported, rc_mode_supported, resolution_supported, frame_rate_supported, yuv_format_supported,
+            m_pq.is_pq_force_disable, codec_supported, rc_mode_supported, resolution_supported, frame_rate_supported, yuv_format_supported,
             is_non_secure_session, is_pq_handle_valid, is_non_vpe_session, enable);
 
     m_pq.is_pq_enabled = enable;
@@ -7953,6 +7861,7 @@ venc_dev::venc_dev_pq::venc_dev_pq()
     mPQConfigure = NULL;
     mPQComputeStats = NULL;
     configured_format = 0;
+    is_pq_force_disable = 0;
     pthread_mutex_init(&lock, NULL);
 }
 

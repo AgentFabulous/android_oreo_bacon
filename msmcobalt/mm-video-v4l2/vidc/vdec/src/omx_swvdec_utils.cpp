@@ -214,25 +214,21 @@ omx_swvdec_diag::omx_swvdec_diag():
 
     if (m_dump_ip && property_get("omx_swvdec.filename.ip",
                                   property_value,
-                                  filename_ip))
+                                  filename_ip) && (strlen(property_value) > 0 ) )
     {
         size_t m_filename_ip_size = (strlen(property_value) + 1)*sizeof(char);
-
         m_filename_ip =
             (char *) malloc(m_filename_ip_size);
-
         if (m_filename_ip == NULL)
         {
             OMX_SWVDEC_LOG_ERROR("failed to allocate %zu bytes for "
                                  "input filename string",
-                                 (strlen(property_value) + 1) * sizeof(char));
+                                 m_filename_ip_size);
         }
         else
         {
             strlcpy(m_filename_ip, property_value,m_filename_ip_size);
-
             OMX_SWVDEC_LOG_HIGH("omx_swvdec.filename.ip: %s", m_filename_ip);
-
             if ((m_file_ip = fopen(m_filename_ip, "wb")) == NULL)
             {
                 OMX_SWVDEC_LOG_ERROR("cannot open input file '%s' logging erro is : %d",
@@ -243,23 +239,20 @@ omx_swvdec_diag::omx_swvdec_diag():
 
     if (m_dump_op && property_get("omx_swvdec.filename.op",
                                   property_value,
-                                  filename_op))
+                                  filename_op) && (strlen(property_value) > 0 ))
     {
         size_t m_filename_op_size = (strlen(property_value) + 1)*sizeof(char);
-
         m_filename_op =
             (char *) malloc(m_filename_op_size);
-
         if (m_filename_op == NULL)
         {
             OMX_SWVDEC_LOG_ERROR("failed to allocate %zu bytes for "
                                  "output filename string",
-                                 (strlen(property_value) + 1) * sizeof(char));
+                                 m_filename_op_size);
         }
         else
         {
             strlcpy(m_filename_op, property_value,m_filename_op_size);
-
             OMX_SWVDEC_LOG_HIGH("omx_swvdec.filename.op: %s", m_filename_op);
             if ((m_file_op = fopen(m_filename_op, "wb")) == NULL)
             {
