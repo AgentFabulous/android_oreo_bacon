@@ -725,6 +725,7 @@ static int __op(bt_vendor_opcode_t opcode, void *param)
     char wipower_status[PROPERTY_VALUE_MAX];
     char emb_wp_mode[PROPERTY_VALUE_MAX];
     char bt_version[PROPERTY_VALUE_MAX];
+    char lpm_config[PROPERTY_VALUE_MAX];
     bool ignore_boot_prop = TRUE;
 #ifdef READ_BT_ADDR_FROM_PROP
     int i = 0;
@@ -1151,8 +1152,21 @@ userial_open:
                 }
                 q->cb->lpm_cb(BT_VND_OP_RESULT_SUCCESS);
             } else {
-                /* respond with failure as it's  handled by other mechanism */
-                q->cb->lpm_cb(BT_VND_OP_RESULT_FAIL);
+                int lpm_result = BT_VND_OP_RESULT_SUCCESS;
+
+                property_get("persist.service.bdroid.lpmcfg", lpm_config, "all");
+                ALOGI("%s: property_get: persist.service.bdroid.lpmcfg: %s",
+                            __func__, lpm_config);
+
+                if (!strcmp(lpm_config, "all")) {
+                    // respond with success since we want to hold wake lock through LPM
+                    lpm_result = BT_VND_OP_RESULT_SUCCESS;
+                }
+                else {
+                    lpm_result = BT_VND_OP_RESULT_FAIL;
+                }
+
+                q->cb->lpm_cb(lpm_result);
             }
             break;
 
@@ -1319,9 +1333,6 @@ static void ssr_cleanup(int reason)
         /*CTRL OFF twice to make sure hw
          * turns off*/
 #ifdef ENABLE_ANT
-        __op(BT_VND_OP_POWER_CTRL, &pwr_state);
-#endif
-#ifdef FM_OVER_UART
         __op(BT_VND_OP_POWER_CTRL, &pwr_state);
 #endif
     }
