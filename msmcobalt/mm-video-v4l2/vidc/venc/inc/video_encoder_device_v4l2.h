@@ -397,6 +397,7 @@ class venc_dev
                 venc_dev_pq();
                 ~venc_dev_pq();
                 bool is_pq_enabled;
+                bool is_pq_force_disable;
                 bool is_YUV_format_uncertain;
                 pthread_mutex_t lock;
                 struct extradata_buffer_info roi_extradata_info;
@@ -469,7 +470,6 @@ class venc_dev
         bool is_gralloc_source_ubwc;
         bool is_camera_source_ubwc;
         bool is_csc_enabled;
-        bool is_pq_force_disable;
         OMX_U32 fd_list[64];
 
     private:
