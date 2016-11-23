@@ -1501,11 +1501,17 @@ bool venc_dev::venc_open(OMX_U32 codec)
     }
 
 #ifdef _PQ_
-    if (codec == OMX_VIDEO_CodingAVC) {
+    if (codec == OMX_VIDEO_CodingAVC && !is_pq_force_disable) {
         m_pq.init(V4L2_DEFAULT_OUTPUT_COLOR_FMT);
         m_pq.get_caps();
     }
 #endif // _PQ_
+
+    /* Enable Low power mode by default for better power */
+
+    if (venc_set_perf_mode(V4L2_MPEG_VIDC_VIDEO_PERF_POWER_SAVE) == false) {
+        DEBUG_PRINT_HIGH("Failed to set Perf Mode");
+    }
 
     input_extradata_info.port_index = OUTPUT_PORT;
     output_extradata_info.port_index = CAPTURE_PORT;
@@ -2705,12 +2711,6 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 if (true == deinterlace_enabled) {
                     DEBUG_PRINT_ERROR("ERROR: Rotation is not supported with deinterlacing");
                     return false;
-                }
-                if (config_rotation->nRotation == 90 || config_rotation->nRotation == 270) {
-                    DEBUG_PRINT_HIGH("venc_set_config: updating the new Dims");
-                    nFrameWidth = m_sVenc_cfg.dvs_width;
-                    m_sVenc_cfg.dvs_width  = m_sVenc_cfg.dvs_height;
-                    m_sVenc_cfg.dvs_height = nFrameWidth;
                 }
                 if(venc_set_vpe_rotation(config_rotation->nRotation) == false) {
                     DEBUG_PRINT_ERROR("ERROR: Dimension Change for Rotation failed");
@@ -4051,10 +4051,10 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     }
 
 #ifdef _PQ_
-    if (!streaming[OUTPUT_PORT]) {
+    if (!streaming[OUTPUT_PORT] && !is_pq_force_disable) {
         /*
          * This is the place where all parameters for deciding
-         * PQ enablement are aailable. Evaluate PQ for the final time.
+         * PQ enablement are available. Evaluate PQ for the final time.
          */
         m_pq.is_YUV_format_uncertain = false;
         m_pq.reinit(m_sVenc_cfg.inputformat);
@@ -4212,7 +4212,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             }
 
 #ifdef _PQ_
-            if (!streaming[OUTPUT_PORT]) {
+            if (!streaming[OUTPUT_PORT] && !is_pq_force_disable) {
                 m_pq.is_YUV_format_uncertain = false;
                 m_pq.reinit(m_sVenc_cfg.inputformat);
                 venc_try_enable_pq();
@@ -4936,11 +4936,9 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
                     requested_level.level = V4L2_MPEG_VIDEO_MPEG4_LEVEL_4;
                     break;
                 case OMX_VIDEO_MPEG4Level5:
+                case OMX_VIDEO_MPEG4LevelMax:
+                default: //Set max level possible as default so that invalid levels are non-fatal
                     requested_level.level = V4L2_MPEG_VIDEO_MPEG4_LEVEL_5;
-                    break;
-                default:
-                    return false;
-                    // TODO update corresponding levels for MPEG4_LEVEL_3b,MPEG4_LEVEL_6
                     break;
             }
         }
@@ -5004,10 +5002,9 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_H263_LEVEL_6_0;
                 break;
             case OMX_VIDEO_H263Level70:
+            case OMX_VIDEO_H263LevelMax:
+            default: //Set max level possible as default so that invalid levels are non-fatal
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_H263_LEVEL_7_0;
-                break;
-            default:
-                return false;
                 break;
         }
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
@@ -5086,15 +5083,9 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
                 requested_level.level = V4L2_MPEG_VIDEO_H264_LEVEL_5_1;
                 break;
             case OMX_VIDEO_AVCLevel52:
-                requested_level.level = V4L2_MPEG_VIDEO_H264_LEVEL_5_2;
-                break;
             case OMX_VIDEO_AVCLevelMax:
+            default: //Set max level possible as default so that invalid levels are non-fatal
                 requested_level.level = V4L2_MPEG_VIDEO_H264_LEVEL_5_2;
-                break;
-            default :
-                DEBUG_PRINT_ERROR("ERROR: Unsupported H.264 level= %lu",
-                        requested_level.level);
-                return false;
                 break;
         }
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
@@ -5110,12 +5101,9 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0;
                 break;
             case OMX_VIDEO_VP8Level_Version1:
+            case OMX_VIDEO_VP8LevelMax:
+            default: //Set max level possible as default so that invalid levels are non-fatal
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_1;
-                break;
-            default:
-                DEBUG_PRINT_ERROR("ERROR: Unsupported VP8 level= %u",
-                            (unsigned int)eLevel);
-                return false;
                 break;
         }
     }  else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
@@ -5201,12 +5189,10 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_6_1;
                 break;
             case OMX_VIDEO_HEVCHighTierLevel61:
+            case OMX_VIDEO_HEVCLevelMax:
+            default: //Set max level possible as default so that invalid levels are non-fatal
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_6_1;
                 break;
-            default :
-                DEBUG_PRINT_ERROR("ERROR: Unsupported HEVC level= %lu",
-                        requested_level.level);
-                return false;
         }
     }
 
@@ -7939,19 +7925,21 @@ void venc_dev::venc_try_enable_pq(void)
             is_pq_force_disable, codec_supported, rc_mode_supported, resolution_supported, frame_rate_supported, yuv_format_supported,
             is_non_secure_session, is_pq_handle_valid, is_non_vpe_session, enable);
 
-    venc_set_extradata(OMX_ExtraDataEncoderOverrideQPInfo, (OMX_BOOL)enable);
-    extradata |= enable;
-
-    m_pq.pConfig.algo = ADAPTIVE_QP;
-    m_pq.pConfig.height = m_sVenc_cfg.input_height;
-    m_pq.pConfig.width = m_sVenc_cfg.input_width;
-    m_pq.pConfig.mb_height = 16;
-    m_pq.pConfig.mb_width = 16;
-    m_pq.pConfig.a_qp.pq_enabled = enable;
-    m_pq.pConfig.stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, m_sVenc_cfg.input_width);
-    m_pq.configure();
     m_pq.is_pq_enabled = enable;
 
+    if (enable) {
+        venc_set_extradata(OMX_ExtraDataEncoderOverrideQPInfo, (OMX_BOOL)enable);
+        extradata |= enable;
+
+        m_pq.pConfig.algo = ADAPTIVE_QP;
+        m_pq.pConfig.height = m_sVenc_cfg.input_height;
+        m_pq.pConfig.width = m_sVenc_cfg.input_width;
+        m_pq.pConfig.mb_height = 16;
+        m_pq.pConfig.mb_width = 16;
+        m_pq.pConfig.a_qp.pq_enabled = enable;
+        m_pq.pConfig.stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, m_sVenc_cfg.input_width);
+        m_pq.configure();
+    }
     return;
 }
 
@@ -8062,14 +8050,12 @@ bool venc_dev::venc_dev_pq::reinit(unsigned long format)
 {
     bool status = false;
 
-    if (configured_format != format) {
+    if ((configured_format != format) && (is_color_format_supported(format))) {
         DEBUG_PRINT_HIGH("New format (%lu) is different from configure format (%lu);"
                                 " reinitializing PQ lib", format, configured_format);
         deinit();
-        if (is_color_format_supported(format)) {
-            status = init(format);
-            get_caps();
-        }
+        status = init(format);
+        get_caps();
     } else {
         // ignore if new format is same as configured
     }

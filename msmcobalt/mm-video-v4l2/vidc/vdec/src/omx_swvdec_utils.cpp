@@ -41,6 +41,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include <time.h>
+#include <errno.h>
 
 #include <cutils/properties.h>
 
@@ -215,8 +216,10 @@ omx_swvdec_diag::omx_swvdec_diag():
                                   property_value,
                                   filename_ip))
     {
+        size_t m_filename_ip_size = (strlen(property_value) + 1)*sizeof(char);
+
         m_filename_ip =
-            (char *) malloc((strlen(property_value) + 1) * sizeof(char));
+            (char *) malloc(m_filename_ip_size);
 
         if (m_filename_ip == NULL)
         {
@@ -226,14 +229,14 @@ omx_swvdec_diag::omx_swvdec_diag():
         }
         else
         {
-            strlcpy(m_filename_ip, property_value, strlen(m_filename_ip));
+            strlcpy(m_filename_ip, property_value,m_filename_ip_size);
 
             OMX_SWVDEC_LOG_HIGH("omx_swvdec.filename.ip: %s", m_filename_ip);
 
             if ((m_file_ip = fopen(m_filename_ip, "wb")) == NULL)
             {
-                OMX_SWVDEC_LOG_ERROR("cannot open input file '%s'",
-                                     m_filename_ip);
+                OMX_SWVDEC_LOG_ERROR("cannot open input file '%s' logging erro is : %d",
+                                     m_filename_ip,errno);
             }
         }
     }
@@ -242,8 +245,10 @@ omx_swvdec_diag::omx_swvdec_diag():
                                   property_value,
                                   filename_op))
     {
+        size_t m_filename_op_size = (strlen(property_value) + 1)*sizeof(char);
+
         m_filename_op =
-            (char *) malloc((strlen(property_value) + 1) * sizeof(char));
+            (char *) malloc(m_filename_op_size);
 
         if (m_filename_op == NULL)
         {
@@ -253,14 +258,13 @@ omx_swvdec_diag::omx_swvdec_diag():
         }
         else
         {
-            strlcpy(m_filename_op, property_value, strlen(m_filename_op));
+            strlcpy(m_filename_op, property_value,m_filename_op_size);
 
             OMX_SWVDEC_LOG_HIGH("omx_swvdec.filename.op: %s", m_filename_op);
-
             if ((m_file_op = fopen(m_filename_op, "wb")) == NULL)
             {
-                OMX_SWVDEC_LOG_ERROR("cannot open output file '%s'",
-                                     m_filename_op);
+                OMX_SWVDEC_LOG_ERROR("cannot open output file '%s' logging error : %d",
+                                     m_filename_op,errno);
             }
         }
     }
