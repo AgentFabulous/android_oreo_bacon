@@ -475,7 +475,8 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
         (pReq->service_name_len ? SIZEOF_TLV_HDR + pReq->service_name_len : 0) +
         (pReq->service_specific_info_len ? SIZEOF_TLV_HDR + pReq->service_specific_info_len : 0) +
         (pReq->rx_match_filter_len ? SIZEOF_TLV_HDR + pReq->rx_match_filter_len : 0) +
-        (pReq->tx_match_filter_len ? SIZEOF_TLV_HDR + pReq->tx_match_filter_len : 0);
+        (pReq->tx_match_filter_len ? SIZEOF_TLV_HDR + pReq->tx_match_filter_len : 0) +
+        (pReq->service_responder_policy ? SIZEOF_TLV_HDR + sizeof(NanServiceAcceptPolicy) : 0);
 
     pNanPublishServiceReqMsg pFwReq = (pNanPublishServiceReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -530,6 +531,10 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
     if (pReq->tx_match_filter_len) {
         tlvs = addTlv(NAN_TLV_TYPE_TX_MATCH_FILTER, pReq->tx_match_filter_len,
                       (const u8*)&pReq->tx_match_filter[0], tlvs);
+    }
+    if (pReq->service_responder_policy) {
+        tlvs = addTlv(NAN_TLV_TYPE_NAN_SERVICE_ACCEPT_POLICY, sizeof(NanServiceAcceptPolicy),
+                      (const u8*)&pReq->service_responder_policy, tlvs);
     }
 
     mVendorData = (char *)pFwReq;
