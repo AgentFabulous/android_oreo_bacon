@@ -1456,7 +1456,7 @@ int rome_set_baudrate_req(int fd)
 
     /* Total length of the packet to be sent to the Controller */
     size = (HCI_CMD_IND + HCI_COMMAND_HDR_SIZE + VSC_SET_BAUDRATE_REQ_LEN);
-    tcflush(fd,TCIOFLUSH);
+
     /* Flow off during baudrate change */
     if ((err = userial_vendor_ioctl(USERIAL_OP_FLOW_OFF , &flags)) < 0)
     {
