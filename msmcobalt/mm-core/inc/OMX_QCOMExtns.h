@@ -326,6 +326,7 @@ enum OMX_QCOM_COLOR_FORMATTYPE
     QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed,
     QOMX_COLOR_Format32bitRGBA8888,
     QOMX_COLOR_Format32bitRGBA8888Compressed,
+    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed,
     QOMX_COLOR_FormatAndroidOpaque = (OMX_COLOR_FORMATTYPE) OMX_COLOR_FormatVendorStartUnused  + 0x789,
 };
 
@@ -2026,6 +2027,68 @@ typedef struct QOMX_VIDEO_CLIENT_EXTRADATA {
     OMX_U32 nExtradataAllocSize;
     OMX_U32 nExtradataSize;
 } QOMX_VIDEO_CLIENT_EXTRADATATYPE;
+
+#if defined(__cplusplus) && defined(USE_CAMERA_METABUFFER_UTILS)
+
+/**
+ * Camera1 meta-buffer payload create/access/modify utility
+ */
+struct MetaBufferUtil {
+
+    enum {
+        INT_OFFSET      = 1,
+        INT_SIZE        = 2,
+        INT_USAGE       = 3,
+        INT_TIMESTAMP   = 4,
+        INT_COLORFORMAT = 5,
+        INT_BUFINDEX    = 6,
+        INT_TOTAL       = INT_BUFINDEX,
+    };
+
+    static int getNumFdsForBatch(int batchSize) {
+        return batchSize;
+    }
+    static int getNumIntsForBatch(int batchSize) {
+        return batchSize * INT_TOTAL;
+    }
+    static int getBatchSize(const native_handle_t *hnd) {
+        return MetaBufferUtil::isHandleSane(hnd) ? hnd->numFds : -1;
+    }
+
+    /* getters */
+    /* return a fd at index or -1 if index is invalid */
+    static int getFdAt(const native_handle_t *hnd, int index) {
+        return (MetaBufferUtil::isHandleSane(hnd) && (index < hnd->numFds)) ? hnd->data[index] : -1;
+    }
+    /* return a int of type at index or -1 if index or type is invalid */
+    static int getIntAt(const native_handle_t *hnd, int index, int type) {
+        int idx = MetaBufferUtil::getIntIndex(hnd, index, type);
+        return idx < 0 ? -1 : hnd->data[idx];
+    }
+
+    /* setters */
+    /* replace the fd at index and return 0. Return -1 if index is invalid */
+    static int setFdAt(native_handle_t *hnd, int index, int fd) {
+        return (MetaBufferUtil::isHandleSane(hnd) && (index < hnd->numFds)) ? hnd->data[index] = fd, 0 : -1;
+    }
+    /* replace an int of type at index and return 0. Return -1 if index or type is invalid */
+    static int setIntAt(native_handle_t *hnd, int index, int type, int value) {
+        int idx = MetaBufferUtil::getIntIndex(hnd, index, type);
+        return idx < 0 ? -1 : hnd->data[idx] = value, 0;
+    }
+
+private:
+    static bool isHandleSane(const native_handle_t *hnd) {
+        return hnd && hnd->version == sizeof(native_handle_t);
+    }
+
+    static int getIntIndex(const native_handle_t *hnd, int index, int type) {
+        int idx = index + type * MetaBufferUtil::getBatchSize(hnd);
+        return (MetaBufferUtil::isHandleSane(hnd) && (idx < (hnd->numInts + hnd->numFds))) ? idx : -1;
+    }
+};
+
+#endif // __cplusplus
 
 #ifdef __cplusplus
 }

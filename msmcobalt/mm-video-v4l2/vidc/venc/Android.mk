@@ -72,6 +72,8 @@ ifeq ($(TARGET_USES_MEDIA_EXTENSIONS),true)
 libmm-venc-def += -DSUPPORT_CONFIG_INTRA_REFRESH
 endif
 
+libmm-venc-def += -DUSE_CAMERA_METABUFFER_UTILS
+
 # Common Includes
 libmm-venc-inc      := $(LOCAL_PATH)/inc
 libmm-venc-inc      += $(QCOM_MEDIA_ROOT)/mm-video-v4l2/vidc/common/inc

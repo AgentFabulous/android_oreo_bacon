@@ -475,13 +475,27 @@ class omx_vdec: public qc_omx_component
         void buf_ref_remove();
         OMX_BUFFERHEADERTYPE* get_omx_output_buffer_header(int index);
         OMX_ERRORTYPE set_dpb(bool is_split_mode, int dpb_color_format);
-        OMX_ERRORTYPE decide_dpb_buffer_mode(bool force_split_mode);
+        OMX_ERRORTYPE decide_dpb_buffer_mode(bool split_opb_dpb_with_same_color_fmt);
         void request_perf_level(enum vidc_perf_level perf_level);
         int dpb_bit_depth;
         bool async_thread_force_stop;
         volatile bool message_thread_stop;
         struct extradata_info m_extradata_info;
         int m_progressive;
+
+        enum dither_type {
+            DITHER_DISABLE = 0,
+            DITHER_COLORSPACE_EXCEPTBT2020,
+            DITHER_ALL_COLORSPACE
+        };
+        enum dither_type m_dither_config;
+
+        enum color_space_type {
+            BT2020 = 0,
+            EXCEPT_BT2020,
+            UNKNOWN
+        };
+        enum color_space_type m_color_space;
 
     private:
         // Bit Positions
