@@ -23,6 +23,7 @@ LOCAL_SRC_FILES := \
 LOCAL_CFLAGS := $(PV_CFLAGS_MINUS_VISIBILITY)
 
 LOCAL_C_INCLUDES:= \
+        $(LOCAL_PATH)/include \
         frameworks/native/include/media/openmax \
         frameworks/native/include/media/hardware
 
@@ -33,9 +34,7 @@ LOCAL_SHARED_LIBRARIES :=       \
         libdl                   \
         libui                   \
 
-LOCAL_COPY_HEADERS_TO         := qcom/media
-LOCAL_COPY_HEADERS            := QComOMXMetadata.h \
-                                 QComOMXPlugin.h
+LOCAL_EXPORT_C_INCLUDE_DIRS   := $(LOCAL_PATH)/include
 
 LOCAL_MODULE := libstagefrighthw
 
