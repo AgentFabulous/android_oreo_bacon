@@ -63,6 +63,7 @@ typedef enum {
 #define HCI_CMD_PREAMBLE_SIZE 3
 #define HCI_EVT_CMD_CMPL_STATUS_RET_BYTE   5
 #define HCI_EVT_CMD_CMPL_OPCODE        3
+#define BT_PWR_CNTRL_DEVICE    "/dev/btpower"
 
 enum {
     BT_STATUS_SUCCESS = 0,
@@ -71,7 +72,7 @@ enum {
     BT_STATUS_NOMEM,
     BT_STATUS_PROP_FAILURE,
 };
-
+#define BT_CMD_PWR_CTRL         0xbfad
 struct bt_qcom_struct {
     int fd[2];
     int ant_fd;

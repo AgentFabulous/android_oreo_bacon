@@ -37,6 +37,7 @@ endif
 
 ifneq (,$(filter userdebug eng,$(TARGET_BUILD_VARIANT)))
 LOCAL_CFLAGS += -DPANIC_ON_SOC_CRASH
+LOCAL_CFLAGS += -DENABLE_DBG_FLAGS
 endif
 
 LOCAL_C_INCLUDES += \
