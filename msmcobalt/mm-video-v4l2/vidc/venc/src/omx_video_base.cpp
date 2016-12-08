@@ -47,11 +47,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/prctl.h>
+#include <sys/ioctl.h>
 #ifdef _ANDROID_ICS_
 #include <media/hardware/HardwareAPI.h>
 #include <gralloc_priv.h>
 #endif
-#ifndef _ANDROID_
+#ifdef _USE_GLIB_
 #include <glib.h>
 #define strlcpy g_strlcpy
 #endif
@@ -1300,6 +1301,7 @@ bool omx_video::execute_output_flush(void)
 
         if (ident == OMX_COMPONENT_GENERATE_FTB ) {
             pending_output_buffers++;
+            VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
             fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_FBD) {
             fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
@@ -1342,6 +1344,7 @@ bool omx_video::execute_input_flush(void)
         m_etb_q.pop_entry(&p1,&p2,&ident);
         if (ident == OMX_COMPONENT_GENERATE_ETB) {
             pending_input_buffers++;
+            VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_EBD) {
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
@@ -1404,6 +1407,7 @@ bool omx_video::execute_flush_all(void)
         m_etb_q.pop_entry(&p1,&p2,&ident);
         if (ident == OMX_COMPONENT_GENERATE_ETB) {
             pending_input_buffers++;
+            VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_EBD) {
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
@@ -1435,6 +1439,7 @@ bool omx_video::execute_flush_all(void)
 
         if (ident == OMX_COMPONENT_GENERATE_FTB ) {
             pending_output_buffers++;
+            VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
             fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_FBD) {
             fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
@@ -3792,6 +3797,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
 OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
+    VIDC_TRACE_NAME_HIGH("ETB");
     (void)hComp;
     OMX_U8 *pmem_data_buf = NULL;
     int push_cnt = 0;
@@ -3836,6 +3842,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
                     if (media_buffer->meta_handle == NULL)
                         met_error = true;
                     else {
+                        // TBD: revisit this check !
                         int nFds = media_buffer->meta_handle->numFds,
                             nInt = media_buffer->meta_handle->numInts;
                         met_error = ((nFds == 1 && nInt >= 2) /*normal*/ ||
@@ -3863,6 +3870,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     }
 
     pending_input_buffers++;
+    VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
     if (input_flush_progress == true) {
         post_event ((unsigned long)buffer,0,
                 OMX_COMPONENT_GENERATE_EBD);
@@ -3884,13 +3892,19 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         }
         if (media_buffer->buffer_type == LEGACY_CAM_SOURCE) {
             Input_pmem_info.buffer = media_buffer;
-            Input_pmem_info.fd = media_buffer->meta_handle->data[0];
+            Input_pmem_info.fd = MetaBufferUtil::getFdAt(media_buffer->meta_handle, 0);
 #ifdef _MSM8974_
             fd = Input_pmem_info.fd;
 #endif
-            Input_pmem_info.offset = media_buffer->meta_handle->data[1];
-            Input_pmem_info.size = media_buffer->meta_handle->data[2];
-            DEBUG_PRINT_LOW("ETB (meta-Camera) fd = %d, offset = %d, size = %d",
+            int offset = MetaBufferUtil::getIntAt(media_buffer->meta_handle, 0, MetaBufferUtil::INT_OFFSET);
+            int size = MetaBufferUtil::getIntAt(media_buffer->meta_handle, 0, MetaBufferUtil::INT_SIZE);
+            if (offset < 0 || size < 0) {
+                DEBUG_PRINT_ERROR("meta-buffer is invalid!");
+                return OMX_ErrorBadParameter;
+            }
+            Input_pmem_info.offset = offset;
+            Input_pmem_info.size = size;
+            DEBUG_PRINT_INFO("ETB (meta-Camera) fd = %d, offset = %d, size = %d",
                     Input_pmem_info.fd, Input_pmem_info.offset,
                     Input_pmem_info.size);
         } else {
@@ -3956,6 +3970,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         post_event ((unsigned long)buffer,0,OMX_COMPONENT_GENERATE_EBD);
         /*Generate an async error and move to invalid state*/
         pending_input_buffers--;
+        VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
         if (hw_overload) {
             return OMX_ErrorInsufficientResources;
         }
@@ -4033,6 +4048,7 @@ OMX_ERRORTYPE  omx_video::fill_this_buffer_proxy(
         OMX_IN OMX_HANDLETYPE        hComp,
         OMX_IN OMX_BUFFERHEADERTYPE* bufferAdd)
 {
+    VIDC_TRACE_NAME_HIGH("FTB");
     (void)hComp;
     OMX_U8 *pmem_data_buf = NULL;
     OMX_ERRORTYPE nRet = OMX_ErrorNone;
@@ -4045,6 +4061,7 @@ OMX_ERRORTYPE  omx_video::fill_this_buffer_proxy(
     }
 
     pending_output_buffers++;
+    VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
     /*Return back the output buffer to client*/
     if ( m_sOutPortDef.bEnabled != OMX_TRUE || output_flush_progress == true) {
         DEBUG_PRINT_LOW("o/p port is Disabled or Flush in Progress");
@@ -4062,6 +4079,7 @@ OMX_ERRORTYPE  omx_video::fill_this_buffer_proxy(
         DEBUG_PRINT_ERROR("ERROR: dev_fill_buf() Failed");
         post_event ((unsigned long)bufferAdd,0,OMX_COMPONENT_GENERATE_FBD);
         pending_output_buffers--;
+        VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
         return OMX_ErrorBadParameter;
     }
 
@@ -4432,6 +4450,7 @@ bool omx_video::release_input_done(void)
 OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
         OMX_BUFFERHEADERTYPE * buffer)
 {
+    VIDC_TRACE_NAME_HIGH("FBD");
 #ifdef _MSM8974_
     int index = buffer - m_out_mem_ptr;
 #endif
@@ -4442,6 +4461,9 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
     }
 
     pending_output_buffers--;
+    VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
+    VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
+    VIDC_TRACE_INT_LOW("FBD-size", buffer->nFilledLen);
 
     if (secure_session && m_pCallbacks.FillBufferDone) {
         if (buffer->nFilledLen > 0)
@@ -4485,6 +4507,7 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
 OMX_ERRORTYPE omx_video::empty_buffer_done(OMX_HANDLETYPE         hComp,
         OMX_BUFFERHEADERTYPE* buffer)
 {
+    VIDC_TRACE_NAME_HIGH("EBD");
     int buffer_index  = -1;
 
     buffer_index = buffer - ((mUseProxyColorFormat && !mUsesColorConversion) ? meta_buffer_hdr : m_inp_mem_ptr);
@@ -4496,6 +4519,7 @@ OMX_ERRORTYPE omx_video::empty_buffer_done(OMX_HANDLETYPE         hComp,
     }
 
     pending_input_buffers--;
+    VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
 
     if (mUseProxyColorFormat &&
         (buffer_index >= 0 && (buffer_index < (int)m_sInPortDef.nBufferCountActual))) {
@@ -4853,13 +4877,17 @@ void omx_video::omx_release_meta_buffer(OMX_BUFFERHEADERTYPE *buffer)
         } else {
             media_ptr = (LEGACY_CAM_METADATA_TYPE *) buffer->pBuffer;
             if (media_ptr && media_ptr->meta_handle) {
-                if (media_ptr->buffer_type == LEGACY_CAM_SOURCE &&
-                        media_ptr->meta_handle->numFds == 1 &&
-                        media_ptr->meta_handle->numInts >= 2) {
-                    Input_pmem.fd = media_ptr->meta_handle->data[0];
+                if (media_ptr->buffer_type == LEGACY_CAM_SOURCE) {
                     Input_pmem.buffer = media_ptr;
-                    Input_pmem.size = media_ptr->meta_handle->data[2];
-                    Input_pmem.offset = media_ptr->meta_handle->data[1];
+                    Input_pmem.fd = MetaBufferUtil::getFdAt(media_ptr->meta_handle, 0);
+                    int size = MetaBufferUtil::getIntAt(media_ptr->meta_handle, 0, MetaBufferUtil::INT_SIZE);
+                    int offset = MetaBufferUtil::getIntAt(media_ptr->meta_handle, 0, MetaBufferUtil::INT_OFFSET);
+                    if (Input_pmem.fd < 0 || size < 0 || offset < 0) {
+                        DEBUG_PRINT_ERROR("Invalid meta buffer");
+                        meta_error = true;
+                    }
+                    Input_pmem.size = size;
+                    Input_pmem.offset = offset;
                     DEBUG_PRINT_LOW("EBD fd = %d, offset = %d, size = %d",Input_pmem.fd,
                             Input_pmem.offset,
                             Input_pmem.size);
@@ -5039,6 +5067,7 @@ void omx_video::print_debug_color_aspects(ColorAspects *aspects, const char *pre
 OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
         OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
+    VIDC_TRACE_NAME_LOW("ETB-Opaque");
     unsigned nBufIndex = 0;
     OMX_ERRORTYPE ret = OMX_ErrorNone;
     VideoGrallocMetadata *media_buffer; // This method primarily assumes gralloc-metadata
@@ -5303,9 +5332,9 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
         /*Will enable to verify camcorder in current TIPS can be removed*/
         if (media_buffer->buffer_type == LEGACY_CAM_SOURCE) {
             Input_pmem_info.buffer = media_buffer;
-            Input_pmem_info.fd = media_buffer->meta_handle->data[0];
-            Input_pmem_info.offset = media_buffer->meta_handle->data[1];
-            Input_pmem_info.size = media_buffer->meta_handle->data[2];
+            Input_pmem_info.fd = MetaBufferUtil::getFdAt(media_buffer->meta_handle, 0);
+            Input_pmem_info.offset = MetaBufferUtil::getIntAt(media_buffer->meta_handle, 0, MetaBufferUtil::INT_OFFSET);
+            Input_pmem_info.size = MetaBufferUtil::getIntAt(media_buffer->meta_handle, 0, MetaBufferUtil::INT_SIZE);
             m_graphicbuffer_size = Input_pmem_info.size;
             DEBUG_PRINT_LOW("ETB fd = %d, offset = %d, size = %d",Input_pmem_info.fd,
                     Input_pmem_info.offset,
@@ -5404,5 +5433,6 @@ OMX_ERRORTYPE omx_video::push_empty_eos_buffer(OMX_HANDLETYPE hComp,
     //buffer is sent to the the encoder
     m_pCallbacks.EmptyBufferDone(hComp, m_app_data, buffer);
     --pending_input_buffers;
+    VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
     return retVal;
 }
