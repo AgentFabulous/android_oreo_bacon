@@ -2018,11 +2018,16 @@ static wifi_error parse_stats_record(hal_info *info,
     } else if (pkt_stats_header->log_type == PKTLOG_TYPE_PKT_DUMP ||
                pkt_stats_header->log_type == PKTLOG_TYPE_PKT_DUMP_V2) {
         pthread_mutex_lock(&info->pkt_fate_stats_lock);
-        if (info->fate_monitoring_enabled)
-            status = parse_pkt_fate_stats(info,
-                                          (u8 *)(pkt_stats_header + 1),
-                                          pkt_stats_header->size);
-        else
+        if (info->fate_monitoring_enabled) {
+            if (pkt_stats_header->flags & PKT_INFO_FLG_PKT_DUMP_V2)
+                status = parse_pkt_fate_stats(info,
+                                              (u8 *)pkt_stats_header + sizeof(wh_pktlog_hdr_v2_t),
+                                              pkt_stats_header->size);
+            else
+                status = parse_pkt_fate_stats(info,
+                                              (u8 *)pkt_stats_header + sizeof(wh_pktlog_hdr_t),
+                                              pkt_stats_header->size);
+        } else
             status = WIFI_SUCCESS;
         pthread_mutex_unlock(&info->pkt_fate_stats_lock);
     } else {
@@ -2057,8 +2062,13 @@ static wifi_error parse_stats(hal_info *info, u8 *data, u32 buflen)
                   pkt_stats_header->log_type);
             return status;
         }
-        data += (sizeof(wh_pktlog_hdr_t) + pkt_stats_header->size);
-        buflen -= (sizeof(wh_pktlog_hdr_t) + pkt_stats_header->size);
+        if (pkt_stats_header->flags & PKT_INFO_FLG_PKT_DUMP_V2){
+            data += (sizeof(wh_pktlog_hdr_v2_t) + pkt_stats_header->size);
+            buflen -= (sizeof(wh_pktlog_hdr_v2_t) + pkt_stats_header->size);
+        } else {
+            data += (sizeof(wh_pktlog_hdr_t) + pkt_stats_header->size);
+            buflen -= (sizeof(wh_pktlog_hdr_t) + pkt_stats_header->size);
+        }
     } while (buflen > 0);
 
     return status;

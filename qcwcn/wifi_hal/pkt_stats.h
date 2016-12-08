@@ -61,6 +61,7 @@
 #define PKT_INFO_FLG_RX_REORDER_DROP_S   0x100
 #define PKT_INFO_FLG_RX_PEER_INFO_S      0x200
 #define PKT_INFO_FLG_UNKNOWN_S           0x400
+#define PKT_INFO_FLG_PKT_DUMP_V2         0x8000
 
 /* MASK value of flags based on RX_STAT content.
  * These are the events that carry Rx decriptor
@@ -80,6 +81,16 @@ typedef struct {
     u16 size;
     u32 timestamp;
 } __attribute__((packed)) wh_pktlog_hdr_t;
+
+/* Format of the v2 packet stats event*/
+typedef struct {
+    u16 flags;
+    u16 missed_cnt;
+    u16 log_type;
+    u16 size;
+    u32 timestamp;
+    u32 reserved;
+} __attribute__((packed)) wh_pktlog_hdr_v2_t;
 
 /*Rx stats specific structures. */
 struct rx_attention {
