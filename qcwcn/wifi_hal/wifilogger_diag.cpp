@@ -2015,7 +2015,8 @@ static wifi_error parse_stats_record(hal_info *info,
                                     pkt_stats_header->size);
         else
             status = WIFI_SUCCESS;
-    } else if (pkt_stats_header->log_type == PKTLOG_TYPE_PKT_DUMP) {
+    } else if (pkt_stats_header->log_type == PKTLOG_TYPE_PKT_DUMP ||
+               pkt_stats_header->log_type == PKTLOG_TYPE_PKT_DUMP_V2) {
         pthread_mutex_lock(&info->pkt_fate_stats_lock);
         if (info->fate_monitoring_enabled)
             status = parse_pkt_fate_stats(info,
