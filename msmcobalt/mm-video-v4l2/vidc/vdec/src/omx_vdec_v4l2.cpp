@@ -554,6 +554,19 @@ VideoHeap::VideoHeap(int fd, size_t size, void* base)
 }
 #endif
 #endif // _ANDROID_
+
+bool is_platform_tp10capture_supported()
+{
+    char platform_name[PROPERTY_VALUE_MAX] = {0};
+    property_get("ro.board.platform", platform_name, "0");
+    if (!strncmp(platform_name, "msmcobalt", 9)) {
+        DEBUG_PRINT_HIGH("TP10 on capture port is supported");
+        return true;
+    }
+    DEBUG_PRINT_HIGH("TP10 on capture port is not supported");
+    return false;
+}
+
 /* ======================================================================
    FUNCTION
    omx_vdec::omx_vdec
@@ -644,7 +657,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_queued_codec_config_count(0),
     current_perf_level(V4L2_CID_MPEG_VIDC_PERF_LEVEL_NOMINAL),
     secure_scaling_to_non_secure_opb(false),
-    m_force_compressed_for_dpb(false),
+    m_force_compressed_for_dpb(true),
     m_is_display_session(false)
 {
     m_pipe_in = -1;
@@ -658,7 +671,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
 #ifdef _ANDROID_
     char property_value[PROPERTY_VALUE_MAX] = {0};
     property_get("vidc.debug.level", property_value, "1");
-    debug_level = atoi(property_value);
+    debug_level = strtoul(property_value, NULL, 16);
     property_value[0] = '\0';
 
     DEBUG_PRINT_HIGH("In OMX vdec Constructor");
@@ -815,6 +828,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_internal_hdr_info.nPortIndex = (OMX_U32)OMX_CORE_OUTPUT_PORT_INDEX;
     m_change_client_hdr_info = false;
     pthread_mutex_init(&m_hdr_info_client_lock, NULL);
+    m_dither_config = is_platform_tp10capture_supported() ? DITHER_DISABLE : DITHER_ALL_COLORSPACE;
+    m_color_space = EXCEPT_BT2020;
 }
 
 static const int event_type[] = {
@@ -970,6 +985,7 @@ OMX_ERRORTYPE omx_vdec::set_dpb(bool is_split_mode, int dpb_color_format)
          "unknown",
          capture_capability == V4L2_PIX_FMT_NV12 ? "nv12":
          capture_capability == V4L2_PIX_FMT_NV12_UBWC ? "nv12_ubwc":
+         capture_capability == V4L2_PIX_FMT_NV12_TP10_UBWC ? "nv12_10bit_ubwc":
          "unknown");
 
     ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_STREAM_OUTPUT_MODE;
@@ -995,11 +1011,51 @@ OMX_ERRORTYPE omx_vdec::set_dpb(bool is_split_mode, int dpb_color_format)
 }
 
 
-OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool force_split_mode)
+OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_color_fmt)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     struct v4l2_format fmt;
     int rc = 0;
+    bool cpu_access = (capture_capability != V4L2_PIX_FMT_NV12_UBWC) &&
+        capture_capability != V4L2_PIX_FMT_NV12_TP10_UBWC;
+    bool tp10_enable = !cpu_access &&
+        dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10;
+    bool dither_enable = true;
+
+    switch (m_dither_config) {
+    case DITHER_DISABLE:
+        dither_enable = false;
+        break;
+    case DITHER_COLORSPACE_EXCEPTBT2020:
+        dither_enable = (m_color_space == EXCEPT_BT2020);
+        break;
+    case DITHER_ALL_COLORSPACE:
+        dither_enable = true;
+        break;
+    default:
+        DEBUG_PRINT_ERROR("Unsupported dither configuration:%d", m_dither_config);
+    }
+
+    if (tp10_enable && !dither_enable) {
+        drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
+        capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
+
+        memset(&fmt, 0x0, sizeof(struct v4l2_format));
+        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+        rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
+        if (rc) {
+            DEBUG_PRINT_ERROR("%s: Failed get format on capture mplane", __func__);
+            return OMX_ErrorUnsupportedSetting;
+        }
+        fmt.fmt.pix_mp.pixelformat = capture_capability;
+        rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
+        if (rc) {
+            DEBUG_PRINT_ERROR("%s: Failed set format on capture mplane", __func__);
+            return OMX_ErrorUnsupportedSetting;
+        }
+
+    }
+
 
     if (!BITMASK_PRESENT(&m_flags ,OMX_COMPONENT_IDLE_PENDING) &&
         !BITMASK_PRESENT(&m_flags, OMX_COMPONENT_OUTPUT_ENABLE_PENDING)) {
@@ -1007,12 +1063,9 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool force_split_mode)
         return eRet;
     }
 
-    bool cpu_access = capture_capability != V4L2_PIX_FMT_NV12_UBWC;
 
     if (cpu_access) {
         if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8) {
-            if ((m_force_compressed_for_dpb || (m_progressive && (eCompressionFormat != OMX_VIDEO_CodingVP9))) &&
-                !force_split_mode && !m_disable_split_mode && !drv_ctx.idr_only_decoding) {
             /* Disabled split mode for VP9. In split mode the DPB buffers are part of the internal
              * scratch buffers and the driver does not does the reference buffer management for
              * scratch buffers. In case of VP9 with spatial scalability, when a sequence changed
@@ -1024,10 +1077,23 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool force_split_mode)
              * and hence the DPB buffers get unmapped. For other codecs it does not matter
              * as with the new SPS/PPS, the DPB is flushed.
              */
+            bool is_not_vp9 = eCompressionFormat != OMX_VIDEO_CodingVP9;
+            bool eligible_for_split_dpb_ubwc =
+               m_progressive == MSM_VIDC_PIC_STRUCT_PROGRESSIVE &&     //@ Due to Venus limitation for Interlaced, Split mode enabled only for Progressive.
+               is_not_vp9                                       &&     //@ Split mode disabled for VP9.
+               !drv_ctx.idr_only_decoding                       &&     //@ Split mode disabled for Thumbnail usecase.
+               !m_disable_split_mode;                                  //@ Set prop to disable split mode
+
+            //Since opb is linear, dpb should also be linear.
+            if (split_opb_dpb_with_same_color_fmt) {
+                eligible_for_split_dpb_ubwc = false;
+            }
+
+            if (eligible_for_split_dpb_ubwc) {
                 //split DPB-OPB
                 //DPB -> UBWC , OPB -> Linear
                 eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC);
-            } else if (force_split_mode) {
+            } else if (split_opb_dpb_with_same_color_fmt) {
                         //DPB -> Linear, OPB -> Linear
                         eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
             } else {
@@ -1041,7 +1107,7 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool force_split_mode)
         }
     } else { //no cpu access
         if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8) {
-            if (force_split_mode) {
+            if (split_opb_dpb_with_same_color_fmt) {
                 //split DPB-OPB
                 //DPB -> UBWC, OPB -> UBWC
                 eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC);
@@ -1050,27 +1116,22 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool force_split_mode)
                 eRet = set_dpb(false, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
             }
         } else if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
-            //split DPB-OPB
-            //DPB -> UBWC, OPB -> UBWC
-            eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
+            if (dither_enable) {
+                //split DPB-OPB
+                //DPB -> TP10UBWC, OPB -> UBWC
+                eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
+            } else {
+                //combined DPB-OPB
+                //DPB -> TP10UBWC, OPB -> TP10UBWC
+                eRet = set_dpb(false, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
+            }
         }
     }
     if (eRet) {
         DEBUG_PRINT_HIGH("Failed to set DPB buffer mode: %d", eRet);
     }
 
-    //Restore the capture format again here, because
-    //in switching between different DPB-OPB modes, the pixelformat
-    //on capture port may be changed. Don't change resolutions.
-    memset(&fmt, 0x0, sizeof(struct v4l2_format));
-    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-    rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
-    fmt.fmt.pix_mp.pixelformat = capture_capability;
-    rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
-    if (rc) {
-        DEBUG_PRINT_ERROR("%s: Failed set format on capture mplane", __func__);
-        return OMX_ErrorUnsupportedSetting;
-    }
+
 
     return eRet;
 }
@@ -1132,6 +1193,15 @@ int omx_vdec::decide_downscalar()
     struct v4l2_format fmt;
     enum color_fmts color_format;
     OMX_U32 width, height;
+
+    if (capture_capability == V4L2_PIX_FMT_NV12_TP10_UBWC) {
+        rc = disable_downscalar();
+        if (rc) {
+            DEBUG_PRINT_ERROR("Disable downscalar failed!");
+            return rc;
+        }
+        return 0;
+    }
 
     if  (!m_downscalar_width || !m_downscalar_height) {
         DEBUG_PRINT_LOW("%s: downscalar not supported", __func__);
@@ -1969,7 +2039,8 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
     buf_index = buffer - m_out_mem_ptr;
     temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr;
 
-    if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC) {
+    if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC ||
+            drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_TP10_UBWC) {
         DEBUG_PRINT_HIGH("Logging UBWC yuv width/height(%u/%u)",
             drv_ctx.video_resolution.frame_width,
             drv_ctx.video_resolution.frame_height);
@@ -1982,7 +2053,7 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
             unsigned int y_plane, y_meta_plane;
             int y_stride = 0, y_sclines = 0;
             int y_meta_stride = 0, y_meta_scanlines = 0, uv_meta_stride = 0, uv_meta_scanlines = 0;
-            int color_fmt = COLOR_FMT_NV12_UBWC;
+            int color_fmt = (drv_ctx.output_format== VDEC_YUV_FORMAT_NV12_UBWC)? COLOR_FMT_NV12_UBWC: COLOR_FMT_NV12_BPP10_UBWC;
             int i;
             int bytes_written = 0;
 
@@ -2010,7 +2081,7 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
                 temp += uv_meta_stride;
             }
         }
-    } else if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12 && m_debug.outfile) {
+    } else if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12) {
         int stride = drv_ctx.video_resolution.stride;
         int scanlines = drv_ctx.video_resolution.scan_lines;
         if (m_smoothstreaming_mode) {
@@ -3266,6 +3337,7 @@ bool omx_vdec::execute_input_flush()
             m_cb.EmptyBufferDone(&m_cmp ,m_app_data, (OMX_BUFFERHEADERTYPE *)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_ETB) {
             pending_input_buffers++;
+            VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
             DEBUG_PRINT_LOW("Flush Input OMX_COMPONENT_GENERATE_ETB %p, pending_input_buffers %d",
                     (OMX_BUFFERHEADERTYPE *)p2, pending_input_buffers);
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
@@ -4053,6 +4125,9 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                                } else if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC) {
                                                    stride = VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, portDefn->format.video.nFrameWidth);
                                                    slice = VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, portDefn->format.video.nFrameHeight);
+                                               } else if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_TP10_UBWC) {
+                                                   stride = VENUS_Y_STRIDE(COLOR_FMT_NV12_BPP10_UBWC, portDefn->format.video.nFrameWidth);
+                                                   slice = VENUS_Y_SCANLINES(COLOR_FMT_NV12_BPP10_UBWC, portDefn->format.video.nFrameHeight);
                                                } else {
                                                    stride = portDefn->format.video.nFrameWidth;
                                                    slice = portDefn->format.video.nFrameHeight;
@@ -7194,6 +7269,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
 OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
+    VIDC_TRACE_NAME_HIGH("ETB");
     (void) hComp;
     int push_cnt = 0,i=0;
     unsigned nPortIndex = 0;
@@ -7218,6 +7294,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     }
 
     pending_input_buffers++;
+    VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
 
     /* return zero length and not an EOS buffer */
     if (!arbitrary_bytes && (buffer->nFilledLen == 0) &&
@@ -7260,6 +7337,8 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         }
     }
 
+    VIDC_TRACE_INT_LOW("ETB-TS", buffer->nTimeStamp / 1000);
+    VIDC_TRACE_INT_LOW("ETB-size", buffer->nFilledLen);
     DEBUG_PRINT_LOW("ETBProxy: bufhdr = %p, bufhdr->pBuffer = %p", buffer, buffer->pBuffer);
     /*for use buffer we need to memcpy the data*/
     temp_buffer->buffer_len = buffer->nFilledLen;
@@ -7532,6 +7611,7 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
         OMX_IN OMX_HANDLETYPE        hComp,
         OMX_IN OMX_BUFFERHEADERTYPE* bufferAdd)
 {
+    VIDC_TRACE_NAME_HIGH("FTB");
     OMX_ERRORTYPE nRet = OMX_ErrorNone;
     OMX_BUFFERHEADERTYPE *buffer = bufferAdd;
     unsigned nPortIndex = 0;
@@ -7565,6 +7645,7 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     }
 
     pending_output_buffers++;
+    VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
     buffer = client_buffers.get_dr_buf_hdr(bufferAdd);
     if (!buffer) {
        DEBUG_PRINT_ERROR("err: client_buffer ptr invalid");
@@ -7580,6 +7661,7 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
         buffer->nFilledLen = 0;
         m_cb.FillBufferDone (hComp,m_app_data,buffer);
         pending_output_buffers--;
+        VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
         return OMX_ErrorBadParameter;
     }
 
@@ -8190,6 +8272,7 @@ bool omx_vdec::release_input_done(void)
 OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         OMX_BUFFERHEADERTYPE * buffer)
 {
+    VIDC_TRACE_NAME_HIGH("FBD");
     OMX_QCOM_PLATFORM_PRIVATE_PMEM_INFO *pPMEMInfo = NULL;
     if (!buffer || (buffer - m_out_mem_ptr) >= (int)drv_ctx.op_buf.actualcount) {
         DEBUG_PRINT_ERROR("[FBD] ERROR in ptr(%p)", buffer);
@@ -8221,6 +8304,7 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
     DEBUG_PRINT_LOW("fill_buffer_done: bufhdr = %p, bufhdr->pBuffer = %p, flags: 0x%x, timestamp: %lld",
             buffer, buffer->pBuffer, buffer->nFlags, buffer->nTimeStamp);
     pending_output_buffers --;
+    VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
 
     if (buffer->nFlags & OMX_BUFFERFLAG_EOS) {
         DEBUG_PRINT_HIGH("Output EOS has been reached");
@@ -8302,6 +8386,7 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
             }
         }
     }
+    VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
 
     if (m_cb.FillBufferDone) {
         if (buffer->nFilledLen > 0) {
@@ -8468,7 +8553,7 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
 OMX_ERRORTYPE omx_vdec::empty_buffer_done(OMX_HANDLETYPE         hComp,
         OMX_BUFFERHEADERTYPE* buffer)
 {
-
+    VIDC_TRACE_NAME_HIGH("EBD");
     int nBufferIndex = buffer - m_inp_mem_ptr;
 
     if (buffer == NULL || (nBufferIndex >= (int)drv_ctx.ip_buf.actualcount)) {
@@ -8479,6 +8564,7 @@ OMX_ERRORTYPE omx_vdec::empty_buffer_done(OMX_HANDLETYPE         hComp,
     DEBUG_PRINT_LOW("empty_buffer_done: bufhdr = %p, bufhdr->pBuffer = %p, bufhdr->nFlags = 0x%x",
             buffer, buffer->pBuffer, buffer->nFlags);
     pending_input_buffers--;
+    VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
 
     if (arbitrary_bytes) {
         if (pdest_frame == NULL && input_flush_progress == false) {
@@ -8869,7 +8955,12 @@ int omx_vdec::async_message_process (void *context, void* message)
                                VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, omx->drv_ctx.video_resolution.frame_width);
                            omx->drv_ctx.video_resolution.scan_lines =
                                VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, omx->drv_ctx.video_resolution.frame_height);
-                       }
+                       } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_TP10_UBWC) {
+                           omx->drv_ctx.video_resolution.stride =
+                               VENUS_Y_STRIDE(COLOR_FMT_NV12_BPP10_UBWC, omx->drv_ctx.video_resolution.frame_width);
+                           omx->drv_ctx.video_resolution.scan_lines =
+                               VENUS_Y_SCANLINES(COLOR_FMT_NV12_BPP10_UBWC, omx->drv_ctx.video_resolution.frame_height);
+                        }
 
                        omx->post_event(OMX_CORE_OUTPUT_PORT_INDEX,
                                 OMX_IndexConfigCommonOutputCrop,
@@ -12024,8 +12115,9 @@ fail_update_buf_req:
 bool omx_vdec::allocate_color_convert_buf::set_color_format(
         OMX_COLOR_FORMATTYPE dest_color_format)
 {
-    bool status = true;
-    OMX_COLOR_FORMATTYPE drv_color_format;
+    bool status = true, drv_colorformat_c2d_enable = false;
+    bool dest_color_format_c2d_enable = false;
+    OMX_COLOR_FORMATTYPE drv_color_format = OMX_COLOR_FormatUnused;
     if (!omx) {
         DEBUG_PRINT_ERROR("Invalid client in color convert");
         return false;
@@ -12041,18 +12133,27 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
      else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC) {
          drv_color_format = (OMX_COLOR_FORMATTYPE)
                   QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
+     } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_TP10_UBWC) {
+            drv_color_format = (OMX_COLOR_FORMATTYPE)
+                    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed;
      } else {
         DEBUG_PRINT_ERROR("Incorrect color format");
         status = false;
     }
-    if (status &&
-        drv_color_format != dest_color_format &&
-        drv_color_format != (OMX_COLOR_FORMATTYPE)
-                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView &&
-        drv_color_format != (OMX_COLOR_FORMATTYPE)
-                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed &&
-        dest_color_format != (OMX_COLOR_FORMATTYPE)
-                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
+    drv_colorformat_c2d_enable = (drv_color_format != dest_color_format) &&
+        (drv_color_format != (OMX_COLOR_FORMATTYPE)
+                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView) &&
+        (drv_color_format != (OMX_COLOR_FORMATTYPE)
+                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) &&
+        (drv_color_format != (OMX_COLOR_FORMATTYPE)
+                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed);
+
+    dest_color_format_c2d_enable = (dest_color_format != (OMX_COLOR_FORMATTYPE)
+            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) &&
+            (dest_color_format != (OMX_COLOR_FORMATTYPE)
+                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed);
+
+    if (status && drv_colorformat_c2d_enable && dest_color_format_c2d_enable) {
         DEBUG_PRINT_LOW("Enabling C2D");
         if ((dest_color_format != OMX_COLOR_FormatYUV420Planar) &&
            (dest_color_format != OMX_COLOR_FormatYUV420SemiPlanar)) {
@@ -12357,6 +12458,8 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
                     dest_color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
         } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC){
              dest_color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
+        } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_TP10_UBWC){
+             dest_color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed;
         } else
             status = false;
     } else {
@@ -12526,6 +12629,7 @@ void omx_vdec::send_codec_config() {
                     }
                 } else {
                     pending_input_buffers++;
+                    VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
                     DEBUG_PRINT_LOW("\n Flush Input OMX_COMPONENT_GENERATE_ETB %p, pending_input_buffers %d",
                             (OMX_BUFFERHEADERTYPE *)p2, pending_input_buffers);
                     empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
@@ -12850,6 +12954,9 @@ void omx_vdec::prefetchNewBuffers() {
     case VDEC_YUV_FORMAT_NV12_UBWC:
         color_fmt = COLOR_FMT_NV12_UBWC;
         break;
+    case VDEC_YUV_FORMAT_NV12_TP10_UBWC:
+        color_fmt = COLOR_FMT_NV12_BPP10_UBWC;
+        break;
     default:
         color_fmt = -1;
         DEBUG_PRINT_HIGH("Color format : %x not supported for secure memory prefetching\n", drv_ctx.output_format);
@@ -12919,4 +13026,3 @@ prefetch_exit:
         free(custom_data);
     }
 }
-

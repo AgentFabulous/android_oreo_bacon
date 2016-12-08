@@ -50,6 +50,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <qdMetaData.h>
 
+#define ATRACE_TAG ATRACE_TAG_VIDEO
+#include <utils/Trace.h>
+
 #define YUV_STATS_LIBRARY_NAME "libgpustats.so" // UBWC case: use GPU library
 
 #define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
@@ -879,7 +882,7 @@ int venc_dev::venc_set_format(int format)
     return rc;
 }
 
-OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extradata_info)
+OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extradata_info, int flags)
 {
     if (extradata_info->allocated) {
         DEBUG_PRINT_HIGH("2nd allocation return for port = %d",extradata_info->port_index);
@@ -900,7 +903,7 @@ OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extrada
         extradata_info->ion.ion_device_fd = venc_handle->alloc_map_ion_memory(
                 extradata_info->size,
                 &extradata_info->ion.ion_alloc_data,
-                &extradata_info->ion.fd_ion_data, 0);
+                &extradata_info->ion.fd_ion_data, flags);
 
 
         if (extradata_info->ion.ion_device_fd < 0) {
@@ -2479,8 +2482,8 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 }
 #ifdef _PQ_
                 m_pq.pConfig.a_qp.roi_enabled = (OMX_U32)true;
-                allocate_extradata(&m_pq.roi_extradata_info);
-                m_pq.configure();
+                allocate_extradata(&m_pq.roi_extradata_info, ION_FLAG_CACHED);
+                m_pq.configure(m_sVenc_cfg.input_width, m_sVenc_cfg.input_height);
 #endif // _PQ_
                 break;
             }
@@ -3449,7 +3452,7 @@ bool venc_dev::venc_use_buf(void *buf_addr, unsigned port,unsigned index)
         extra_idx = EXTRADATA_IDX(num_input_planes);
 
         if ((num_input_planes > 1) && (extra_idx)) {
-            rc = allocate_extradata(&input_extradata_info);
+            rc = allocate_extradata(&input_extradata_info, ION_FLAG_CACHED);
 
             if (rc)
                 DEBUG_PRINT_ERROR("Failed to allocate extradata: %d\n", rc);
@@ -3494,7 +3497,7 @@ if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
         extra_idx = EXTRADATA_IDX(num_output_planes);
 
         if ((num_output_planes > 1) && (extra_idx)) {
-            rc = allocate_extradata(&output_extradata_info);
+            rc = allocate_extradata(&output_extradata_info, 0);
 
             if (rc)
                 DEBUG_PRINT_ERROR("Failed to allocate extradata: %d", rc);
@@ -3739,17 +3742,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         struct v4l2_format fmt;
                         OMX_COLOR_FORMATTYPE color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
 
-                        if (!mBatchSize && hnd->numFds + hnd->numInts > 5) {
-                            color_format = (OMX_COLOR_FORMATTYPE)hnd->data[5];
-                        } else if (mBatchSize) {
-                            color_format = (OMX_COLOR_FORMATTYPE)BatchInfo::getColorFormatAt(hnd, 0);
-                        }
-
-                        if (!mBatchSize && hnd->numFds + hnd->numInts > 3) {
-                            usage = hnd->data[3];
-                        } else if (mBatchSize) {
-                            usage = BatchInfo::getUsageAt(hnd, 0);
-                        }
+                        color_format = (OMX_COLOR_FORMATTYPE)MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_COLORFORMAT);
+                        usage = MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_USAGE);
+                        usage = usage > 0 ? usage : 0;
 
                         memset(&fmt, 0, sizeof(fmt));
                         if (usage & private_handle_t::PRIV_FLAGS_ITU_R_709 ||
@@ -3781,7 +3776,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             buf.flags = V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
                         }
 
-                        if (!venc_set_color_format(color_format)) {
+                        if (color_format > 0 && !venc_set_color_format(color_format)) {
                             DEBUG_PRINT_ERROR("Failed setting color format in Camerasource %lx", m_sVenc_cfg.inputformat);
                             return false;
                         }
@@ -3795,20 +3790,24 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     // Setting batch mode is sticky. We do not expect camera to change
                     // between batch and normal modes at runtime.
                     if (mBatchSize) {
-                        if ((unsigned)hnd->numFds != mBatchSize) {
+                        if ((unsigned int)MetaBufferUtil::getBatchSize(hnd) != mBatchSize) {
                             DEBUG_PRINT_ERROR("Don't support dynamic batch sizes (changed from %d->%d)",
-                                    mBatchSize, hnd->numFds);
+                                    mBatchSize, MetaBufferUtil::getBatchSize(hnd));
                             return false;
                         }
 
                         return venc_empty_batch ((OMX_BUFFERHEADERTYPE*)buffer, index);
                     }
 
-                    if (hnd->numFds + hnd->numInts > 2) {
-                        plane[0].data_offset = hnd->data[1];
-                        plane[0].length = hnd->data[2];
-                        plane[0].bytesused = hnd->data[2];
+                    int offset = MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_OFFSET);
+                    int length = MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_SIZE);
+                    if (offset < 0 || length < 0) {
+                        DEBUG_PRINT_ERROR("Invalid meta buffer handle!");
+                        return false;
                     }
+                    plane[0].data_offset = offset;
+                    plane[0].length = length;
+                    plane[0].bytesused = length;
                     DEBUG_PRINT_LOW("venc_empty_buf: camera buf: fd = %d filled %d of %d flag 0x%x format 0x%lx",
                             fd, plane[0].bytesused, plane[0].length, buf.flags, m_sVenc_cfg.inputformat);
                 } else if (meta_buf->buffer_type == kMetadataBufferTypeGrallocSource) {
@@ -3968,14 +3967,16 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     }
 
 #ifdef _PQ_
-    if (!streaming[OUTPUT_PORT] && !m_pq.is_pq_force_disable) {
-        /*
-         * This is the place where all parameters for deciding
-         * PQ enablement are available. Evaluate PQ for the final time.
-         */
+    if (!streaming[OUTPUT_PORT]) {
         m_pq.is_YUV_format_uncertain = false;
-        m_pq.reinit(m_sVenc_cfg.inputformat);
-        venc_try_enable_pq();
+        if(venc_check_for_pq()) {
+            /*
+             * This is the place where all parameters for deciding
+             * PQ enablement are available. Evaluate PQ for the final time.
+             */
+            m_pq.reinit(m_sVenc_cfg.inputformat);
+            venc_configure_pq();
+        }
     }
 #endif // _PQ_
 
@@ -3988,6 +3989,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     buf.length = num_input_planes;
 
     handle_input_extradata(buf);
+
+    VIDC_TRACE_INT_LOW("ETB-TS", bufhdr->nTimeStamp / 1000);
 
     if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)
         buf.flags |= V4L2_QCOM_BUF_FLAG_EOS;
@@ -4056,12 +4059,12 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
                 if (!hnd) {
                     DEBUG_PRINT_ERROR("venc_empty_batch: invalid handle !");
                     return false;
-                } else if (hnd->numFds > kMaxBuffersInBatch) {
+                } else if (MetaBufferUtil::getBatchSize(hnd) > kMaxBuffersInBatch) {
                     DEBUG_PRINT_ERROR("venc_empty_batch: Too many buffers (%d) in batch. "
-                            "Max = %d", hnd->numFds, kMaxBuffersInBatch);
+                            "Max = %d", MetaBufferUtil::getBatchSize(hnd), kMaxBuffersInBatch);
                     status = false;
                 }
-                DEBUG_PRINT_LOW("venc_empty_batch: Batch of %d bufs", hnd->numFds);
+                DEBUG_PRINT_LOW("venc_empty_batch: Batch of %d bufs", MetaBufferUtil::getBatchSize(hnd));
             } else {
                 DEBUG_PRINT_ERROR("Batch supported for CameraSource buffers only !");
                 status = false;
@@ -4077,7 +4080,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
 
     if (status) {
         OMX_TICKS bufTimeStamp = 0ll;
-        int numBufs = hnd->numFds;
+        int numBufs = MetaBufferUtil::getBatchSize(hnd);
         int v4l2Ids[kMaxBuffersInBatch] = {-1};
         for (int i = 0; i < numBufs; ++i) {
             v4l2Ids[i] = mBatchInfo.registerBuffer(index);
@@ -4098,11 +4101,11 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             buf.index = (unsigned)v4l2Id;
             buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
             buf.memory = V4L2_MEMORY_USERPTR;
-            plane[0].reserved[0] = BatchInfo::getFdAt(hnd, i);
+            plane[0].reserved[0] = MetaBufferUtil::getFdAt(hnd, i);
             plane[0].reserved[1] = 0;
-            plane[0].data_offset = BatchInfo::getOffsetAt(hnd, i);
+            plane[0].data_offset = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_OFFSET);
             plane[0].m.userptr = (unsigned long)meta_buf;
-            plane[0].length = plane[0].bytesused = BatchInfo::getSizeAt(hnd, i);
+            plane[0].length = plane[0].bytesused = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_SIZE);
             buf.m.planes = plane;
             buf.length = num_input_planes;
 
@@ -4129,10 +4132,12 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             }
 
 #ifdef _PQ_
-            if (!streaming[OUTPUT_PORT] && !m_pq.is_pq_force_disable) {
+            if (!streaming[OUTPUT_PORT]) {
                 m_pq.is_YUV_format_uncertain = false;
-                m_pq.reinit(m_sVenc_cfg.inputformat);
-                venc_try_enable_pq();
+                if(venc_check_for_pq()) {
+                    m_pq.reinit(m_sVenc_cfg.inputformat);
+                    venc_configure_pq();
+                }
             }
 #endif // _PQ_
 
@@ -4151,12 +4156,14 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             }
 
             // timestamp differences from camera are in nano-seconds
-            bufTimeStamp = bufhdr->nTimeStamp + BatchInfo::getTimeStampAt(hnd, i) / 1000;
+            bufTimeStamp = bufhdr->nTimeStamp + MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_TIMESTAMP) / 1000;
 
             DEBUG_PRINT_LOW(" Q Batch [%d of %d] : buf=%p fd=%d len=%d TS=%lld",
                 i, numBufs, bufhdr, plane[0].reserved[0], plane[0].length, bufTimeStamp);
             buf.timestamp.tv_sec = bufTimeStamp / 1000000;
             buf.timestamp.tv_usec = (bufTimeStamp % 1000000);
+
+            VIDC_TRACE_INT_LOW("ETB-TS", bufTimeStamp / 1000);
 
             rc = ioctl(m_nDriver_fd, VIDIOC_QBUF, &buf);
             if (rc) {
@@ -7661,40 +7668,6 @@ bool venc_dev::BatchInfo::isPending(int bufferId) {
     return existsId < kMaxBufs;
 }
 
-int venc_dev::BatchInfo::getFdAt(native_handle_t *hnd, int index) {
-    int fd = hnd && index < hnd->numFds ? hnd->data[index] : -1;
-    return fd;
-}
-
-int venc_dev::BatchInfo::getOffsetAt(native_handle_t *hnd, int index) {
-    int off = hnd && index < hnd->numInts ? hnd->data[hnd->numFds + index] : -1;
-    return off;
-}
-
-int venc_dev::BatchInfo::getSizeAt(native_handle_t *hnd, int index) {
-    int size = hnd && (index + hnd->numFds) < hnd->numInts ?
-            hnd->data[2*hnd->numFds + index] : -1;
-    return size;
-}
-
-int venc_dev::BatchInfo::getUsageAt(native_handle_t *hnd, int index) {
-    int usage = hnd && (index + 2*hnd->numFds) < hnd->numInts ?
-            hnd->data[3*hnd->numFds + index] : 0;
-    return usage;
-}
-
-int venc_dev::BatchInfo::getColorFormatAt(native_handle_t *hnd, int index) {
-    int usage = hnd && (index + 4*hnd->numFds) < hnd->numInts ?
-            hnd->data[5*hnd->numFds + index] : 0;
-    return usage;
-}
-
-int venc_dev::BatchInfo::getTimeStampAt(native_handle_t *hnd, int index) {
-    int size = hnd && (index + 3*hnd->numFds) < hnd->numInts ?
-            hnd->data[4*hnd->numFds + index] : -1;
-    return size;
-}
-
 #ifdef _VQZIP_
 venc_dev::venc_dev_vqzip::venc_dev_vqzip()
 {
@@ -7780,7 +7753,7 @@ venc_dev::venc_dev_vqzip::~venc_dev_vqzip()
 #endif
 
 #ifdef _PQ_
-void venc_dev::venc_try_enable_pq(void)
+bool venc_dev::venc_check_for_pq(void)
 {
     bool rc_mode_supported = false;
     bool codec_supported = false;
@@ -7835,20 +7808,22 @@ void venc_dev::venc_try_enable_pq(void)
 
     m_pq.is_pq_enabled = enable;
 
-    if (enable) {
-        venc_set_extradata(OMX_ExtraDataEncoderOverrideQPInfo, (OMX_BOOL)enable);
-        extradata |= enable;
+    return enable;
+}
 
-        m_pq.pConfig.algo = ADAPTIVE_QP;
-        m_pq.pConfig.height = m_sVenc_cfg.input_height;
-        m_pq.pConfig.width = m_sVenc_cfg.input_width;
-        m_pq.pConfig.mb_height = 16;
-        m_pq.pConfig.mb_width = 16;
-        m_pq.pConfig.a_qp.pq_enabled = enable;
-        m_pq.pConfig.stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, m_sVenc_cfg.input_width);
-        m_pq.configure();
-    }
+void venc_dev::venc_configure_pq()
+{
+    venc_set_extradata(OMX_ExtraDataEncoderOverrideQPInfo, (OMX_BOOL)true);
+    extradata |= true;
+    m_pq.configure(m_sVenc_cfg.input_width, m_sVenc_cfg.input_height);
     return;
+}
+
+void venc_dev::venc_try_enable_pq(void)
+{
+    if(venc_check_for_pq()) {
+        venc_configure_pq();
+    }
 }
 
 venc_dev::venc_dev_pq::venc_dev_pq()
@@ -7886,6 +7861,7 @@ bool venc_dev::venc_dev_pq::init(unsigned long format)
             break;
     }
 
+    ATRACE_BEGIN("PQ init");
     if (status) {
         mLibHandle = dlopen(YUV_STATS_LIBRARY_NAME, RTLD_NOW);
         if (mLibHandle) {
@@ -7916,6 +7892,7 @@ bool venc_dev::venc_dev_pq::init(unsigned long format)
 
         }
     }
+    ATRACE_END();
 
     if (!status && mLibHandle) {
         if (mLibHandle)
@@ -7964,7 +7941,6 @@ bool venc_dev::venc_dev_pq::reinit(unsigned long format)
                                 " reinitializing PQ lib", format, configured_format);
         deinit();
         status = init(format);
-        get_caps();
     } else {
         // ignore if new format is same as configured
     }
@@ -8020,9 +7996,16 @@ bool venc_dev::venc_dev_pq::is_color_format_supported(unsigned long format)
     return support;
 }
 
-int venc_dev::venc_dev_pq::configure()
+int venc_dev::venc_dev_pq::configure(unsigned long width, unsigned long height)
 {
     if (mPQHandle) {
+        pConfig.algo = ADAPTIVE_QP;
+        pConfig.height = height;
+        pConfig.width = width;
+        pConfig.mb_height = 16;
+        pConfig.mb_width = 16;
+        pConfig.a_qp.pq_enabled = true;
+        pConfig.stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, pConfig.width);
         pConfig.a_qp.gain = 1.0397;
         pConfig.a_qp.offset = 14.427;
         if (pConfig.a_qp.roi_enabled) {
@@ -8053,7 +8036,7 @@ int venc_dev::venc_dev_pq::fill_pq_stats(struct v4l2_buffer buf,
                 mPQHandle, is_pq_enabled);
         return 0;
     }
-
+    ATRACE_BEGIN("PQ Compute Stats");
     input.fd =  buf.m.planes[0].reserved[0];
     input.data_offset =  buf.m.planes[0].data_offset;
     input.alloc_len =  buf.m.planes[0].length;
@@ -8080,7 +8063,7 @@ int venc_dev::venc_dev_pq::fill_pq_stats(struct v4l2_buffer buf,
         DEBUG_PRINT_HIGH("Output fd = %d, data_offset = %d", output.fd, output.data_offset);
         mPQComputeStats(mPQHandle, &input, NULL, &output, NULL, NULL);
     }
-
+    ATRACE_END();
     DEBUG_PRINT_HIGH("PQ data length = %d", output.filled_len);
     return output.filled_len;
 }

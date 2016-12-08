@@ -38,7 +38,9 @@ enum {
    PRIO_ERROR=0x1,
    PRIO_INFO=0x1,
    PRIO_HIGH=0x2,
-   PRIO_LOW=0x4
+   PRIO_LOW=0x4,
+   PRIO_TRACE_HIGH = 0x10,
+   PRIO_TRACE_LOW = 0x20,
 };
 
 extern int debug_level;
@@ -109,5 +111,47 @@ class AutoUnmap {
                 munmap(vaddr, size);
         }
 };
+
+#ifdef _ANDROID_
+#define ATRACE_TAG ATRACE_TAG_VIDEO
+#include <utils/Trace.h>
+
+class AutoTracer {
+    int mPrio;
+public:
+    AutoTracer(int prio, const char* msg)
+        : mPrio(prio) {
+        if (debug_level & prio) {
+            ATRACE_BEGIN(msg);
+        }
+    }
+    ~AutoTracer() {
+        if (debug_level & mPrio) {
+            ATRACE_END();
+        }
+    }
+};
+
+#define VIDC_TRACE_NAME_LOW(_name) AutoTracer _tracer(PRIO_TRACE_LOW, _name);
+#define VIDC_TRACE_NAME_HIGH(_name) AutoTracer _tracer(PRIO_TRACE_HIGH, _name);
+
+#define VIDC_TRACE_INT_LOW(_name, _int) \
+    if (debug_level & PRIO_TRACE_LOW) { \
+        ATRACE_INT(_name, _int);        \
+    }
+
+#define VIDC_TRACE_INT_HIGH(_name, _int) \
+    if (debug_level & PRIO_TRACE_HIGH) { \
+        ATRACE_INT(_name, _int);        \
+    }
+
+#else // _ANDROID_
+
+#define VIDC_TRACE_NAME_LOW(_name)
+#define VIDC_TRACE_NAME_HIGH(_name)
+#define VIDC_TRACE_INT_LOW(_name, _int)
+#define VIDC_TRACE_INT_HIGH(_name, _int)
+
+#endif // !_ANDROID_
 
 #endif
