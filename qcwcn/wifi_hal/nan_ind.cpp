@@ -295,6 +295,20 @@ int NanCommand::getNanMatch(NanMatchInd *event)
                    outputTlv.value, outputTlv.length);
             event->cluster_attribute_len = outputTlv.length;
             break;
+        case NAN_TLV_TYPE_NAN_CSID:
+            if (outputTlv.length > sizeof(event->peer_cipher_type)) {
+                outputTlv.length = sizeof(event->peer_cipher_type);
+            }
+            memcpy(&event->peer_cipher_type, outputTlv.value,
+                   outputTlv.length);
+            break;
+        case NAN_TLV_TYPE_NAN_SCID:
+            if (outputTlv.length > sizeof(event->scid)) {
+                outputTlv.length = sizeof(event->scid);
+            }
+            event->scid_len = outputTlv.length;
+            memcpy(event->scid, outputTlv.value, outputTlv.length);
+            break;
         default:
             ALOGV("Unknown TLV type skipped");
             break;

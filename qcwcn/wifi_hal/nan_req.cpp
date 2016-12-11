@@ -514,7 +514,9 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
         (pReq->service_specific_info_len ? SIZEOF_TLV_HDR + pReq->service_specific_info_len : 0) +
         (pReq->rx_match_filter_len ? SIZEOF_TLV_HDR + pReq->rx_match_filter_len : 0) +
         (pReq->tx_match_filter_len ? SIZEOF_TLV_HDR + pReq->tx_match_filter_len : 0) +
-        (pReq->service_responder_policy ? SIZEOF_TLV_HDR + sizeof(NanServiceAcceptPolicy) : 0);
+        (pReq->service_responder_policy ? SIZEOF_TLV_HDR + sizeof(NanServiceAcceptPolicy) : 0) +
+        (pReq->cipher_type ? SIZEOF_TLV_HDR + sizeof(NanCsidType) : 0) +
+        (pReq->pmk_len ? SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN : 0);
 
     pNanPublishServiceReqMsg pFwReq = (pNanPublishServiceReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -574,7 +576,16 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
         tlvs = addTlv(NAN_TLV_TYPE_NAN_SERVICE_ACCEPT_POLICY, sizeof(NanServiceAcceptPolicy),
                       (const u8*)&pReq->service_responder_policy, tlvs);
     }
-
+    if (pReq->cipher_type) {
+        NanCsidType pNanCsidType;
+        pNanCsidType.csid_type = pReq->cipher_type;
+        tlvs = addTlv(NAN_TLV_TYPE_NAN_CSID, sizeof(NanCsidType),
+                        (const u8*)&pNanCsidType, tlvs);
+    }
+    if (pReq->pmk_len) {
+        tlvs = addTlv(NAN_TLV_TYPE_NAN_PMK, pReq->pmk_len,
+                      (const u8*)&pReq->pmk[0], tlvs);
+    }
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
 
@@ -640,7 +651,9 @@ int NanCommand::putNanSubscribe(transaction_id id,
         (pReq->service_name_len ? SIZEOF_TLV_HDR + pReq->service_name_len : 0) +
         (pReq->service_specific_info_len ? SIZEOF_TLV_HDR + pReq->service_specific_info_len : 0) +
         (pReq->rx_match_filter_len ? SIZEOF_TLV_HDR + pReq->rx_match_filter_len : 0) +
-        (pReq->tx_match_filter_len ? SIZEOF_TLV_HDR + pReq->tx_match_filter_len : 0);
+        (pReq->tx_match_filter_len ? SIZEOF_TLV_HDR + pReq->tx_match_filter_len : 0) +
+        (pReq->cipher_type ? SIZEOF_TLV_HDR + sizeof(NanCsidType) : 0) +
+        (pReq->pmk_len ? SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN : 0);
 
     message_len += \
         (pReq->num_intf_addr_present * (SIZEOF_TLV_HDR + NAN_MAC_ADDR_LEN));
@@ -706,6 +719,17 @@ int NanCommand::putNanSubscribe(transaction_id id,
         tlvs = addTlv(NAN_TLV_TYPE_MAC_ADDRESS,
                       NAN_MAC_ADDR_LEN,
                       (const u8*)&pReq->intf_addr[i][0], tlvs);
+    }
+
+    if (pReq->cipher_type) {
+        NanCsidType pNanCsidType;
+        pNanCsidType.csid_type = pReq->cipher_type;
+        tlvs = addTlv(NAN_TLV_TYPE_NAN_CSID, sizeof(NanCsidType),
+                        (const u8*)&pNanCsidType, tlvs);
+    }
+    if (pReq->pmk_len) {
+        tlvs = addTlv(NAN_TLV_TYPE_NAN_PMK, pReq->pmk_len,
+                      (const u8*)&pReq->pmk[0], tlvs);
     }
 
     mVendorData = (char *)pFwReq;
