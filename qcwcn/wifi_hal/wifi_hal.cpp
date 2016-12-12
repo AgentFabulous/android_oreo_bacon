@@ -182,6 +182,40 @@ cleanup:
     return (wifi_error)ret;
 }
 
+static wifi_error wifi_get_capabilities(wifi_interface_handle handle)
+{
+    wifi_error ret;
+    int requestId;
+    WifihalGeneric *wifihalGeneric;
+    wifi_handle wifiHandle = getWifiHandle(handle);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver", __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* No request id from caller, so generate one and pass it on to the driver.
+     * Generate it randomly.
+     */
+    requestId = get_requestid();
+
+    wifihalGeneric = new WifihalGeneric(
+                            wifiHandle,
+                            requestId,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_GSCAN_GET_CAPABILITIES);
+    if (!wifihalGeneric) {
+        ALOGE("%s: Failed to create object of WifihalGeneric class", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ret = wifihalGeneric->wifiGetCapabilities(handle);
+
+    delete wifihalGeneric;
+    return ret;
+}
+
 static wifi_error get_firmware_bus_max_size_supported(
                                                 wifi_interface_handle iface)
 {
@@ -314,7 +348,6 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_get_driver_version = wifi_get_driver_version;
     fn->wifi_set_passpoint_list = wifi_set_passpoint_list;
     fn->wifi_reset_passpoint_list = wifi_reset_passpoint_list;
-    fn->wifi_set_bssid_blacklist = wifi_set_bssid_blacklist;
     fn->wifi_set_lci = wifi_set_lci;
     fn->wifi_set_lcr = wifi_set_lcr;
     fn->wifi_start_sending_offloaded_packet =
@@ -349,6 +382,9 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_start_pkt_fate_monitoring = wifi_start_pkt_fate_monitoring;
     fn->wifi_get_tx_pkt_fates = wifi_get_tx_pkt_fates;
     fn->wifi_get_rx_pkt_fates = wifi_get_rx_pkt_fates;
+    fn->wifi_get_roaming_capabilities = wifi_get_roaming_capabilities;
+    fn->wifi_configure_roaming = wifi_configure_roaming;
+    fn->wifi_enable_firmware_roaming = wifi_enable_firmware_roaming;
 
     return WIFI_SUCCESS;
 }
@@ -509,6 +545,10 @@ wifi_error wifi_initialize(wifi_handle *handle)
         ALOGE("Wifi Logger Ring Initialization Failed");
         goto unload;
     }
+
+    ret = wifi_get_capabilities(iface_handle);
+    if (ret != WIFI_SUCCESS)
+        ALOGE("Failed to get wifi Capabilities, error: %d", ret);
 
     info->pkt_stats = (struct pkt_stats_s *)malloc(sizeof(struct pkt_stats_s));
     if (!info->pkt_stats) {
