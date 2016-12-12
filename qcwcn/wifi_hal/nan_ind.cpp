@@ -319,6 +319,12 @@ int NanCommand::getNanMatch(NanMatchInd *event)
             getNanReceiveSdeaCtrlParams(outputTlv.value,
                                              &event->peer_sdea_params);
             break;
+        case NAN_TLV_TYPE_NAN_RANGE_RESULT:
+            if (outputTlv.length > sizeof(event->range_result)) {
+                outputTlv.length = sizeof(event->range_result);
+            }
+            memcpy(&event->range_result, outputTlv.value, outputTlv.length);
+            break;
         default:
             ALOGV("Unknown TLV type skipped");
             break;
