@@ -84,6 +84,11 @@ typedef struct {
     int  id;                                        // id to use when talking to driver
 } interface_info;
 
+typedef struct {
+    wifi_gscan_capabilities gscan_capa;
+    wifi_roaming_capabilities roaming_capa;
+} wifi_capa;
+
 struct gscan_event_handlers_s;
 struct rssi_monitor_event_handler_s;
 
@@ -140,6 +145,7 @@ typedef struct hal_info_s {
     /* mutex for the packet fate stats shared resource protection */
     pthread_mutex_t pkt_fate_stats_lock;
     struct rssi_monitor_event_handler_s *rssi_handlers;
+    wifi_capa capa;
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);
