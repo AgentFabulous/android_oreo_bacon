@@ -295,6 +295,30 @@ int NanCommand::getNanMatch(NanMatchInd *event)
                    outputTlv.value, outputTlv.length);
             event->cluster_attribute_len = outputTlv.length;
             break;
+        case NAN_TLV_TYPE_NAN_CSID:
+            if (outputTlv.length > sizeof(event->peer_cipher_type)) {
+                outputTlv.length = sizeof(event->peer_cipher_type);
+            }
+            memcpy(&event->peer_cipher_type, outputTlv.value,
+                   outputTlv.length);
+            break;
+        case NAN_TLV_TYPE_NAN_SCID:
+            if (outputTlv.length > sizeof(event->scid)) {
+                outputTlv.length = sizeof(event->scid);
+            }
+            event->scid_len = outputTlv.length;
+            memcpy(event->scid, outputTlv.value, outputTlv.length);
+            break;
+        case NAN_TLV_TYPE_SDEA_CTRL_PARAMS:
+            if (outputTlv.length != sizeof(u32)) {
+                ALOGE("NAN_TLV_TYPE_SDEA_CTRL_PARAMS"
+                      "Incorrect size:%d expecting %zu", outputTlv.length,
+                      sizeof(u32));
+                break;
+            }
+            getNanReceiveSdeaCtrlParams(outputTlv.value,
+                                             &event->peer_sdea_params);
+            break;
         default:
             ALOGV("Unknown TLV type skipped");
             break;
@@ -628,6 +652,25 @@ void NanCommand::getNanReceivePostConnectivityCapabilityVal(
     }
 }
 
+void NanCommand::getNanReceiveSdeaCtrlParams(const u8* pInValue,
+    NanSdeaCtrlParams *pPeerSdeaParams)
+{
+    if (pInValue && pPeerSdeaParams) {
+        pPeerSdeaParams->security_cfg =
+                          (NanDataPathSecurityCfgStatus)((pInValue[0] & BIT_6) ?
+                           NAN_DP_CONFIG_SECURITY : NAN_DP_CONFIG_NO_SECURITY);
+        pPeerSdeaParams->ranging_state =
+                           (NanRangingState)((pInValue[0] & BIT_7) ?
+                            NAN_RANGING_ENABLE : NAN_RANGING_DISABLE);
+#if 0
+        pPeerSdeaParams->enable_ranging_limit =
+                         (NanRangingLimitState)((pInValue[0] & BIT_8) ?
+                          NAN_RANGING_LIMIT_ENABLE : NAN_RANGING_LIMIT_DISABLE);
+#endif
+    }
+    return;
+}
+
 int NanCommand::getNanReceivePostDiscoveryVal(const u8 *pInValue,
                                               u32 length,
                                               NanReceivePostDiscovery *pRxDisc)
@@ -746,7 +789,7 @@ int NanCommand::getNanStaParameter(wifi_interface_handle iface,
 {
     int ret = WIFI_ERROR_NONE;
     int res = -1;
-    int id = 1;
+    transaction_id id = 1;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -799,9 +842,10 @@ int NanCommand::getNanStaParameter(wifi_interface_handle iface,
     }
     ALOGV("%s: NanStaparameter Master_pref:%x," \
           " Random_factor:%x, hop_count:%x " \
-          " beacon_transmit_time:%d", __func__,
+          " beacon_transmit_time:%d" \
+          " ndp_channel_freq:%d", __func__,
           pRsp->master_pref, pRsp->random_factor,
-          pRsp->hop_count, pRsp->beacon_transmit_time);
+          pRsp->hop_count, pRsp->beacon_transmit_time, pRsp->ndp_channel_freq);
 cleanup:
     mStaParam = NULL;
     return (int)ret;

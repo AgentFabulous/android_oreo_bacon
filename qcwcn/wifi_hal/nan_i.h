@@ -104,7 +104,9 @@ typedef enum
     NAN_MSG_ID_BEACON_SDF_IND               = 32,
     NAN_MSG_ID_CAPABILITIES_REQ             = 33,
     NAN_MSG_ID_CAPABILITIES_RSP             = 34,
-    NAN_MSG_ID_SELF_TRANSMIT_FOLLOWUP_IND   = 35
+    NAN_MSG_ID_SELF_TRANSMIT_FOLLOWUP_IND   = 35,
+    NAN_MSG_ID_TESTMODE_REQ                 = 1025,
+    NAN_MSG_ID_TESTMODE_RSP                 = 1026
 } NanMsgId;
 
 /*
@@ -128,7 +130,17 @@ typedef enum
     NAN_TLV_TYPE_POST_NAN_CONNECTIVITY_CAPABILITIES_RECEIVE = 8,
     NAN_TLV_TYPE_POST_NAN_DISCOVERY_ATTRIBUTE_RECEIVE = 9,
     NAN_TLV_TYPE_BEACON_SDF_PAYLOAD_RECEIVE = 10,
+    NAN_TLV_TYPE_NAN_DATA_PATH_PARAMS = 11,
+    NAN_TLV_TYPE_NAN_DATA_SUPPORTED_BAND = 12,
+    NAN_TLV_TYPE_2G_COMMITTED_DW = 13,
+    NAN_TLV_TYPE_5G_COMMITTED_DW = 14,
+    NAN_TLV_TYPE_NAN_DATA_RESPONDER_MODE = 15,
+    NAN_TLV_TYPE_NAN_DATA_ENABLED_IN_MATCH = 16,
     NAN_TLV_TYPE_NAN_SERVICE_ACCEPT_POLICY = 17,
+    NAN_TLV_TYPE_NAN_CSID = 18,
+    NAN_TLV_TYPE_NAN_SCID = 19,
+    NAN_TLV_TYPE_NAN_PMK = 20,
+    NAN_TLV_TYPE_SDEA_CTRL_PARAMS = 21,
     NAN_TLV_TYPE_SDF_LAST = 4095,
 
     /* Configuration types */
@@ -169,6 +181,7 @@ typedef enum
     NAN_TLV_TYPE_FURTHER_AVAILABILITY,
     NAN_TLV_TYPE_24G_CHANNEL,
     NAN_TLV_TYPE_5G_CHANNEL,
+    NAN_TLV_TYPE_DISC_MAC_ADDR_RANDOM_INTERVAL,
     NAN_TLV_TYPE_CONFIG_LAST = 8191,
 
     /* Attributes types */
@@ -205,6 +218,11 @@ typedef enum
     NAN_TLV_TYPE_DE_DW_STATS,
     NAN_TLV_TYPE_DE_STATS,
     NAN_TLV_TYPE_STATS_LAST = 36863,
+
+    /* Testmode types */
+    NAN_TLV_TYPE_TESTMODE_FIRST = 36864,
+    NAN_TLV_TYPE_TM_NAN_AVAILABILITY = NAN_TLV_TYPE_TESTMODE_FIRST,
+    NAN_TLV_TYPE_TESTMODE_LAST = 37000,
 
     NAN_TLV_TYPE_LAST = 65535
 } NanTlvType;
@@ -883,6 +901,7 @@ typedef struct PACKED
     u32 discBeaconTxAttempts;
     u32 discBeaconTxFailures;
     u32 amHopCountExpireCount;
+    u32 ndpChannelFreq;
 } FwNanSyncStats, *pFwNanSyncStats;
 
 /* NAN Misc DE Statistics */
@@ -930,18 +949,6 @@ typedef enum {
     NAN_INDICATION_UNKNOWN                 =0xFFFF
 } NanIndicationType;
 
-typedef struct {
-  /* NAN master rank being advertised by DE */
-  u64 master_rank;
-  /* NAN master preference being advertised by DE */
-  u8 master_pref;
-  /* random value being advertised by DE */
-  u8 random_factor;
-  /* hop_count from anchor master */
-  u8 hop_count;
-  u32 beacon_transmit_time;
-} NanStaParameter;
-
 /* NAN Capabilities Req */
 typedef struct PACKED
 {
@@ -976,6 +983,27 @@ typedef struct PACKED
     NanMsgHeader fwHeader;
     u32 reason;
 } NanSelfTransmitFollowupIndMsg, *pNanSelfTransmitFollowupIndMsg;
+
+/* NAN Cipher Suite Shared Key */
+typedef struct PACKED
+{
+    u32 csid_type;
+} NanCsidType;
+
+/* Service Discovery Extended Attribute params */
+typedef struct PACKED
+{
+    u32 fsd_required:1;
+    u32 fsd_with_gas:1;
+    u32 data_path_required:1;
+    u32 data_path_type:1;
+    u32 multicast_type:1;
+    u32 qos_required:1;
+    u32 security_required:1;
+    u32 ranging_required:1;
+    u32 range_limit_present:1;
+    u32 reserved:23;
+} NanFWSdeaCtrlParams;
 
 /*
   NAN Status codes exchanged between firmware
@@ -1079,14 +1107,6 @@ typedef enum {
 void NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
                          u32 valueRcvd,
                          void *pRsp);
-
-/*
-    Function to get the sta_parameter expected by Sigma
-    as per CAPI spec.
-*/
-wifi_error nan_get_sta_parameter(wifi_request_id id,
-                                 wifi_interface_handle iface,
-                                 NanStaParameter* msg);
 
 #ifdef __cplusplus
 }

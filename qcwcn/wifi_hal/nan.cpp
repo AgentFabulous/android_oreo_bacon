@@ -23,6 +23,7 @@
 #include <utils/Log.h>
 #include "nancommand.h"
 #include "vendor_definitions.h"
+
 #ifdef __GNUC__
 #define PRINTF_FORMAT(a,b) __attribute__ ((format (printf, (a), (b))))
 #define STRUCT_PACKED __attribute__ ((packed))
@@ -45,13 +46,11 @@ wifi_error nan_register_handler(wifi_interface_handle iface,
 
     nanCommand = NanCommand::instance(wifiHandle);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
     ret = nanCommand->setCallbackHandler(handlers);
-    return (wifi_error)ret;
-
     return (wifi_error)ret;
 }
 
@@ -77,7 +76,7 @@ wifi_error nan_enable_request(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -92,12 +91,12 @@ wifi_error nan_enable_request(transaction_id id,
 
     ret = nanCommand->putNanEnable(id, msg);
     if (ret != 0) {
-        ALOGE("%s: putNanEnable Error:%d",__func__, ret);
+        ALOGE("%s: putNanEnable Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
     }
 cleanup:
     delete nanCommand;
@@ -118,7 +117,7 @@ wifi_error nan_disable_request(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -133,12 +132,12 @@ wifi_error nan_disable_request(transaction_id id,
 
     ret = nanCommand->putNanDisable(id);
     if (ret != 0) {
-        ALOGE("%s: putNanDisable Error:%d",__func__, ret);
+        ALOGE("%s: putNanDisable Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
     }
 cleanup:
     delete nanCommand;
@@ -160,7 +159,7 @@ wifi_error nan_publish_request(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -175,12 +174,12 @@ wifi_error nan_publish_request(transaction_id id,
 
     ret = nanCommand->putNanPublish(id, msg);
     if (ret != 0) {
-        ALOGE("%s: putNanPublish Error:%d",__func__, ret);
+        ALOGE("%s: putNanPublish Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
     }
 cleanup:
     delete nanCommand;
@@ -202,7 +201,7 @@ wifi_error nan_publish_cancel_request(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -217,12 +216,12 @@ wifi_error nan_publish_cancel_request(transaction_id id,
 
     ret = nanCommand->putNanPublishCancel(id, msg);
     if (ret != 0) {
-        ALOGE("%s: putNanPublishCancel Error:%d",__func__, ret);
+        ALOGE("%s: putNanPublishCancel Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
     }
 cleanup:
     delete nanCommand;
@@ -244,7 +243,7 @@ wifi_error nan_subscribe_request(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -253,19 +252,18 @@ wifi_error nan_subscribe_request(transaction_id id,
         goto cleanup;
 
     /* Set the interface Id of the message. */
-
     ret = nanCommand->set_iface_id(ifaceInfo->name);
     if (ret < 0)
         goto cleanup;
 
     ret = nanCommand->putNanSubscribe(id, msg);
     if (ret != 0) {
-        ALOGE("%s: putNanSubscribe Error:%d",__func__, ret);
+        ALOGE("%s: putNanSubscribe Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
     }
 cleanup:
     delete nanCommand;
@@ -287,7 +285,7 @@ wifi_error nan_subscribe_cancel_request(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -302,12 +300,12 @@ wifi_error nan_subscribe_cancel_request(transaction_id id,
 
     ret = nanCommand->putNanSubscribeCancel(id, msg);
     if (ret != 0) {
-        ALOGE("%s: putNanSubscribeCancel Error:%d",__func__, ret);
+        ALOGE("%s: putNanSubscribeCancel Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
     }
 cleanup:
     delete nanCommand;
@@ -329,7 +327,7 @@ wifi_error nan_transmit_followup_request(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -344,12 +342,12 @@ wifi_error nan_transmit_followup_request(transaction_id id,
 
     ret = nanCommand->putNanTransmitFollowup(id, msg);
     if (ret != 0) {
-        ALOGE("%s: putNanTransmitFollowup Error:%d",__func__, ret);
+        ALOGE("%s: putNanTransmitFollowup Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
     }
 cleanup:
     delete nanCommand;
@@ -371,7 +369,7 @@ wifi_error nan_stats_request(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -386,12 +384,12 @@ wifi_error nan_stats_request(transaction_id id,
 
     ret = nanCommand->putNanStats(id, msg);
     if (ret != 0) {
-        ALOGE("%s: putNanStats Error:%d",__func__, ret);
+        ALOGE("%s: putNanStats Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
     }
 cleanup:
     delete nanCommand;
@@ -413,7 +411,7 @@ wifi_error nan_config_request(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -428,12 +426,12 @@ wifi_error nan_config_request(transaction_id id,
 
     ret = nanCommand->putNanConfig(id, msg);
     if (ret != 0) {
-        ALOGE("%s: putNanConfig Error:%d",__func__, ret);
+        ALOGE("%s: putNanConfig Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
     }
 cleanup:
     delete nanCommand;
@@ -455,7 +453,7 @@ wifi_error nan_tca_request(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -470,12 +468,12 @@ wifi_error nan_tca_request(transaction_id id,
 
     ret = nanCommand->putNanTCA(id, msg);
     if (ret != 0) {
-        ALOGE("%s: putNanTCA Error:%d",__func__, ret);
+        ALOGE("%s: putNanTCA Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
     }
 cleanup:
     delete nanCommand;
@@ -500,7 +498,7 @@ wifi_error nan_beacon_sdf_payload_request(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -515,12 +513,12 @@ wifi_error nan_beacon_sdf_payload_request(transaction_id id,
 
     ret = nanCommand->putNanBeaconSdfPayload(id, msg);
     if (ret != 0) {
-        ALOGE("%s: putNanBeaconSdfPayload Error:%d",__func__, ret);
+        ALOGE("%s: putNanBeaconSdfPayload Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
     }
 
 cleanup:
@@ -538,13 +536,13 @@ wifi_error nan_get_sta_parameter(transaction_id id,
 
     nanCommand = NanCommand::instance(wifiHandle);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
     ret = nanCommand->getNanStaParameter(iface, msg);
     if (ret != 0) {
-        ALOGE("%s: getNanStaParameter Error:%d",__func__, ret);
+        ALOGE("%s: getNanStaParameter Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
 
@@ -566,7 +564,7 @@ wifi_error nan_get_capabilities(transaction_id id,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -581,7 +579,7 @@ wifi_error nan_get_capabilities(transaction_id id,
 
     ret = nanCommand->putNanCapabilities(id);
     if (ret != 0) {
-        ALOGE("%s: putNanCapabilities Error:%d",__func__, ret);
+        ALOGE("%s: putNanCapabilities Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
@@ -1000,7 +998,7 @@ int NanCommand::handleResponse(WifiEvent &reply){
 
 int NanCommand::setCallbackHandler(NanCallbackHandler nHandler)
 {
-    int res = 0;
+    int res = WIFI_SUCCESS;
     mHandler = nHandler;
     res = registerVendorHandler(mVendor_id, QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (res != 0) {
@@ -1114,7 +1112,7 @@ int NanCommand::handleEvent(WifiEvent &event)
         }
     } else {
         //error case should not happen print log
-        ALOGE("%s: Wrong NAN subcmd received %d", __func__, mSubcmd);
+        ALOGE("%s: Wrong NAN subcmd received %d", __FUNCTION__, mSubcmd);
     }
     return NL_SKIP;
 }
