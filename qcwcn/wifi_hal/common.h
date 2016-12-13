@@ -86,6 +86,7 @@ typedef struct {
 
 typedef struct {
     wifi_gscan_capabilities gscan_capa;
+    wifi_roaming_capabilities roaming_capa;
 } wifi_capa;
 
 struct gscan_event_handlers_s;
