@@ -140,6 +140,7 @@ typedef enum
     NAN_TLV_TYPE_NAN_CSID = 18,
     NAN_TLV_TYPE_NAN_SCID = 19,
     NAN_TLV_TYPE_NAN_PMK = 20,
+    NAN_TLV_TYPE_SDEA_CTRL_PARAMS = 21,
     NAN_TLV_TYPE_SDF_LAST = 4095,
 
     /* Configuration types */
@@ -988,6 +989,21 @@ typedef struct PACKED
 {
     u32 csid_type;
 } NanCsidType;
+
+/* Service Discovery Extended Attribute params */
+typedef struct PACKED
+{
+    u32 fsd_required:1;
+    u32 fsd_with_gas:1;
+    u32 data_path_required:1;
+    u32 data_path_type:1;
+    u32 multicast_type:1;
+    u32 qos_required:1;
+    u32 security_required:1;
+    u32 ranging_required:1;
+    u32 range_limit_present:1;
+    u32 reserved:23;
+} NanFWSdeaCtrlParams;
 
 /*
   NAN Status codes exchanged between firmware

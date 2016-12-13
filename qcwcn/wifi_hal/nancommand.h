@@ -81,6 +81,8 @@ private:
     void getNanReceivePostConnectivityCapabilityVal(
         const u8* pInValue,
         NanReceivePostConnectivityCapability *pRxCapab);
+    void getNanReceiveSdeaCtrlParams(const u8* pInValue,
+        NanSdeaCtrlParams *pPeerSdeaParams);
     int getNanReceivePostDiscoveryVal(const u8 *pInValue,
                                       u32 length,
                                       NanReceivePostDiscovery *pRxDisc);
