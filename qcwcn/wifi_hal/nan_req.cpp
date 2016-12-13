@@ -122,7 +122,15 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
         (
           pReq->config_5g_channel ? (SIZEOF_TLV_HDR + \
           sizeof(u32)) : 0 \
-        );
+         ) + \
+         (
+           pReq->config_dw.config_2dot4g_dw_band ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
+         ) + \
+         (
+           pReq->config_dw.config_5g_dw_band ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
+         );
     pNanEnableReqMsg pFwReq = (pNanEnableReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
         cleanup();
@@ -256,6 +264,17 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
                       sizeof(u32),
                       (const u8*)&pReq->channel_5g_val, tlvs);
     }
+    if (pReq->config_dw.config_2dot4g_dw_band) {
+        tlvs = addTlv(NAN_TLV_TYPE_2G_COMMITTED_DW,
+                      sizeof(pReq->config_dw.dw_2dot4g_interval_val),
+                      (const u8*)&pReq->config_dw.dw_2dot4g_interval_val, tlvs);
+    }
+    if (pReq->config_dw.config_5g_dw_band) {
+        tlvs = addTlv(NAN_TLV_TYPE_5G_COMMITTED_DW,
+                      sizeof(pReq->config_dw.dw_5g_interval_val),
+                      (const u8*)&pReq->config_dw.dw_5g_interval_val, tlvs);
+    }
+
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
 
@@ -355,6 +374,14 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
          (
            pReq->config_conn_capability ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
+         ) + \
+         (
+           pReq->config_dw.config_2dot4g_dw_band ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
+         ) + \
+         (
+           pReq->config_dw.config_5g_dw_band ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
          );
 
     if (pReq->num_config_discovery_attr) {
@@ -446,6 +473,17 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
         tlvs = addTlv(NAN_TLV_TYPE_FURTHER_AVAILABILITY_MAP,
                       calcNanFurtherAvailabilityMapSize(&pReq->fam_val),
                       (const u8*)(tlvs + SIZEOF_TLV_HDR), tlvs);
+    }
+
+    if (pReq->config_dw.config_2dot4g_dw_band) {
+        tlvs = addTlv(NAN_TLV_TYPE_2G_COMMITTED_DW,
+                      sizeof(pReq->config_dw.dw_2dot4g_interval_val),
+                      (const u8*)&pReq->config_dw.dw_2dot4g_interval_val, tlvs);
+    }
+    if (pReq->config_dw.config_5g_dw_band) {
+        tlvs = addTlv(NAN_TLV_TYPE_5G_COMMITTED_DW,
+                      sizeof(pReq->config_dw.dw_5g_interval_val),
+                      (const u8*)&pReq->config_dw.dw_5g_interval_val, tlvs);
     }
 
     mVendorData = (char*)pFwReq;
