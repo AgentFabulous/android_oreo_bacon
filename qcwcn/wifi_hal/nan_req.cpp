@@ -122,15 +122,19 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
         (
           pReq->config_5g_channel ? (SIZEOF_TLV_HDR + \
           sizeof(u32)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_dw.config_2dot4g_dw_band ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_dw.config_5g_dw_band ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
-         );
+        ) + \
+        (
+           pReq->config_disc_mac_addr_randomization ? (SIZEOF_TLV_HDR + \
+           sizeof(u16)) : 0 \
+        );
     pNanEnableReqMsg pFwReq = (pNanEnableReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
         cleanup();
@@ -274,7 +278,11 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
                       sizeof(pReq->config_dw.dw_5g_interval_val),
                       (const u8*)&pReq->config_dw.dw_5g_interval_val, tlvs);
     }
-
+    if (pReq->config_disc_mac_addr_randomization) {
+        tlvs = addTlv(NAN_TLV_TYPE_DISC_MAC_ADDR_RANDOM_INTERVAL,
+                      sizeof(u16),
+                      (const u8*)&pReq->disc_mac_addr_rand_interval_sec, tlvs);
+    }
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
 
@@ -335,54 +343,58 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
     message_len = sizeof(NanMsgHeader);
 
     message_len += \
-         (
+        (
            pReq->config_sid_beacon ? (SIZEOF_TLV_HDR + \
            sizeof(pReq->sid_beacon)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_master_pref ? (SIZEOF_TLV_HDR + \
            sizeof(pReq->master_pref)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_rssi_proximity ? (SIZEOF_TLV_HDR + \
            sizeof(pReq->rssi_proximity)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_5g_rssi_close_proximity ? (SIZEOF_TLV_HDR + \
            sizeof(pReq->rssi_close_proximity_5g_val)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_rssi_window_size ? (SIZEOF_TLV_HDR + \
            sizeof(pReq->rssi_window_size_val)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_cluster_attribute_val ? (SIZEOF_TLV_HDR + \
            sizeof(pReq->config_cluster_attribute_val)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_scan_params ? (SIZEOF_TLV_HDR + \
            NAN_MAX_SOCIAL_CHANNELS * sizeof(u32)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_random_factor_force ? (SIZEOF_TLV_HDR + \
            sizeof(pReq->random_factor_force_val)) : 0 \
-          ) + \
-         (
+        ) + \
+        (
            pReq->config_hop_count_force ? (SIZEOF_TLV_HDR + \
            sizeof(pReq->hop_count_force_val)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_conn_capability ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_dw.config_2dot4g_dw_band ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
-         ) + \
-         (
+        ) + \
+        (
            pReq->config_dw.config_5g_dw_band ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
-         );
+        ) + \
+        (
+           pReq->config_disc_mac_addr_randomization ? (SIZEOF_TLV_HDR + \
+           sizeof(u16)) : 0 \
+        );
 
     if (pReq->num_config_discovery_attr) {
         for (idx = 0; idx < pReq->num_config_discovery_attr; idx ++) {
@@ -484,6 +496,11 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
         tlvs = addTlv(NAN_TLV_TYPE_5G_COMMITTED_DW,
                       sizeof(pReq->config_dw.dw_5g_interval_val),
                       (const u8*)&pReq->config_dw.dw_5g_interval_val, tlvs);
+    }
+    if (pReq->config_disc_mac_addr_randomization) {
+        tlvs = addTlv(NAN_TLV_TYPE_DISC_MAC_ADDR_RANDOM_INTERVAL,
+                      sizeof(u16),
+                      (const u8*)&pReq->disc_mac_addr_rand_interval_sec, tlvs);
     }
 
     mVendorData = (char*)pFwReq;
