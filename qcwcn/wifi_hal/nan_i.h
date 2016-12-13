@@ -104,7 +104,9 @@ typedef enum
     NAN_MSG_ID_BEACON_SDF_IND               = 32,
     NAN_MSG_ID_CAPABILITIES_REQ             = 33,
     NAN_MSG_ID_CAPABILITIES_RSP             = 34,
-    NAN_MSG_ID_SELF_TRANSMIT_FOLLOWUP_IND   = 35
+    NAN_MSG_ID_SELF_TRANSMIT_FOLLOWUP_IND   = 35,
+    NAN_MSG_ID_TESTMODE_REQ                 = 1025,
+    NAN_MSG_ID_TESTMODE_RSP                 = 1026
 } NanMsgId;
 
 /*
@@ -205,6 +207,11 @@ typedef enum
     NAN_TLV_TYPE_DE_DW_STATS,
     NAN_TLV_TYPE_DE_STATS,
     NAN_TLV_TYPE_STATS_LAST = 36863,
+
+    /* Testmode types */
+    NAN_TLV_TYPE_TESTMODE_FIRST = 36864,
+    NAN_TLV_TYPE_TM_NAN_AVAILABILITY = NAN_TLV_TYPE_TESTMODE_FIRST,
+    NAN_TLV_TYPE_TESTMODE_LAST = 37000,
 
     NAN_TLV_TYPE_LAST = 65535
 } NanTlvType;
@@ -883,6 +890,7 @@ typedef struct PACKED
     u32 discBeaconTxAttempts;
     u32 discBeaconTxFailures;
     u32 amHopCountExpireCount;
+    u32 ndpChannelFreq;
 } FwNanSyncStats, *pFwNanSyncStats;
 
 /* NAN Misc DE Statistics */
@@ -930,18 +938,6 @@ typedef enum {
     NAN_INDICATION_UNKNOWN                 =0xFFFF
 } NanIndicationType;
 
-typedef struct {
-  /* NAN master rank being advertised by DE */
-  u64 master_rank;
-  /* NAN master preference being advertised by DE */
-  u8 master_pref;
-  /* random value being advertised by DE */
-  u8 random_factor;
-  /* hop_count from anchor master */
-  u8 hop_count;
-  u32 beacon_transmit_time;
-} NanStaParameter;
-
 /* NAN Capabilities Req */
 typedef struct PACKED
 {
@@ -976,6 +972,16 @@ typedef struct PACKED
     NanMsgHeader fwHeader;
     u32 reason;
 } NanSelfTransmitFollowupIndMsg, *pNanSelfTransmitFollowupIndMsg;
+
+typedef struct PACKED
+{
+    NanMsgHeader fwHeader;
+    /*
+      Excludes TLVs
+      Optional: Nan Availability
+    */
+    u8 ptlv[];
+} NanTestModeReqMsg, *pNanTestModeReqMsg;
 
 /*
   NAN Status codes exchanged between firmware
@@ -1079,14 +1085,6 @@ typedef enum {
 void NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
                          u32 valueRcvd,
                          void *pRsp);
-
-/*
-    Function to get the sta_parameter expected by Sigma
-    as per CAPI spec.
-*/
-wifi_error nan_get_sta_parameter(wifi_request_id id,
-                                 wifi_interface_handle iface,
-                                 NanStaParameter* msg);
 
 #ifdef __cplusplus
 }

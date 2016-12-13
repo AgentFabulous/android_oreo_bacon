@@ -51,8 +51,6 @@ wifi_error nan_register_handler(wifi_interface_handle iface,
 
     ret = nanCommand->setCallbackHandler(handlers);
     return (wifi_error)ret;
-
-    return (wifi_error)ret;
 }
 
 wifi_error nan_get_version(wifi_handle handle,
@@ -253,7 +251,6 @@ wifi_error nan_subscribe_request(transaction_id id,
         goto cleanup;
 
     /* Set the interface Id of the message. */
-
     ret = nanCommand->set_iface_id(ifaceInfo->name);
     if (ret < 0)
         goto cleanup;
