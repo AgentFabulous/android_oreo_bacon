@@ -746,7 +746,7 @@ int NanCommand::getNanStaParameter(wifi_interface_handle iface,
 {
     int ret = WIFI_ERROR_NONE;
     int res = -1;
-    int id = 1;
+    transaction_id id = 1;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -799,9 +799,10 @@ int NanCommand::getNanStaParameter(wifi_interface_handle iface,
     }
     ALOGV("%s: NanStaparameter Master_pref:%x," \
           " Random_factor:%x, hop_count:%x " \
-          " beacon_transmit_time:%d", __func__,
+          " beacon_transmit_time:%d" \
+          " ndp_channel_freq:%d", __func__,
           pRsp->master_pref, pRsp->random_factor,
-          pRsp->hop_count, pRsp->beacon_transmit_time);
+          pRsp->hop_count, pRsp->beacon_transmit_time, pRsp->ndp_channel_freq);
 cleanup:
     mStaParam = NULL;
     return (int)ret;
