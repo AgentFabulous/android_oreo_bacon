@@ -2379,6 +2379,7 @@ int omx_venc::swvenc_input_log_buffers(const char *buffer, int bufferlen)
           fwrite(temp, width, 1, m_debug.infile);
           temp += stride;
        }
+       temp = (char*)(buffer + (stride * scanlines));
        for(int i = 0; i < height/2; i++)
        {
           fwrite(temp, width, 1, m_debug.infile);
