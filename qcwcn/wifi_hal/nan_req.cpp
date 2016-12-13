@@ -533,7 +533,10 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
         (pReq->tx_match_filter_len ? SIZEOF_TLV_HDR + pReq->tx_match_filter_len : 0) +
         (pReq->service_responder_policy ? SIZEOF_TLV_HDR + sizeof(NanServiceAcceptPolicy) : 0) +
         (pReq->cipher_type ? SIZEOF_TLV_HDR + sizeof(NanCsidType) : 0) +
-        (pReq->pmk_len ? SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN : 0);
+        (pReq->pmk_len ? SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN : 0) +
+        ((pReq->sdea_params.config_nan_data_path || pReq->sdea_params.security_cfg ||
+          pReq->sdea_params.ranging_state) ?
+          SIZEOF_TLV_HDR + sizeof(NanSdeaCtrlParams) : 0);
 
     pNanPublishServiceReqMsg pFwReq = (pNanPublishServiceReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -603,6 +606,33 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
         tlvs = addTlv(NAN_TLV_TYPE_NAN_PMK, pReq->pmk_len,
                       (const u8*)&pReq->pmk[0], tlvs);
     }
+    if (pReq->sdea_params.config_nan_data_path ||
+        pReq->sdea_params.security_cfg ||
+        pReq->sdea_params.ranging_state) {
+        NanFWSdeaCtrlParams pNanFWSdeaCtrlParams;
+        memset(&pNanFWSdeaCtrlParams, 0, sizeof(NanFWSdeaCtrlParams));
+
+        if (pReq->sdea_params.config_nan_data_path) {
+            pNanFWSdeaCtrlParams.data_path_required = 1;
+            pNanFWSdeaCtrlParams.data_path_type =
+                                  (pReq->sdea_params.ndp_type & BIT_0) ?
+                                  NAN_DATA_PATH_MULTICAST_MSG :
+                                  NAN_DATA_PATH_UNICAST_MSG;
+
+        }
+        if (pReq->sdea_params.security_cfg) {
+            pNanFWSdeaCtrlParams.security_required =
+                                         pReq->sdea_params.security_cfg;
+        }
+        if (pReq->sdea_params.ranging_state) {
+            pNanFWSdeaCtrlParams.ranging_required =
+                                         pReq->sdea_params.ranging_state;
+        }
+        tlvs = addTlv(NAN_TLV_TYPE_SDEA_CTRL_PARAMS, sizeof(NanFWSdeaCtrlParams),
+                        (const u8*)&pNanFWSdeaCtrlParams, tlvs);
+
+    }
+
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
 
@@ -670,7 +700,10 @@ int NanCommand::putNanSubscribe(transaction_id id,
         (pReq->rx_match_filter_len ? SIZEOF_TLV_HDR + pReq->rx_match_filter_len : 0) +
         (pReq->tx_match_filter_len ? SIZEOF_TLV_HDR + pReq->tx_match_filter_len : 0) +
         (pReq->cipher_type ? SIZEOF_TLV_HDR + sizeof(NanCsidType) : 0) +
-        (pReq->pmk_len ? SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN : 0);
+        (pReq->pmk_len ? SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN : 0) +
+        ((pReq->sdea_params.config_nan_data_path || pReq->sdea_params.security_cfg ||
+          pReq->sdea_params.ranging_state) ?
+          SIZEOF_TLV_HDR + sizeof(NanSdeaCtrlParams) : 0);
 
     message_len += \
         (pReq->num_intf_addr_present * (SIZEOF_TLV_HDR + NAN_MAC_ADDR_LEN));
@@ -747,6 +780,32 @@ int NanCommand::putNanSubscribe(transaction_id id,
     if (pReq->pmk_len) {
         tlvs = addTlv(NAN_TLV_TYPE_NAN_PMK, pReq->pmk_len,
                       (const u8*)&pReq->pmk[0], tlvs);
+    }
+    if (pReq->sdea_params.config_nan_data_path ||
+        pReq->sdea_params.security_cfg ||
+        pReq->sdea_params.ranging_state) {
+        NanFWSdeaCtrlParams pNanFWSdeaCtrlParams;
+        memset(&pNanFWSdeaCtrlParams, 0, sizeof(NanFWSdeaCtrlParams));
+
+        if (pReq->sdea_params.config_nan_data_path) {
+            pNanFWSdeaCtrlParams.data_path_required = 1;
+            pNanFWSdeaCtrlParams.data_path_type =
+                                  (pReq->sdea_params.ndp_type & BIT_0) ?
+                                  NAN_DATA_PATH_MULTICAST_MSG :
+                                  NAN_DATA_PATH_UNICAST_MSG;
+
+        }
+        if (pReq->sdea_params.security_cfg) {
+            pNanFWSdeaCtrlParams.security_required =
+                                         pReq->sdea_params.security_cfg;
+        }
+        if (pReq->sdea_params.ranging_state) {
+            pNanFWSdeaCtrlParams.ranging_required =
+                                         pReq->sdea_params.ranging_state;
+        }
+        tlvs = addTlv(NAN_TLV_TYPE_SDEA_CTRL_PARAMS, sizeof(NanFWSdeaCtrlParams),
+                        (const u8*)&pNanFWSdeaCtrlParams, tlvs);
+
     }
 
     mVendorData = (char *)pFwReq;

@@ -309,6 +309,16 @@ int NanCommand::getNanMatch(NanMatchInd *event)
             event->scid_len = outputTlv.length;
             memcpy(event->scid, outputTlv.value, outputTlv.length);
             break;
+        case NAN_TLV_TYPE_SDEA_CTRL_PARAMS:
+            if (outputTlv.length != sizeof(u32)) {
+                ALOGE("NAN_TLV_TYPE_SDEA_CTRL_PARAMS"
+                      "Incorrect size:%d expecting %zu", outputTlv.length,
+                      sizeof(u32));
+                break;
+            }
+            getNanReceiveSdeaCtrlParams(outputTlv.value,
+                                             &event->peer_sdea_params);
+            break;
         default:
             ALOGV("Unknown TLV type skipped");
             break;
@@ -640,6 +650,25 @@ void NanCommand::getNanReceivePostConnectivityCapabilityVal(
         pRxCapab->is_wfds_supported = (pInValue[0] & (0x01 << 1));
         pRxCapab->is_wfd_supported = pInValue[0] & 0x01;
     }
+}
+
+void NanCommand::getNanReceiveSdeaCtrlParams(const u8* pInValue,
+    NanSdeaCtrlParams *pPeerSdeaParams)
+{
+    if (pInValue && pPeerSdeaParams) {
+        pPeerSdeaParams->security_cfg =
+                          (NanDataPathSecurityCfgStatus)((pInValue[0] & BIT_6) ?
+                           NAN_DP_CONFIG_SECURITY : NAN_DP_CONFIG_NO_SECURITY);
+        pPeerSdeaParams->ranging_state =
+                           (NanRangingState)((pInValue[0] & BIT_7) ?
+                            NAN_RANGING_ENABLE : NAN_RANGING_DISABLE);
+#if 0
+        pPeerSdeaParams->enable_ranging_limit =
+                         (NanRangingLimitState)((pInValue[0] & BIT_8) ?
+                          NAN_RANGING_LIMIT_ENABLE : NAN_RANGING_LIMIT_DISABLE);
+#endif
+    }
+    return;
 }
 
 int NanCommand::getNanReceivePostDiscoveryVal(const u8 *pInValue,
