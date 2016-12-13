@@ -137,6 +137,9 @@ typedef enum
     NAN_TLV_TYPE_NAN_DATA_RESPONDER_MODE = 15,
     NAN_TLV_TYPE_NAN_DATA_ENABLED_IN_MATCH = 16,
     NAN_TLV_TYPE_NAN_SERVICE_ACCEPT_POLICY = 17,
+    NAN_TLV_TYPE_NAN_CSID = 18,
+    NAN_TLV_TYPE_NAN_SCID = 19,
+    NAN_TLV_TYPE_NAN_PMK = 20,
     NAN_TLV_TYPE_SDF_LAST = 4095,
 
     /* Configuration types */
@@ -979,15 +982,11 @@ typedef struct PACKED
     u32 reason;
 } NanSelfTransmitFollowupIndMsg, *pNanSelfTransmitFollowupIndMsg;
 
+/* NAN Cipher Suite Shared Key */
 typedef struct PACKED
 {
-    NanMsgHeader fwHeader;
-    /*
-      Excludes TLVs
-      Optional: Nan Availability
-    */
-    u8 ptlv[];
-} NanTestModeReqMsg, *pNanTestModeReqMsg;
+    u32 csid_type;
+} NanCsidType;
 
 /*
   NAN Status codes exchanged between firmware
