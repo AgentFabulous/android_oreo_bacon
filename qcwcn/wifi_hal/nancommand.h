@@ -22,6 +22,7 @@
 #include "wifi_hal.h"
 #include "qca-vendor.h"
 #include "vendor_definitions.h"
+#include "nan_cert.h"
 
 class NanCommand : public WifiVendorCommand
 {
@@ -126,6 +127,7 @@ public:
     int putNanBeaconSdfPayload(transaction_id id, const NanBeaconSdfPayloadRequest *pReq);
     int getNanStaParameter(wifi_interface_handle iface, NanStaParameter *pRsp);
     int putNanCapabilities(transaction_id id);
+	int putNanAvailabilityDebug(NanAvailabilityDebug debug);
 
     /* Functions for NAN error translation
        For NanResponse, NanPublishTerminatedInd, NanSubscribeTerminatedInd,
