@@ -44,6 +44,7 @@ int NanCommand::isNanResponse()
     case NAN_MSG_ID_TCA_RSP:
     case NAN_MSG_ID_BEACON_SDF_RSP:
     case NAN_MSG_ID_CAPABILITIES_RSP:
+    case NAN_MSG_ID_TESTMODE_RSP:
         return 1;
     default:
         return 0;
@@ -628,6 +629,7 @@ int NanCommand::handleNanResponse()
         mStaParam->random_factor = (pSyncStats->myRank & 0x00FF000000000000) >> 48;
         mStaParam->hop_count = pSyncStats->currAmHopCount;
         mStaParam->beacon_transmit_time = pSyncStats->currAmBTT;
+        mStaParam->ndp_channel_freq = pSyncStats->ndpChannelFreq;
 
         return ret;
     }
@@ -818,6 +820,7 @@ void NanCommand::handleNanStatsResponse(NanStatsType stats_type,
         sync_stats.discBeaconTxAttempts = pSyncStats->discBeaconTxAttempts;
         sync_stats.discBeaconTxFailures = pSyncStats->discBeaconTxFailures;
         sync_stats.amHopCountExpireCount = pSyncStats->amHopCountExpireCount;
+        sync_stats.ndpChannelFreq = pSyncStats->ndpChannelFreq;
         memcpy(&pRsp->data, &sync_stats, sizeof(NanSyncStats));
     } else if (stats_type == NAN_STATS_ID_DE) {
         NanDeStats de_stats;
