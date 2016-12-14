@@ -19,6 +19,8 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS := -Wno-unused-parameter
+# http://b/33566695 - Disable address-of-packed-member temporarily.
+LOCAL_CFLAGS += -Wno-address-of-packed-member
 ifeq ($(TARGET_BUILD_VARIANT),userdebug)
 LOCAL_CFLAGS += "-DLOG_NDEBUG=0"
 endif
@@ -74,6 +76,8 @@ include $(CLEAR_VARS)
 LOCAL_REQUIRED_MODULES :=
 
 LOCAL_CFLAGS += -Wno-unused-parameter -Wall -Werror
+# http://b/33566695 - Disable address-of-packed-member temporarily.
+LOCAL_CFLAGS += -Wno-address-of-packed-member
 LOCAL_CPPFLAGS += -Wno-conversion-null
 ifeq ($(TARGET_BUILD_VARIANT),userdebug)
 LOCAL_CFLAGS += "-DLOG_NDEBUG=0"
