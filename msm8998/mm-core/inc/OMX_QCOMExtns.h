@@ -632,6 +632,10 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /* Configure to disable PQ*/
     OMX_QTIIndexParamDisablePQ = 0x7F000068,
+
+    /* Dither control for 10bit */
+    OMX_QTIIndexParamDitherControl = 0x7F000069,
+
 };
 
 /**
@@ -2089,6 +2093,19 @@ private:
 };
 
 #endif // __cplusplus
+
+typedef enum QOMX_VIDEO_DITHERTYPE {
+    QOMX_DITHER_DISABLE = 0,
+    QOMX_DITHER_COLORSPACE_EXCEPT_BT2020 = 0x01,
+    QOMX_DITHER_ALL_COLORSPACE = 0x02,
+} QOMX_VIDEO_DITHERTYPE;
+
+typedef struct QOMX_VIDEO_DITHER_CONTROL {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    QOMX_VIDEO_DITHERTYPE eDitherType;
+} QOMX_VIDEO_DITHER_CONTROL;
 
 #ifdef __cplusplus
 }

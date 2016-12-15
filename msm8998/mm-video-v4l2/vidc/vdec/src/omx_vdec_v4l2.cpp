@@ -148,6 +148,8 @@ extern "C" {
 #define SECURE_FLAGS_OUTPUT_BUFFER ION_SECURE
 #endif
 
+#define LUMINANCE_DIV_FACTOR 10000.0
+
 static OMX_U32 maxSmoothStreamingWidth = 1920;
 static OMX_U32 maxSmoothStreamingHeight = 1088;
 
@@ -236,6 +238,14 @@ void* async_message_thread (void *input)
                 if(ptr[2] & V4L2_EVENT_PICSTRUCT_FLAG) {
                     omx->m_progressive = ptr[4];
                     DEBUG_PRINT_HIGH("VIDC Port Reconfig PicStruct change - %d", ptr[4]);
+                }
+                if(ptr[2] & V4L2_EVENT_COLOUR_SPACE_FLAG) {
+                    if (ptr[5] == MSM_VIDC_BT2020) {
+                        omx->m_color_space = omx_vdec::BT2020;
+                    } else {
+                        omx->m_color_space = omx_vdec::EXCEPT_BT2020;
+                    }
+                    DEBUG_PRINT_HIGH("VIDC Port Reconfig ColorSpace change - %d", omx->m_color_space);
                 }
                 if (omx->async_message_process(input,&vdec_msg) < 0) {
                     DEBUG_PRINT_HIGH("async_message_thread Exited");
@@ -559,7 +569,7 @@ bool is_platform_tp10capture_supported()
 {
     char platform_name[PROPERTY_VALUE_MAX] = {0};
     property_get("ro.board.platform", platform_name, "0");
-    if (!strncmp(platform_name, "msmcobalt", 9)) {
+    if (!strncmp(platform_name, "msm8998", 9)) {
         DEBUG_PRINT_HIGH("TP10 on capture port is supported");
         return true;
     }
@@ -828,7 +838,17 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_internal_hdr_info.nPortIndex = (OMX_U32)OMX_CORE_OUTPUT_PORT_INDEX;
     m_change_client_hdr_info = false;
     pthread_mutex_init(&m_hdr_info_client_lock, NULL);
-    m_dither_config = is_platform_tp10capture_supported() ? DITHER_DISABLE : DITHER_ALL_COLORSPACE;
+
+    char dither_value[PROPERTY_VALUE_MAX] = {0};
+    property_get("vidc.dec.dither", dither_value, "0");
+    if ((atoi(dither_value) > DITHER_ALL_COLORSPACE) ||
+        (atoi(dither_value) < DITHER_DISABLE)) {
+        m_dither_config = DITHER_ALL_COLORSPACE;
+    } else {
+        m_dither_config = is_platform_tp10capture_supported() ? (dither_type)atoi(dither_value) : DITHER_ALL_COLORSPACE;
+    }
+
+    DEBUG_PRINT_HIGH("Dither config is %d", m_dither_config);
     m_color_space = EXCEPT_BT2020;
 }
 
@@ -3925,6 +3945,16 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             eRet = OMX_ErrorNone;
             break;
         }
+        case OMX_QTIIndexParamDitherControl:
+        {
+            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_DITHER_CONTROL);
+            DEBUG_PRINT_LOW("get_parameter: QOMX_VIDEO_DITHER_CONTROL");
+            QOMX_VIDEO_DITHER_CONTROL *pParam =
+                (QOMX_VIDEO_DITHER_CONTROL *) paramData;
+            pParam->eDitherType = (QOMX_VIDEO_DITHERTYPE) m_dither_config;
+            eRet = OMX_ErrorNone;
+            break;
+        }
         default: {
                  DEBUG_PRINT_ERROR("get_parameter: unknown param %08x", paramIndex);
                  eRet =OMX_ErrorUnsupportedIndex;
@@ -5107,7 +5137,22 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
             break;
         }
-
+        case OMX_QTIIndexParamDitherControl:
+        {
+            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_DITHER_CONTROL);
+            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamDitherControl");
+            QOMX_VIDEO_DITHER_CONTROL *pParam = (QOMX_VIDEO_DITHER_CONTROL *)paramData;
+            DEBUG_PRINT_LOW("set_parameter: Dither Config from client is: %d", pParam->eDitherType);
+            if (( pParam->eDitherType < QOMX_DITHER_DISABLE ) ||
+                ( pParam->eDitherType > QOMX_DITHER_ALL_COLORSPACE)) {
+                DEBUG_PRINT_ERROR("set_parameter: DitherType outside the range");
+                eRet = OMX_ErrorBadParameter;
+                break;
+            }
+            m_dither_config = is_platform_tp10capture_supported() ? (dither_type)pParam->eDitherType : DITHER_ALL_COLORSPACE;
+            DEBUG_PRINT_LOW("set_parameter: Final Dither Config is: %d", m_dither_config);
+            break;
+        }
         default: {
                  DEBUG_PRINT_ERROR("Setparameter: unknown param %d", paramIndex);
                  eRet = OMX_ErrorUnsupportedIndex;
@@ -8460,21 +8505,35 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         }
 
         // add current framerate to gralloc meta data
-        if (buffer->nFilledLen > 0 && m_drc_enable && m_enable_android_native_buffers && m_out_mem_ptr) {
-            //If valid fps was received, directly send it to display for the 1st fbd.
-            //Otherwise, calculate fps using fbd timestamps,
-            //  when received 2 fbds, send a coarse fps,
-            //  when received 30 fbds, update fps again as it should be
-            //  more accurate than the one when only 2 fbds received.
-            //For other frames, set value 0 to inform that refresh rate has no update
+        if ((buffer->nFilledLen > 0) && m_enable_android_native_buffers && m_out_mem_ptr) {
+            // If valid fps was received, directly send it to display for the 1st fbd.
+            // Otherwise, calculate fps using fbd timestamps
             float refresh_rate = m_fps_prev;
             if (m_fps_received) {
                 if (1 == proc_frms) {
                     refresh_rate = m_fps_received / (float)(1<<16);
                 }
             } else {
-                if (2 == proc_frms || 30 == proc_frms) {
-                    refresh_rate = drv_ctx.frame_rate.fps_numerator / (float) drv_ctx.frame_rate.fps_denominator;
+                // check if dynamic refresh rate change feature enabled or not
+                if (m_drc_enable) {
+                    // set coarse fps when 2 fbds received and
+                    // set fps again when 30 fbds received as it should be
+                    // more accurate than the one set when only 2 fbds received.
+                    if (2 == proc_frms || 30 == proc_frms) {
+                        if (drv_ctx.frame_rate.fps_denominator) {
+                            refresh_rate = drv_ctx.frame_rate.fps_numerator /
+                                    (float) drv_ctx.frame_rate.fps_denominator;
+                        }
+                    }
+                } else {
+                    // calculate and set refresh rate for every frame from second frame onwards
+                    // display will assume the default refresh rate for first frame (which is 60 fps)
+                    if (m_fps_prev) {
+                        if (drv_ctx.frame_rate.fps_denominator) {
+                            refresh_rate = drv_ctx.frame_rate.fps_numerator /
+                                    (float) drv_ctx.frame_rate.fps_denominator;
+                        }
+                    }
                 }
             }
             if (refresh_rate > 60) {
@@ -10833,7 +10892,12 @@ bool omx_vdec::handle_mastering_display_color_info(void* data)
     internal_disp_changed_flag |= (hdr_info->sType1.mW.x != mastering_display_payload->nWhitePointX) ||
         (hdr_info->sType1.mW.y != mastering_display_payload->nWhitePointY);
 
-    internal_disp_changed_flag != (hdr_info->sType1.mMaxDisplayLuminance != mastering_display_payload->nMaxDisplayMasteringLuminance) ||
+    /* Maximum Display Luminance from the bitstream is in 0.0001 cd/m2 while the HDRStaticInfo extension
+       requires it in cd/m2, so dividing by 10000 and rounding the value after division
+    */
+    uint16_t max_display_luminance_cd_m2 =
+        static_cast<int>((mastering_display_payload->nMaxDisplayMasteringLuminance / LUMINANCE_DIV_FACTOR) + 0.5);
+    internal_disp_changed_flag |= (hdr_info->sType1.mMaxDisplayLuminance != max_display_luminance_cd_m2) ||
         (hdr_info->sType1.mMinDisplayLuminance != mastering_display_payload->nMinDisplayMasteringLuminance);
 
     if (internal_disp_changed_flag) {
@@ -10846,7 +10910,7 @@ bool omx_vdec::handle_mastering_display_color_info(void* data)
         hdr_info->sType1.mW.x = mastering_display_payload->nWhitePointX;
         hdr_info->sType1.mW.y = mastering_display_payload->nWhitePointY;
 
-        hdr_info->sType1.mMaxDisplayLuminance = mastering_display_payload->nMaxDisplayMasteringLuminance;
+        hdr_info->sType1.mMaxDisplayLuminance = max_display_luminance_cd_m2;
         hdr_info->sType1.mMinDisplayLuminance = mastering_display_payload->nMinDisplayMasteringLuminance;
     }
 
