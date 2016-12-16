@@ -13,8 +13,8 @@ ifeq ($(filter adp8064 fox,$(TARGET_DEVICE)),)
           #For msm8909 target
           include $(call all-named-subdir-makefiles,msm8909)
         else
-          ifneq ($(filter msmcobalt,$(TARGET_BOARD_PLATFORM)),)
-            include $(call all-named-subdir-makefiles,msmcobalt)
+          ifneq ($(filter msm8998,$(TARGET_BOARD_PLATFORM)),)
+            include $(call all-named-subdir-makefiles,msm8998)
           endif
         endif
       endif
