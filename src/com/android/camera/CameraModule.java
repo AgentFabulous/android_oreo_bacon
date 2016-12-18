@@ -70,4 +70,6 @@ public interface CameraModule {
     public void resizeForPreviewAspectRatio();
 
     public void onSwitchSavePath();
+
+    public boolean delayAppExitToSaveImage();
 }

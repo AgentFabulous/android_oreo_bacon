@@ -1099,6 +1099,11 @@ public class VideoModule implements CameraModule,
     }
 
     @Override
+    public boolean delayAppExitToSaveImage() {
+        return false;
+    }
+
+    @Override
     public void installIntentFilter() {
         // install an intent filter to receive SD card related events.
         IntentFilter intentFilter =

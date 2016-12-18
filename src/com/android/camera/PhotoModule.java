@@ -44,6 +44,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.os.MessageQueue;
@@ -314,6 +315,7 @@ public class PhotoModule
     private long mJpegPictureCallbackTime;
     private long mOnResumeTime;
     private byte[] mJpegImageData;
+    private boolean mWaitForJpegCallback;
 
     // These latency time are for the CameraLatency test.
     public long mAutoFocusTime;
@@ -331,6 +333,7 @@ public class PhotoModule
 
     private final Handler mHandler = new MainHandler();
     private MessageQueue.IdleHandler mIdleHandler = null;
+    private HandlerThread mCaptureHandlerThread;
 
     private PreferenceGroup mPreferenceGroup;
 
@@ -353,6 +356,13 @@ public class PhotoModule
     private int mJpegFileSizeEstimation = 0;
     private int mRemainingPhotos = -1;
     private static final int SELFIE_FLASH_DURATION = 680;
+
+    private void createCaptureThread() {
+        if (mCaptureHandlerThread == null) {
+            mCaptureHandlerThread = new HandlerThread("CaptureThread");
+            mCaptureHandlerThread.start();
+        }
+    }
 
     private class SelfieThread extends Thread {
         public void run() {
@@ -822,6 +832,11 @@ public class PhotoModule
                 Toast.LENGTH_SHORT).show();
     }
 
+    @Override
+    public boolean delayAppExitToSaveImage() {
+        return mWaitForJpegCallback;
+    }
+
     private void keepMediaProviderInstance() {
         // We want to keep a reference to MediaProvider in camera's lifecycle.
         // TODO: Utilize mMediaProviderClient instance to replace
@@ -856,6 +871,8 @@ public class PhotoModule
         }
 
         mNamedImages = new NamedImages();
+
+        createCaptureThread();
 
         mFirstTimeInitialized = true;
         Log.d(TAG, "addIdleHandler in first time initialization");
@@ -1188,8 +1205,13 @@ public class PhotoModule
         public void onPictureTaken(final byte [] jpegData, CameraProxy camera) {
             Log.d(TAG, "JpegPictureCallback: onPictureTaken()");
             if (mCameraState != LONGSHOT) {
-                mUI.stopSelfieFlash();
-                mUI.enableShutter(true);
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mUI.stopSelfieFlash();
+                        mUI.enableShutter(true);
+                    }
+                });
             }
             if (mPaused) {
                 return;
@@ -1199,8 +1221,13 @@ public class PhotoModule
                     stopPreview();
                 }
             } else if (mSceneMode == CameraUtil.SCENE_MODE_HDR) {
-                mUI.showSwitcher();
-                mUI.setSwipingEnabled(true);
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mUI.showSwitcher();
+                        mUI.setSwipingEnabled(true);
+                    }
+                });
             }
 
             mReceivedSnapNum = mReceivedSnapNum + 1;
@@ -1270,7 +1297,12 @@ public class PhotoModule
                 }
             } else if (((mCameraState != LONGSHOT) && (mReceivedSnapNum == mBurstSnapNum))
                         || isLongshotDone()) {
-                mUI.enableShutter(true);
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mUI.enableShutter(true);
+                    }
+                });
                 mFocusManager.restartTouchFocusTimer();
                 if (CameraUtil.FOCUS_MODE_CONTINUOUS_PICTURE.equals(mFocusManager.getFocusMode(false))
                         || CameraUtil.FOCUS_MODE_MW_CONTINUOUS_PICTURE.equals(mFocusManager.getFocusMode(false))) {
@@ -1296,7 +1328,7 @@ public class PhotoModule
             }
             if (!mRefocus || (mRefocus && mReceivedSnapNum == 7)) {
                 ExifInterface exif = Exif.getExif(jpegData);
-                int orientation = Exif.getOrientation(exif);
+                final int orientation = Exif.getOrientation(exif);
                 if (!mIsImageCaptureIntent) {
                     // Burst snapshot. Generate new image name.
                     if (mReceivedSnapNum > 1) {
@@ -1359,21 +1391,31 @@ public class PhotoModule
                                     orientation, exif, mOnMediaSavedListener,
                                     mContentResolver, mPictureFormat);
                             if (mRefocus && mReceivedSnapNum == 7) {
-                                 mUI.showRefocusToast(mRefocus);
+                                 mHandler.post(new Runnable() {
+                                     @Override
+                                     public void run() {
+                                         mUI.showRefocusToast(mRefocus);
+                                     }
+                                 });
                             }
                         }
                         // Animate capture with real jpeg data instead of a preview frame.
                         if ((mCameraState != LONGSHOT) ||
                             isLongshotDone()) {
-                            Size pic_size = mParameters.getPictureSize();
-                            if ((pic_size.width <= 352) && (pic_size.height<= 288)) {
-                                mUI.setDownFactor(2); //Downsample by 2 for CIF & below
-                            } else {
-                                mUI.setDownFactor(4);
-                            }
-                            if (mAnimateCapture) {
-                                mUI.animateCapture(jpegData, orientation, mMirror);
-                            }
+                            final Size pic_size = mParameters.getPictureSize();
+                            mHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if ((pic_size.width <= 352) && (pic_size.height<= 288)) {
+                                        mUI.setDownFactor(2); //Downsample by 2 for CIF & below
+                                    } else {
+                                        mUI.setDownFactor(4);
+                                    }
+                                    if (mAnimateCapture) {
+                                        mUI.animateCapture(jpegData, orientation, mMirror);
+                                    }
+                                }
+                            });
                         } else {
                             // In long shot mode, we do not want to update the preview thumbnail
                             // for each snapshot, instead, keep the last jpeg data and orientation,
@@ -1386,7 +1428,12 @@ public class PhotoModule
                         stopPreview();
                         mJpegImageData = jpegData;
                         if (!mQuickCapture) {
-                            mUI.showCapturedImageForReview(jpegData, orientation, mMirror);
+                            mHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mUI.showCapturedImageForReview(jpegData, orientation, mMirror);
+                                }
+                            });
                         } else {
                             onCaptureDone();
                         }
@@ -1396,7 +1443,12 @@ public class PhotoModule
                     // the mean time and fill it, but that could have happened between the
                     // shutter press and saving the JPEG too.
                     mActivity.updateStorageSpaceAndHint();
-                    mUI.updateRemainingPhotos(--mRemainingPhotos);
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            mUI.updateRemainingPhotos(--mRemainingPhotos);
+                        }
+                    });
                     long now = System.currentTimeMillis();
                     mJpegCallbackFinishTime = now - mJpegPictureCallbackTime;
                     Log.v(TAG, "mJpegCallbackFinishTime = "
@@ -1425,6 +1477,8 @@ public class PhotoModule
                     cancelAutoFocus();
                 }
             }
+
+            mWaitForJpegCallback = false;
         }
     }
 
@@ -1549,6 +1603,7 @@ public class PhotoModule
         mCaptureStartTime = System.currentTimeMillis();
         mPostViewPictureCallbackTime = 0;
         mJpegImageData = null;
+        mWaitForJpegCallback = true;
 
         final boolean animateBefore = (mSceneMode == CameraUtil.SCENE_MODE_HDR);
         if(mHistogramEnabled) {
@@ -1640,8 +1695,9 @@ public class PhotoModule
                         new JpegPictureCallback(loc));
             }
         } else {
+            Handler handler = new Handler(mCaptureHandlerThread.getLooper());
             mCameraDevice.enableShutterSound(!mRefocus);
-            mCameraDevice.takePicture(mHandler,
+            mCameraDevice.takePicture(handler,
                     new ShutterCallback(!animateBefore),
                     mRawPictureCallback, mPostViewPictureCallback,
                     new JpegPictureCallback(loc));
@@ -2269,6 +2325,8 @@ public class PhotoModule
         mCameraId = getPreferredCameraId(mPreferences);
         mPreferences.setLocalId(mActivity, mCameraId);
         CameraSettings.upgradeLocalPreferences(mPreferences.getLocal());
+
+        createCaptureThread();
     }
 
     private void openCamera() {
@@ -2398,6 +2456,8 @@ public class PhotoModule
 
         Log.d(TAG, "remove idle handleer in onPause");
         removeIdleHandler();
+
+        mCaptureHandlerThread = null;
     }
 
     @Override
