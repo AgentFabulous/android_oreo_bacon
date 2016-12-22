@@ -141,6 +141,7 @@ typedef enum
     NAN_TLV_TYPE_NAN_SCID = 19,
     NAN_TLV_TYPE_NAN_PMK = 20,
     NAN_TLV_TYPE_SDEA_CTRL_PARAMS = 21,
+    NAN_TLV_TYPE_NAN_RANGING_CFG = 22,
     NAN_TLV_TYPE_SDF_LAST = 4095,
 
     /* Configuration types */
@@ -182,6 +183,8 @@ typedef enum
     NAN_TLV_TYPE_24G_CHANNEL,
     NAN_TLV_TYPE_5G_CHANNEL,
     NAN_TLV_TYPE_DISC_MAC_ADDR_RANDOM_INTERVAL,
+    NAN_TLV_TYPE_RANGING_AUTO_RESPONSE_CFG = 4134,
+    NAN_TLV_TYPE_NAN_RANGE_RESULT,
     NAN_TLV_TYPE_CONFIG_LAST = 8191,
 
     /* Attributes types */
@@ -1004,6 +1007,31 @@ typedef struct PACKED
     u32 range_limit_present:1;
     u32 reserved:23;
 } NanFWSdeaCtrlParams;
+
+/* NAN Ranging Configuration params */
+typedef struct PACKED
+{
+    u32  inner_threshold;
+    u32  outer_threshold;
+} NanFWGeoFenceDescriptor;
+
+typedef struct PACKED
+{
+    u32 range_resolution;
+    u32 range_interval;
+    u32 ranging_indication_event;
+    NanFWGeoFenceDescriptor geo_fence_threshold;
+} NanFWRangeConfigParams;
+
+typedef struct PACKED
+{
+    NanMsgHeader fwHeader;
+    /*
+      Excludes TLVs
+      Optional: Nan Availability
+    */
+    u8 ptlv[];
+} NanTestModeReqMsg, *pNanTestModeReqMsg;
 
 /*
   NAN Status codes exchanged between firmware
