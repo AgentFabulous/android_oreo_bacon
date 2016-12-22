@@ -129,7 +129,7 @@ public:
     int putNanBeaconSdfPayload(transaction_id id, const NanBeaconSdfPayloadRequest *pReq);
     int getNanStaParameter(wifi_interface_handle iface, NanStaParameter *pRsp);
     int putNanCapabilities(transaction_id id);
-	int putNanAvailabilityDebug(NanAvailabilityDebug debug);
+    int putNanAvailabilityDebug(NanAvailabilityDebug debug);
 
     /* Functions for NAN error translation
        For NanResponse, NanPublishTerminatedInd, NanSubscribeTerminatedInd,
