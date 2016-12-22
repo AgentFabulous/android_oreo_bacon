@@ -1023,6 +1023,16 @@ typedef struct PACKED
     NanFWGeoFenceDescriptor geo_fence_threshold;
 } NanFWRangeConfigParams;
 
+typedef struct PACKED
+{
+    NanMsgHeader fwHeader;
+    /*
+      Excludes TLVs
+      Optional: Nan Availability
+    */
+    u8 ptlv[];
+} NanTestModeReqMsg, *pNanTestModeReqMsg;
+
 /*
   NAN Status codes exchanged between firmware
   and WifiHal.
