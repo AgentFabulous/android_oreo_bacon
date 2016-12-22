@@ -1400,3 +1400,43 @@ int NanCommand::putNanCapabilities(transaction_id id)
     hexdump(mVendorData, mDataLen);
     return ret;
 }
+
+int NanCommand::putNanAvailabilityDebug(NanAvailabilityDebug debug)
+{
+
+    size_t message_len = sizeof(NanTestModeReqMsg);
+    ALOGV("Message Len %zu", message_len);
+
+    message_len += (SIZEOF_TLV_HDR + sizeof(NanAvailabilityDebug));
+    pNanTestModeReqMsg pFwReq = (pNanTestModeReqMsg)malloc(message_len);
+    if (pFwReq == NULL) {
+        cleanup();
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    ALOGV("Message Len %zu", message_len);
+    ALOGV("Valid %d 2g %d 5g %d", debug.valid, debug.band_availability_2g,
+                                               debug.band_availability_5g);
+    memset (pFwReq, 0, message_len);
+    pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
+    pFwReq->fwHeader.msgId = NAN_MSG_ID_TESTMODE_REQ;
+    pFwReq->fwHeader.msgLen = message_len;
+    pFwReq->fwHeader.transactionId = 0;
+
+    u8* tlvs = pFwReq->ptlv;
+    tlvs = addTlv(NAN_TLV_TYPE_TM_NAN_AVAILABILITY, sizeof(NanAvailabilityDebug),
+                  (const u8*)&debug, tlvs);
+
+    mVendorData = (char*)pFwReq;
+    mDataLen = message_len;
+
+    /* Write the TLVs to the message. */
+    int ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+    if (ret < 0) {
+        ALOGE("%s: put_bytes Error:%d",__func__, ret);
+        cleanup();
+        return ret;
+    }
+    hexdump(mVendorData, mDataLen);
+    return ret;
+}
