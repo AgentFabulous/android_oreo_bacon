@@ -4741,6 +4741,7 @@ static VOS_STATUS hdd_parse_ese_beacon_req(tANI_U8 *pValue,
 
     hddLog(LOG1, "Number of Bcn Req Ie fields: %d", pEseBcnReq->numBcnReqIe);
 
+
     for (j = 0; j < (pEseBcnReq->numBcnReqIe); j++)
     {
         for (i = 0; i < 4; i++)
