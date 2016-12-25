@@ -33,6 +33,9 @@
 #include <linux/kernel_stat.h>
 #include <asm/cputime.h>
 #include <linux/input.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
 
 static int active_count;
 
@@ -390,7 +393,11 @@ static void cpufreq_interactive_timer(unsigned long data)
 	do_div(cputime_speedadj, delta_time);
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	cpu_load = loadadjfreq / pcpu->policy->cur;
-	boosted = now < boostpulse_endtime;
+	boosted = now < boostpulse_endtime ||
+			check_cpuboost(data);
+#ifdef CONFIG_STATE_NOTIFIER
+	boosted = boosted && !state_suspended;
+#endif
 	this_hispeed_freq = max(hispeed_freq, pcpu->policy->min);
 	
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
