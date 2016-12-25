@@ -1310,6 +1310,7 @@ int msm_isp_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	struct vfe_device *vfe_dev = v4l2_get_subdevdata(sd);
 	long rc;
 	int retry_times = 5;
+	(void)retry_times;
 	ISP_DBG("%s\n", __func__);
 
 	mutex_lock(&vfe_dev->realtime_mutex);
