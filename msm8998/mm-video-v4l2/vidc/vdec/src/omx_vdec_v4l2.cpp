@@ -253,19 +253,27 @@ void* async_message_thread (void *input)
                 }
             } else if (dqevent.type == V4L2_EVENT_MSM_VIDC_FLUSH_DONE) {
                 struct vdec_msginfo vdec_msg;
-                vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_INPUT_DONE;
+                uint32_t flush_type = *(uint32_t *)dqevent.u.data;
+                // Old driver doesn't send flushType information.
+                // To make this backward compatible fallback to old approach
+                // if the flush_type is not present.
                 vdec_msg.status_code=VDEC_S_SUCCESS;
-                DEBUG_PRINT_HIGH("VIDC Input Flush Done Recieved");
-                if (omx->async_message_process(input,&vdec_msg) < 0) {
-                    DEBUG_PRINT_HIGH("async_message_thread Exited");
-                    break;
+                if (!flush_type || (flush_type & V4L2_QCOM_CMD_FLUSH_OUTPUT)) {
+                    vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_INPUT_DONE;
+                    DEBUG_PRINT_HIGH("VIDC Input Flush Done Recieved");
+                    if (omx->async_message_process(input,&vdec_msg) < 0) {
+                        DEBUG_PRINT_HIGH("async_message_thread Exited");
+                        break;
+                    }
                 }
-                vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_OUTPUT_DONE;
-                vdec_msg.status_code=VDEC_S_SUCCESS;
-                DEBUG_PRINT_HIGH("VIDC Output Flush Done Recieved");
-                if (omx->async_message_process(input,&vdec_msg) < 0) {
-                    DEBUG_PRINT_HIGH("async_message_thread Exited");
-                    break;
+
+                if (!flush_type || (flush_type & V4L2_QCOM_CMD_FLUSH_CAPTURE)) {
+                    vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_OUTPUT_DONE;
+                    DEBUG_PRINT_HIGH("VIDC Output Flush Done Recieved");
+                    if (omx->async_message_process(input,&vdec_msg) < 0) {
+                        DEBUG_PRINT_HIGH("async_message_thread Exited");
+                        break;
+                    }
                 }
             } else if (dqevent.type == V4L2_EVENT_MSM_VIDC_HW_OVERLOAD) {
                 struct vdec_msginfo vdec_msg;
@@ -569,7 +577,7 @@ bool is_platform_tp10capture_supported()
 {
     char platform_name[PROPERTY_VALUE_MAX] = {0};
     property_get("ro.board.platform", platform_name, "0");
-    if (!strncmp(platform_name, "msm8998", 9)) {
+    if (!strncmp(platform_name, "msm8998", 7)) {
         DEBUG_PRINT_HIGH("TP10 on capture port is supported");
         return true;
     }
@@ -7749,12 +7757,13 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
 
     rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_QBUF, &buf);
     if (rc) {
-        /*TODO: How to handle this case */
         buffer->nFilledLen = 0;
-        DEBUG_PRINT_ERROR("Failed to qbuf to driver, send FTB back to client");
+        DEBUG_PRINT_ERROR("Failed to qbuf to driver, error %s", strerror(errno));
         m_cb.FillBufferDone(hComp, m_app_data, buffer);
+        return OMX_ErrorHardware;
     }
-return OMX_ErrorNone;
+
+    return OMX_ErrorNone;
 }
 
 /* ======================================================================

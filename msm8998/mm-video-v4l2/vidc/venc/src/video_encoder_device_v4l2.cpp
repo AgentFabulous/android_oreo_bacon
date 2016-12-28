@@ -7778,6 +7778,8 @@ bool venc_dev::venc_check_for_pq(void)
         (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <=
         (m_pq.caps.max_mb_per_sec / ((m_sVenc_cfg.input_height * m_sVenc_cfg.input_width) / 256));
 
+    frame_rate_supported = (((operating_rate >> 16) > 0) && ((operating_rate >> 16) < 5)) ? false : frame_rate_supported;
+
     yuv_format_supported = ((m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV12)))
             || (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV21 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV21)))
             || (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12_UBWC && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV12_UBWC))));
