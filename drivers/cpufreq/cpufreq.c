@@ -24,6 +24,7 @@
 #include <linux/init.h>
 #include <linux/notifier.h>
 #include <linux/cpufreq.h>
+#include <linux/cpufreq_governor.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
@@ -60,6 +61,7 @@ static DEFINE_SPINLOCK(cpufreq_driver_lock);
 
 static struct kset *cpufreq_kset;
 static struct kset *cpudev_kset;
+static DEFINE_MUTEX(cpufreq_governor_lock);
 
 /*
  * cpu_policy_rwsem is a per CPU reader-writer semaphore designed to cure
@@ -150,6 +152,11 @@ void disable_cpufreq(void)
 static LIST_HEAD(cpufreq_governor_list);
 static DEFINE_MUTEX(cpufreq_governor_mutex);
 
+bool have_governor_per_policy(void)
+{
+	return cpufreq_driver->have_governor_per_policy;
+}
+
 static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
 {
 	u64 idle_time;
@@ -184,6 +191,15 @@ u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy)
 	return idle_time;
 }
 EXPORT_SYMBOL_GPL(get_cpu_idle_time);
+
+struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy)
+{
+	if (have_governor_per_policy())
+		return &policy->kobj;
+	else
+		return cpufreq_global_kobject;
+}
+EXPORT_SYMBOL_GPL(get_governor_parent_kobj);
 
 static struct cpufreq_policy *__cpufreq_cpu_get(unsigned int cpu, int sysfs)
 {
@@ -1257,6 +1273,7 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 
 	if (cpufreq_driver->target)
 		__cpufreq_governor(data, CPUFREQ_GOV_STOP);
+		__cpufreq_governor(data, CPUFREQ_GOV_POLICY_EXIT);
 
 	kobj = &data->kobj;
 	cmp = &data->kobj_unregister;
@@ -1728,6 +1745,21 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 
 	pr_debug("__cpufreq_governor for CPU %u, event %u\n",
 						policy->cpu, event);
+
+	mutex_lock(&cpufreq_governor_lock);
+	if ((!policy->governor_enabled && (event == CPUFREQ_GOV_STOP)) ||
+	    (policy->governor_enabled && (event == CPUFREQ_GOV_START))) {
+		mutex_unlock(&cpufreq_governor_lock);
+		return -EBUSY;
+	}
+
+	if (event == CPUFREQ_GOV_STOP)
+		policy->governor_enabled = false;
+	else if (event == CPUFREQ_GOV_START)
+		policy->governor_enabled = true;
+
+	mutex_unlock(&cpufreq_governor_lock);
+
 	ret = policy->governor->governor(policy, event);
 
 	/* we keep one module reference alive for
@@ -1739,7 +1771,6 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 
 	return ret;
 }
-
 
 int cpufreq_register_governor(struct cpufreq_governor *governor)
 {
@@ -1763,7 +1794,6 @@ int cpufreq_register_governor(struct cpufreq_governor *governor)
 	return err;
 }
 EXPORT_SYMBOL_GPL(cpufreq_register_governor);
-
 
 void cpufreq_unregister_governor(struct cpufreq_governor *governor)
 {
@@ -1834,7 +1864,7 @@ EXPORT_SYMBOL(cpufreq_get_policy);
 static int __cpufreq_set_policy(struct cpufreq_policy *data,
 				struct cpufreq_policy *policy)
 {
-	int ret = 0;
+	int ret = 0, failed = 1;
 
 	pr_debug("setting new policy for CPU %u: %u - %u kHz\n", policy->cpu,
 		policy->min, policy->max);
@@ -1889,17 +1919,31 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 			pr_debug("governor switch\n");
 
 			/* end old governor */
-			if (data->governor)
-				__cpufreq_governor(data, CPUFREQ_GOV_STOP);
+			if (data->governor) {
+ 				__cpufreq_governor(data, CPUFREQ_GOV_STOP);
+				__cpufreq_governor(data,
+						CPUFREQ_GOV_POLICY_EXIT);
+			}
 
 			/* start new governor */
 			data->governor = policy->governor;
-			if (__cpufreq_governor(data, CPUFREQ_GOV_START)) {
+
+			if (!__cpufreq_governor(data, CPUFREQ_GOV_POLICY_INIT)) {
+				if (!__cpufreq_governor(data, CPUFREQ_GOV_START))
+					failed = 0;
+				else
+					__cpufreq_governor(data,
+							CPUFREQ_GOV_POLICY_EXIT);
+			}
+
+			if (failed) {
 				/* new governor failed, so re-start old one */
 				pr_debug("starting governor %s failed\n",
 							data->governor->name);
 				if (old_gov) {
 					data->governor = old_gov;
+					__cpufreq_governor(data,
+							CPUFREQ_GOV_POLICY_INIT);
 					__cpufreq_governor(data,
 							   CPUFREQ_GOV_START);
 				}
@@ -2152,6 +2196,23 @@ static struct notifier_block __refdata cpufreq_cpu_notifier = {
     .notifier_call = cpufreq_cpu_callback,
 };
 
+/* Will return if we need to evaluate cpu load again or not */
+bool need_load_eval(struct cpu_dbs_common_info *cdbs,
+		unsigned int sampling_rate)
+{
+	if (policy_is_shared(cdbs->cur_policy)) {
+		ktime_t time_now = ktime_get();
+		s64 delta_us = ktime_us_delta(time_now, cdbs->time_stamp);
+		/* Do nothing if we recently have sampled */
+		if (delta_us < (s64)(sampling_rate / 2))
+			return false;
+		else
+			cdbs->time_stamp = time_now;
+	}
+	return true;
+}
+EXPORT_SYMBOL_GPL(need_load_eval);
+
 /*********************************************************************
  *               REGISTER / UNREGISTER CPUFREQ DRIVER                *
  *********************************************************************/
@@ -2227,7 +2288,6 @@ err_null_driver:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cpufreq_register_driver);
-
 
 /**
  * cpufreq_unregister_driver - unregister the current CPUFreq driver

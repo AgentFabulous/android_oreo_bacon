@@ -108,6 +108,8 @@ struct cpufreq_policy {
         unsigned int		load_at_max; 
 	unsigned int		policy; /* see above */
 	struct cpufreq_governor	*governor; /* see below */
+	void			*governor_data;
+	bool			governor_enabled; /* governor start/stop flag */
 
 	struct work_struct	update; /* if update_policy() needs to be
 					 * called, but you're in IRQ context */
@@ -117,6 +119,11 @@ struct cpufreq_policy {
 	struct kobject		kobj;
 	struct completion	kobj_unregister;
 };
+
+static inline bool policy_is_shared(struct cpufreq_policy *policy)
+{
+	return cpumask_weight(policy->cpus) > 1;
+}
 
 #define CPUFREQ_ADJUST		(0)
 #define CPUFREQ_INCOMPATIBLE	(1)
@@ -178,12 +185,15 @@ static inline unsigned long cpufreq_scale(unsigned long old, u_int div, u_int mu
  *                          CPUFREQ GOVERNORS                        *
  *********************************************************************/
 
-#define CPUFREQ_GOV_START  1
-#define CPUFREQ_GOV_STOP   2
-#define CPUFREQ_GOV_LIMITS 3
+#define CPUFREQ_GOV_START	1
+#define CPUFREQ_GOV_STOP	2
+#define CPUFREQ_GOV_LIMITS	3
+#define CPUFREQ_GOV_POLICY_INIT	4
+#define CPUFREQ_GOV_POLICY_EXIT	5
 
 struct cpufreq_governor {
 	char	name[CPUFREQ_NAME_LEN];
+	int	initialized;
 	int	(*governor)	(struct cpufreq_policy *policy,
 				 unsigned int event);
 	ssize_t	(*show_setspeed)	(struct cpufreq_policy *policy,
@@ -231,6 +241,13 @@ struct cpufreq_driver {
 	struct module           *owner;
 	char			name[CPUFREQ_NAME_LEN];
 	u8			flags;
+	/*
+	 * This should be set by platforms having multiple clock-domains, i.e.
+	 * supporting multiple policies. With this sysfs directories of governor
+	 * would be created in cpu/cpu<num>/cpufreq/ directory and so they can
+	 * use the same governor with different tunables for different clusters.
+	 */
+	bool			have_governor_per_policy;
 
 	/* needed by all drivers */
 	int	(*init)		(struct cpufreq_policy *policy);
@@ -329,7 +346,9 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
  *********************************************************************/
 u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
 int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu);
+struct kobject *get_governor_parent_kobj(struct cpufreq_policy *policy);
 int cpufreq_update_policy(unsigned int cpu);
+bool have_governor_per_policy(void);
 
 #ifdef CONFIG_MSM_LIMITER
 int cpufreq_set_gov(char *target_gov, unsigned int cpu);
