@@ -1426,7 +1426,8 @@ static int cryptfs_restart_internal(int restart_main)
         property_get("ro.crypto.readonly", ro_prop, "");
         if (strlen(ro_prop) > 0 && atoi(ro_prop)) {
             struct fstab_rec* rec = fs_mgr_get_entry_for_mount_point(fstab, DATA_MNT_POINT);
-            rec->flags |= MS_RDONLY;
+            if (rec)
+               rec->flags |= MS_RDONLY;
         }
 
         /* If that succeeded, then mount the decrypted filesystem */
@@ -2615,13 +2616,15 @@ static int cryptfs_SHA256_fileblock(const char* filename, __le8* buf)
 
 static int get_fs_type(struct fstab_rec *rec)
 {
-    if (!strcmp(rec->fs_type, "ext4")) {
-        return EXT4_FS;
-    } else if (!strcmp(rec->fs_type, "f2fs")) {
-        return F2FS_FS;
-    } else {
-        return -1;
+    if (rec) {
+       if (!strcmp(rec->fs_type, "ext4")) {
+               return EXT4_FS;
+       } else if (!strcmp(rec->fs_type, "f2fs")) {
+               return F2FS_FS;
+       }
     }
+
+    return -1;
 }
 
 static int cryptfs_enable_all_volumes(struct crypt_mnt_ftr *crypt_ftr, int how,
@@ -3504,7 +3507,7 @@ int cryptfs_enable_file()
 int cryptfs_isConvertibleToFBE()
 {
     struct fstab_rec* rec = fs_mgr_get_entry_for_mount_point(fstab, DATA_MNT_POINT);
-    return fs_mgr_is_convertible_to_fbe(rec) ? 1 : 0;
+    return rec && fs_mgr_is_convertible_to_fbe(rec) ? 1 : 0;
 }
 
 int cryptfs_create_default_ftr(struct crypt_mnt_ftr* crypt_ftr, __attribute__((unused))int key_length)
