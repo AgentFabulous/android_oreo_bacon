@@ -71,6 +71,23 @@ __ATTR(_name, 0644, show_##_name##_gov_pol, store_##_name##_gov_pol)
 	gov_sys_attr_ro(_name);						\
 	gov_pol_attr_ro(_name)
 
+/* Create show/store routines */
+#define show_one(_gov, file_name)					\
+static ssize_t show_##file_name##_gov_sys				\
+(struct kobject *kobj, struct attribute *attr, char *buf)		\
+{									\
+	struct _gov##_dbs_tuners *tuners = _gov##_dbs_cdata.gdbs_data->tuners; \
+	return sprintf(buf, "%u\n", tuners->file_name);			\
+}									\
+									\
+static ssize_t show_##file_name##_gov_pol				\
+(struct cpufreq_policy *policy, char *buf)				\
+{									\
+	struct dbs_data *dbs_data = policy->governor_data;		\
+	struct _gov##_dbs_tuners *tuners = dbs_data->tuners;		\
+	return sprintf(buf, "%u\n", tuners->file_name);			\
+}
+
 #define store_one(_gov, file_name)					\
 static ssize_t store_##file_name##_gov_sys				\
 (struct kobject *kobj, struct attribute *attr, const char *buf, size_t count) \
@@ -168,7 +185,7 @@ struct cs_dbs_tuners {
 	unsigned int sampling_down_factor;
 	unsigned int up_threshold;
 	unsigned int down_threshold;
-	unsigned int freq_step;
+ 	unsigned int freq_step;
 };
 
 /* Common Governor data across policies */
@@ -246,6 +263,8 @@ static ssize_t show_sampling_rate_min_gov_pol				\
 	struct dbs_data *dbs_data = policy->governor_data;		\
 	return sprintf(buf, "%u\n", dbs_data->min_sampling_rate);	\
 }
+
+extern struct mutex cpufreq_governor_lock;
 
 void dbs_check_cpu(struct dbs_data *dbs_data, int cpu);
 bool need_load_eval(struct cpu_dbs_common_info *cdbs,
