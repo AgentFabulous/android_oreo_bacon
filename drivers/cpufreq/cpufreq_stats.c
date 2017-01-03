@@ -728,19 +728,20 @@ static int __init cpufreq_stats_init(void)
 		return ret;
 
 	create_all_freq_table();
+	register_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
+	for_each_online_cpu(cpu)
+		cpufreq_update_policy(cpu);
 
 	ret = cpufreq_register_notifier(&notifier_trans_block,
 				CPUFREQ_TRANSITION_NOTIFIER);
 	if (ret) {
 		cpufreq_unregister_notifier(&notifier_policy_block,
 				CPUFREQ_POLICY_NOTIFIER);
+		unregister_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
+		for_each_online_cpu(cpu)
+			cpufreq_stats_free_table(cpu);
 		free_all_freq_table();
 		return ret;
-	}
-
-	register_hotcpu_notifier(&cpufreq_stat_cpu_notifier);
-	for_each_online_cpu(cpu) {
-		cpufreq_update_policy(cpu);
 	}
 
 	ret = sysfs_create_file(cpufreq_global_kobject,
