@@ -142,6 +142,7 @@ typedef enum
     NAN_TLV_TYPE_NAN_PMK = 20,
     NAN_TLV_TYPE_SDEA_CTRL_PARAMS = 21,
     NAN_TLV_TYPE_NAN_RANGING_CFG = 22,
+    NAN_TLV_TYPE_CONFIG_DISCOVERY_INDICATIONS = 23,
     NAN_TLV_TYPE_SDF_LAST = 4095,
 
     /* Configuration types */
@@ -625,6 +626,15 @@ typedef struct PACKED
         SIZEOF_TLV_HDR + sizeof(u16) /* Cluster High  */    +   \
         SIZEOF_TLV_HDR + sizeof(u8)  /* Master Pref   */        \
     )
+
+/* Config Discovery Indication */
+ typedef struct PACKED
+ {
+    u32 disableDiscoveryMacAddressEvent:1;
+    u32 disableDiscoveryStartedClusterEvent:1;
+    u32 disableDiscoveryJoinedClusterEvent:1;
+    u32 reserved:29;
+ } NanConfigDiscoveryIndications;
 
 /* NAN Enable Req */
 typedef struct PACKED

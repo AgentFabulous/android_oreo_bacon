@@ -138,6 +138,10 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
         (
            pReq->config_responder_auto_response ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
+        ) + \
+        (
+           pReq->discovery_indication_cfg ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
         );
     pNanEnableReqMsg pFwReq = (pNanEnableReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -292,6 +296,20 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
                       sizeof(u32),
                       (const u8*)&pReq->ranging_auto_response_cfg, tlvs);
     }
+    if (pReq->discovery_indication_cfg) {
+        NanConfigDiscoveryIndications discovery_indications;
+        discovery_indications.disableDiscoveryMacAddressEvent =
+                               (pReq->discovery_indication_cfg & BIT_0) ? 1 : 0;
+        discovery_indications.disableDiscoveryStartedClusterEvent =
+                               (pReq->discovery_indication_cfg & BIT_1) ? 1 : 0;
+        discovery_indications.disableDiscoveryJoinedClusterEvent =
+                               (pReq->discovery_indication_cfg & BIT_2) ? 1 : 0;
+
+        tlvs = addTlv(NAN_TLV_TYPE_CONFIG_DISCOVERY_INDICATIONS,
+                      sizeof(u32),
+                      (const u8*)&discovery_indications, tlvs);
+    }
+
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
 
@@ -407,6 +425,10 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
         (
            pReq->config_responder_auto_response ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
+        )  + \
+        (
+           pReq->discovery_indication_cfg ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
         );
 
     if (pReq->num_config_discovery_attr) {
@@ -519,6 +541,20 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
         tlvs = addTlv(NAN_TLV_TYPE_RANGING_AUTO_RESPONSE_CFG,
                       sizeof(u32),
                       (const u8*)&pReq->ranging_auto_response_cfg, tlvs);
+    }
+
+    if (pReq->discovery_indication_cfg) {
+        NanConfigDiscoveryIndications discovery_indications;
+        discovery_indications.disableDiscoveryMacAddressEvent =
+                               (pReq->discovery_indication_cfg & BIT_0) ? 1 : 0;
+        discovery_indications.disableDiscoveryStartedClusterEvent =
+                               (pReq->discovery_indication_cfg & BIT_1) ? 1 : 0;
+        discovery_indications.disableDiscoveryJoinedClusterEvent =
+                               (pReq->discovery_indication_cfg & BIT_2) ? 1 : 0;
+
+        tlvs = addTlv(NAN_TLV_TYPE_CONFIG_DISCOVERY_INDICATIONS,
+                      sizeof(u32),
+                      (const u8*)&discovery_indications, tlvs);
     }
 
     mVendorData = (char*)pFwReq;
