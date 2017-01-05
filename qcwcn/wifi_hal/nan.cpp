@@ -752,7 +752,7 @@ wifi_error nan_data_request_initiator(transaction_id id,
             id) ||
         nanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_INSTANCE_ID,
-            msg->service_instance_id) ||
+            msg->requestor_instance_id) ||
         nanCommand->put_bytes(
             QCA_WLAN_VENDOR_ATTR_NDP_PEER_DISCOVERY_MAC_ADDR,
             (char *)msg->peer_disc_mac_addr,
