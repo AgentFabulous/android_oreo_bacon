@@ -320,10 +320,6 @@ struct errorCode errorCodeTranslation[] = {
     {NAN_STATUS_INVALID_PARAM, NDP_I_INVALID_APP_INFO_LEN,
      "Invalid app info length"},
 
-
-    {NAN_STATUS_INVALID_SERVICE_INSTANCE_ID, NDP_I_INVALID_SERVICE_INSTANCE_ID,
-     "Invalid service instance ID"},
-
     {NAN_STATUS_PROTOCOL_FAILURE, NDP_I_MGMT_FRAME_REQUEST_FAILED,
      "Management frame request failed"},
     {NAN_STATUS_PROTOCOL_FAILURE, NDP_I_MGMT_FRAME_RESPONSE_FAILED,
