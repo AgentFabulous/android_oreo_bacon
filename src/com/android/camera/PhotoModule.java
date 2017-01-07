@@ -1218,7 +1218,12 @@ public class PhotoModule
             }
             if (mIsImageCaptureIntent) {
                 if (!mRefocus) {
-                    stopPreview();
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            stopPreview();
+                        }
+                    });
                 }
             } else if (mSceneMode == CameraUtil.SCENE_MODE_HDR) {
                 mHandler.post(new Runnable() {
@@ -1290,7 +1295,12 @@ public class PhotoModule
 
             if (needRestartPreview) {
                 Log.d(TAG, "JpegPictureCallback: needRestartPreview");
-                setupPreview();
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        setupPreview();
+                    }
+                });
                 if (CameraUtil.FOCUS_MODE_CONTINUOUS_PICTURE.equals(mFocusManager.getFocusMode(false))
                         || CameraUtil.FOCUS_MODE_MW_CONTINUOUS_PICTURE.equals(mFocusManager.getFocusMode(false))) {
                     mCameraDevice.cancelAutoFocus();
@@ -1430,7 +1440,12 @@ public class PhotoModule
                         }
 
                     } else {
-                        stopPreview();
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                stopPreview();
+                            }
+                        });
                         mJpegImageData = jpegData;
                         if (!mQuickCapture) {
                             mHandler.post(new Runnable() {
