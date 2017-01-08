@@ -28,7 +28,7 @@
     <string name="touchpad_double_tap_summary">While in camera, double tap to capture image</string>
 
     <!-- Gesture shortcuts -->
-    <string name="screen_gestures_panel_title">Gestures</string>
+    <string name="screen_gestures_panel_title">OnePlus Gestures</string>
 
     <string name="touchscreen_double_tap_gesture_title">Wake device</string>
     <string name="touchscreen_double_tap_gesture_summary">Double tap to wake the device</string>
@@ -73,10 +73,10 @@
     <!-- haptic feedback  -->
     <string name="touchscreen_extras">Extras</string>
     <string name="haptic_feedback">Haptic feedback</string>
-    <string name="haptic_feedback_summary">Vibrate when a gesture got detected</string>
+    <string name="haptic_feedback_summary">Vibrate when a gesture is detected</string>
 
     <!-- Button settings -->
-    <string name="button_panel_title">Additional buttons</string>
+    <string name="button_panel_title">Alert Slider</string>
     <string name="button_swap_title">Swap buttons</string>
     <string name="button_swap_summary">Swap the order of recents and back buttons</string>
 
