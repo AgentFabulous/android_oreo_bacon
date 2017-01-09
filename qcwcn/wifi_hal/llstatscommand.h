@@ -82,6 +82,10 @@ private:
 
     wifi_request_id mRequestId;
 
+    u32 mRadioStatsSize;
+
+    u8 mNumRadios;
+
     LLStatsCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
 
 public:
@@ -98,6 +102,8 @@ public:
     virtual void initGetContext(u32 reqid);
 
     virtual int requestResponse();
+
+    virtual void notifyResponse();
 
     virtual int handleResponse(WifiEvent &reply);
 

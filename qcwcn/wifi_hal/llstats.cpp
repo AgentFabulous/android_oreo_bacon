@@ -56,6 +56,8 @@ LLStatsCommand::LLStatsCommand(wifi_handle handle, int id, u32 vendor_id, u32 su
     memset(&mClearRspParams, 0,sizeof(LLStatsClearRspParams));
     memset(&mResultsParams, 0,sizeof(LLStatsResultsParams));
     memset(&mHandler, 0,sizeof(mHandler));
+    mRadioStatsSize = 0;
+    mNumRadios = 0;
 }
 
 LLStatsCommand::~LLStatsCommand()
@@ -782,6 +784,9 @@ static wifi_error get_wifi_radio_stats(wifi_radio_stat *stats,
     }
     stats->num_channels                           = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS]);
 
+    if (stats->num_channels == 0) {
+        return WIFI_SUCCESS;
+    }
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_CH_INFO])
     {
@@ -852,6 +857,31 @@ int LLStatsCommand::requestResponse()
     return WifiCommand::requestResponse(mMsg);
 }
 
+void LLStatsCommand::notifyResponse()
+{
+    mHandler.on_link_stats_results(mRequestId,
+                            mResultsParams.iface_stat, mNumRadios,
+                            mResultsParams.radio_stat);
+    if(mResultsParams.radio_stat)
+    {
+        if (mResultsParams.radio_stat->tx_time_per_levels)
+        {
+            free(mResultsParams.radio_stat->tx_time_per_levels);
+            mResultsParams.radio_stat->tx_time_per_levels = NULL;
+        }
+        free(mResultsParams.radio_stat);
+        mResultsParams.radio_stat = NULL;
+        mRadioStatsSize = 0;
+        mNumRadios = 0;
+     }
+     if(mResultsParams.iface_stat)
+     {
+        free(mResultsParams.iface_stat);
+        mResultsParams.iface_stat = NULL;
+     }
+}
+
+
 int LLStatsCommand::handleResponse(WifiEvent &reply)
 {
     unsigned i=0;
@@ -867,6 +897,7 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
             u32 resultsBufSize = 0;
             struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX + 1];
             int rem;
+            wifi_radio_stat *radioStatsBuf;
 
             nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX,
                     (struct nlattr *)mVendorData,
@@ -884,6 +915,15 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
             {
                 case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_TYPE_RADIO:
                 {
+                    if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_NUM_RADIOS])
+                    {
+                        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_NUM_RADIOS"
+                              " not found", __FUNCTION__);
+                        return WIFI_ERROR_INVALID_ARGS;
+                    }
+                    mNumRadios = nla_get_u32(tb_vendor[
+                                    QCA_WLAN_VENDOR_ATTR_LL_STATS_NUM_RADIOS]);
+
                     if (!tb_vendor[
                         QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS
                         ])
@@ -899,22 +939,31 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                             QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS])
                             * sizeof(wifi_channel_stat)
                             + sizeof(wifi_radio_stat));
-                    mResultsParams.radio_stat =
-                            (wifi_radio_stat *)malloc(resultsBufSize);
-                    if (!mResultsParams.radio_stat)
+
+                    radioStatsBuf = (wifi_radio_stat *)realloc(
+                                              mResultsParams.radio_stat,
+                                              mRadioStatsSize + resultsBufSize);
+                    if (!radioStatsBuf)
                     {
                         ALOGE("%s: radio_stat: malloc Failed", __FUNCTION__);
                         status = WIFI_ERROR_OUT_OF_MEMORY;
                         goto cleanup;
                     }
-                    memset(mResultsParams.radio_stat, 0, resultsBufSize);
+                    mResultsParams.radio_stat = radioStatsBuf;
+
+                    //Move the buffer to populate current radio stats
+                    radioStatsBuf = (wifi_radio_stat *)(
+                                                (u8 *)mResultsParams.radio_stat
+                                                            + mRadioStatsSize);
+                    memset(radioStatsBuf, 0, resultsBufSize);
+                    mRadioStatsSize += resultsBufSize;
 
                     if (tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_TX_LEVELS])
-                        mResultsParams.radio_stat->num_tx_levels = nla_get_u32(tb_vendor[
+                        radioStatsBuf->num_tx_levels = nla_get_u32(tb_vendor[
                                             QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_TX_LEVELS]);
 
                     wifi_channel_stat *pWifiChannelStats;
-                    status = get_wifi_radio_stats(mResultsParams.radio_stat,
+                    status = get_wifi_radio_stats(radioStatsBuf,
                               tb_vendor);
                     if(status != WIFI_SUCCESS)
                     {
@@ -925,33 +974,33 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                           " onTimeScan :%u onTimeNbd :%u onTimeGscan :%u"
                           " onTimeRoamScan :%u onTimePnoScan :%u"
                           " onTimeHs20 :%u numChannels :%u num_tx_levels: %u",
-                          mResultsParams.radio_stat->radio,
-                          mResultsParams.radio_stat->on_time,
-                          mResultsParams.radio_stat->tx_time,
-                          mResultsParams.radio_stat->rx_time,
-                          mResultsParams.radio_stat->on_time_scan,
-                          mResultsParams.radio_stat->on_time_nbd,
-                          mResultsParams.radio_stat->on_time_gscan,
-                          mResultsParams.radio_stat->on_time_roam_scan,
-                          mResultsParams.radio_stat->on_time_pno_scan,
-                          mResultsParams.radio_stat->on_time_hs20,
-                          mResultsParams.radio_stat->num_channels,
-                          mResultsParams.radio_stat->num_tx_levels);
+                          radioStatsBuf->radio,
+                          radioStatsBuf->on_time,
+                          radioStatsBuf->tx_time,
+                          radioStatsBuf->rx_time,
+                          radioStatsBuf->on_time_scan,
+                          radioStatsBuf->on_time_nbd,
+                          radioStatsBuf->on_time_gscan,
+                          radioStatsBuf->on_time_roam_scan,
+                          radioStatsBuf->on_time_pno_scan,
+                          radioStatsBuf->on_time_hs20,
+                          radioStatsBuf->num_channels,
+                          radioStatsBuf->num_tx_levels);
 #ifdef QC_HAL_DEBUG
-                    for (i = 0; i < mResultsParams.radio_stat->num_tx_levels; i++) {
+                    for (i = 0; i < radioStatsBuf->num_tx_levels; i++) {
                         ALOGV("Power level: %u  tx_time: %u", i,
-                              mResultsParams.radio_stat->tx_time_per_levels[i]);
+                              radioStatsBuf->tx_time_per_levels[i]);
                     }
 #endif
                     ALOGV("%5s | %10s | %11s | %11s | %6s | %11s", "width",
                           "CenterFreq", "CenterFreq0", "CenterFreq1",
                           "onTime", "ccaBusyTime");
 #endif
-                    for ( i=0; i < mResultsParams.radio_stat->num_channels; i++)
+                    for ( i=0; i < radioStatsBuf->num_channels; i++)
                     {
                         pWifiChannelStats =
                             (wifi_channel_stat *) (
-                                (u8 *)mResultsParams.radio_stat->channels
+                                (u8 *)radioStatsBuf->channels
                                 + (i * sizeof(wifi_channel_stat)));
 
 #ifdef QC_HAL_DEBUG
@@ -1008,26 +1057,6 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                         ALOGV("%s: numPeers is %u\n", __FUNCTION__,
                                 mResultsParams.iface_stat->num_peers);
 #endif
-                        if(mResultsParams.iface_stat->num_peers == 0)
-                        {
-                            // Number of Radios are 1 for now
-                            mHandler.on_link_stats_results(mRequestId,
-                                    mResultsParams.iface_stat,
-                                    1,
-                                    mResultsParams.radio_stat);
-                            if(mResultsParams.radio_stat)
-                            {
-                                if (mResultsParams.radio_stat->tx_time_per_levels)
-                                {
-                                    free(mResultsParams.radio_stat->tx_time_per_levels);
-                                    mResultsParams.radio_stat->tx_time_per_levels = NULL;
-                                }
-                                free(mResultsParams.radio_stat);
-                                mResultsParams.radio_stat = NULL;
-                            }
-                            free(mResultsParams.iface_stat);
-                            mResultsParams.iface_stat = NULL;
-                        }
                     }
                 }
                 break;
@@ -1139,25 +1168,6 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                         }
                     }
 
-                    // Number of Radios are 1 for now
-                    mHandler.on_link_stats_results(mRequestId,
-                            mResultsParams.iface_stat, 1,
-                            mResultsParams.radio_stat);
-                    if(mResultsParams.radio_stat)
-                    {
-                        if (mResultsParams.radio_stat->tx_time_per_levels)
-                        {
-                            free(mResultsParams.radio_stat->tx_time_per_levels);
-                            mResultsParams.radio_stat->tx_time_per_levels = NULL;
-                        }
-                        free(mResultsParams.radio_stat);
-                        mResultsParams.radio_stat = NULL;
-                    }
-                    if(mResultsParams.iface_stat)
-                    {
-                        free(mResultsParams.iface_stat);
-                        mResultsParams.iface_stat = NULL;
-                    }
                 }
                 break;
 
@@ -1221,6 +1231,8 @@ cleanup:
         }
         free(mResultsParams.radio_stat);
         mResultsParams.radio_stat = NULL;
+        mRadioStatsSize = 0;
+        mNumRadios = 0;
     }
 
     if(mResultsParams.iface_stat)
@@ -1337,6 +1349,9 @@ wifi_error wifi_get_link_stats(wifi_request_id id,
     }
     if (ret < 0)
         goto cleanup;
+
+    if (ret == 0)
+        LLCommand->notifyResponse();
 
 cleanup:
     return (wifi_error)ret;
