@@ -857,11 +857,20 @@ int LLStatsCommand::requestResponse()
     return WifiCommand::requestResponse(mMsg);
 }
 
-void LLStatsCommand::notifyResponse()
+wifi_error LLStatsCommand::notifyResponse()
 {
-    mHandler.on_link_stats_results(mRequestId,
-                            mResultsParams.iface_stat, mNumRadios,
-                            mResultsParams.radio_stat);
+    wifi_error ret = WIFI_SUCCESS;
+
+    /* Indicate stats to framework only if both radio and iface stats
+     * are present */
+    if (mResultsParams.radio_stat && mResultsParams.iface_stat) {
+        mHandler.on_link_stats_results(mRequestId,
+                                       mResultsParams.iface_stat, mNumRadios,
+                                       mResultsParams.radio_stat);
+    } else {
+        ret = WIFI_ERROR_INVALID_ARGS;
+    }
+
     if(mResultsParams.radio_stat)
     {
         if (mResultsParams.radio_stat->tx_time_per_levels)
@@ -879,6 +888,8 @@ void LLStatsCommand::notifyResponse()
         free(mResultsParams.iface_stat);
         mResultsParams.iface_stat = NULL;
      }
+
+     return ret;
 }
 
 
@@ -1350,8 +1361,9 @@ wifi_error wifi_get_link_stats(wifi_request_id id,
     if (ret < 0)
         goto cleanup;
 
-    if (ret == 0)
-        LLCommand->notifyResponse();
+    if (ret == 0) {
+        ret = LLCommand->notifyResponse();
+    }
 
 cleanup:
     return (wifi_error)ret;
