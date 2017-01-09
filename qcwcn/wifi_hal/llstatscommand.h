@@ -103,7 +103,7 @@ public:
 
     virtual int requestResponse();
 
-    virtual void notifyResponse();
+    virtual wifi_error notifyResponse();
 
     virtual int handleResponse(WifiEvent &reply);
 
