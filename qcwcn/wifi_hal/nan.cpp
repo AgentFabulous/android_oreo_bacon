@@ -591,6 +591,49 @@ cleanup:
     return (wifi_error)ret;
 }
 
+/*  Function to get NAN capabilities */
+wifi_error nan_availability_config(transaction_id id,
+                                   wifi_interface_handle iface,
+                                   NanAvailabilityDebug debug)
+{
+    int ret = 0;
+    NanCommand *nanCommand = NULL;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+
+    nanCommand = new NanCommand(wifiHandle,
+                                0,
+                                OUI_QCA,
+                                QCA_NL80211_VENDOR_SUBCMD_NAN);
+    if (nanCommand == NULL) {
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ret = nanCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    /* Set the interface Id of the message. */
+    ret = nanCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    ret = nanCommand->putNanAvailabilityDebug(debug);
+    if (ret != 0) {
+        ALOGE("%s: putNanAvailabilityDebug Error:%d",__FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    ret = nanCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
+    }
+cleanup:
+    delete nanCommand;
+    return (wifi_error)ret;
+}
+
 wifi_error nan_initialize_vendor_cmd(wifi_interface_handle iface,
                                      NanCommand **nanCommand)
 {
