@@ -2829,6 +2829,8 @@ enum qca_wlan_vendor_attr_gscan_results {
 	= 44,
 
 	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_BUCKETS_SCANNED = 45,
+	/* Unsigned 32bit value; a GSCAN Capabilities attribute. */
+	QCA_WLAN_VENDOR_ATTR_CAPABILITIES_MAX_NUM_BLACKLISTED_BSSID = 46,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_AFTER_LAST,
