@@ -18,6 +18,12 @@ LOCAL_SRC_FILES := \
         wrapper/QualcommCamera.cpp
 
 LOCAL_CFLAGS = -Wall -Werror
+LOCAL_CLANG_CFLAGS += \
+    -Wno-error=unused-variable \
+    -Wno-error=sign-compare \
+    -Wno-error=unused-parameter \
+    -Wno-error=unused-private-field 
+    
 # Debug logs are disabled
 LOCAL_CFLAGS += -DDISABLE_DEBUG_LOG
 
