@@ -20,7 +20,6 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include "wifi_hal.h"
-#include "qca-vendor.h"
 #include "vendor_definitions.h"
 #include "nan_cert.h"
 
