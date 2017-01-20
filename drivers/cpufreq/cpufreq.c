@@ -37,6 +37,10 @@
 
 #include <trace/events/power.h>
 
+#ifdef CONFIG_MSM_LIMITER
+#include <soc/qcom/limiter.h>
+#endif
+
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
  * level driver of CPUFreq support, and its spinlock. This lock
@@ -48,7 +52,7 @@ static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 /* This one keeps track of the previously set governor of a removed CPU */
 struct cpufreq_cpu_save_data {
 	char gov[CPUFREQ_NAME_LEN];
-	unsigned int max, min;
+	unsigned int max, min, max_freq, min_freq;
 };
 static DEFINE_PER_CPU(struct cpufreq_cpu_save_data, cpufreq_policy_save);
 #endif
@@ -467,16 +471,31 @@ static ssize_t show_scaling_cur_freq(
 static int __cpufreq_set_policy(struct cpufreq_policy *data,
 				struct cpufreq_policy *policy);
 
+static bool cpufreq_update_allowed(int mpd)
+{
+#ifdef CONFIG_MSM_LIMITER
+	if (mpd == 0 && mpd_enabled == 0)
+#endif
+		return false;
+
+	return true;
+}
+
 /**
  * cpufreq_per_cpu_attr_write() / store_##file_name() - sysfs write access
  */
-#define store_one(file_name, object)			\
+#define store_one(file_name, object)			                \
 static ssize_t store_##file_name					\
 (struct cpufreq_policy *policy, const char *buf, size_t count)		\
 {									\
 	unsigned int ret;						\
-	struct cpufreq_policy new_policy;				\
-									\
+	struct cpufreq_policy new_policy;                               \
+        int mpd = strcmp(current->comm, "mpdecision");		        \
+ 									\
+	if (mpd == 0)							\
+	if (!cpufreq_update_allowed(mpd))				\
+ 		return ret;						\													\
+                                                                        \
 	ret = cpufreq_get_policy(&new_policy, policy->cpu);		\
 	if (ret)							\
 		return -EINVAL;						\
