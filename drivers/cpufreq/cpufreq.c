@@ -489,13 +489,12 @@ static ssize_t store_##file_name					\
 (struct cpufreq_policy *policy, const char *buf, size_t count)		\
 {									\
 	unsigned int ret;						\
-	struct cpufreq_policy new_policy;                               \
-        int mpd = strcmp(current->comm, "mpdecision");		        \
- 									\
-	if (mpd == 0)							\
+	struct cpufreq_policy new_policy;				\
+	int mpd = strcmp(current->comm, "mpdecision");			\
+									\
 	if (!cpufreq_update_allowed(mpd))				\
- 		return ret;						\													\
-                                                                        \
+                return ret;                                             \
+									\
 	ret = cpufreq_get_policy(&new_policy, policy->cpu);		\
 	if (ret)							\
 		return -EINVAL;						\
