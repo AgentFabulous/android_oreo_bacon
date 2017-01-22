@@ -243,7 +243,6 @@ public class VideoModule implements CameraModule,
         @Override
         public void run() {
             openCamera();
-            initializeFocusManager();
         }
     }
 
@@ -260,6 +259,7 @@ public class VideoModule implements CameraModule,
         mParameters = mCameraDevice.getParameters();
         initializeCapabilities();
         mPreviewFocused = arePreviewControlsVisible();
+        initializeFocusManager();
     }
 
     //QCOM data Members Starts here
@@ -2745,17 +2745,10 @@ public class VideoModule implements CameraModule,
 
         closeCamera();
         mUI.collapseCameraControls();
-        if (mFocusManager != null) mFocusManager.removeMessages();
         // Restart the camera and initialize the UI. From onCreate.
         mPreferences.setLocalId(mActivity, mCameraId);
         CameraSettings.upgradeLocalPreferences(mPreferences.getLocal());
         openCamera();
-
-        CameraInfo info = CameraHolder.instance().getCameraInfo()[mCameraId];
-        boolean mirror = (info.facing == CameraInfo.CAMERA_FACING_FRONT);
-        mParameters = mCameraDevice.getParameters();
-        mFocusManager.setMirror(mirror);
-        mFocusManager.setParameters(mParameters);
 
         readVideoPreferences();
         startPreview();
