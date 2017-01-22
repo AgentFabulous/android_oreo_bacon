@@ -243,7 +243,7 @@ public class VideoModule implements CameraModule,
         @Override
         public void run() {
             openCamera();
-            if (mFocusManager == null) initializeFocusManager();
+            initializeFocusManager();
         }
     }
 
@@ -1343,20 +1343,14 @@ public class VideoModule implements CameraModule,
      */
     private void initializeFocusManager() {
         // Create FocusManager object. startPreview needs it.
-        // if mFocusManager not null, reuse it
-        // otherwise create a new instance
-        if (mFocusManager != null) {
-            mFocusManager.removeMessages();
-        } else {
-            CameraInfo info = CameraHolder.instance().getCameraInfo()[mCameraId];
-            boolean mirror = (info.facing == CameraInfo.CAMERA_FACING_FRONT);
-            String[] defaultFocusModes = mActivity.getResources().getStringArray(
-                    R.array.pref_video_focusmode_default_array);
-            mFocusManager = new FocusOverlayManager(mPreferences, defaultFocusModes,
-                    mParameters, this, mirror,
-                    mActivity.getMainLooper(), mUI.getFocusRing(),
-                    mActivity);
-        }
+        CameraInfo info = CameraHolder.instance().getCameraInfo()[mCameraId];
+        boolean mirror = (info.facing == CameraInfo.CAMERA_FACING_FRONT);
+        String[] defaultFocusModes = mActivity.getResources().getStringArray(
+                R.array.pref_video_focusmode_default_array);
+        mFocusManager = new FocusOverlayManager(mPreferences, defaultFocusModes,
+                mParameters, this, mirror,
+                mActivity.getMainLooper(), mUI.getFocusRing(),
+                mActivity);
     }
 
     @Override
