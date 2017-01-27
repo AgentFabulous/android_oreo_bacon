@@ -26,7 +26,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
+/* Suppress -Waddress-of-packed-member for new toolchain update.
+ * Bug: http://b/33566695
+ */
+#if __clang_major__ >= 4
+#pragma clang diagnostic ignored "-Waddress-of-packed-member"
+#endif
 
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
