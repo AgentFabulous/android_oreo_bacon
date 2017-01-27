@@ -2738,7 +2738,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
             } else if (!color_format) {
 		int color_space = 0;
 
-                if (meta_buf->buffer_type == kMetadataBufferTypeCameraSource) {
+                if ((meta_buf->buffer_type == kMetadataBufferTypeCameraSource) ||
+                        (meta_buf->buffer_type == kMetadataBufferTypeNativeHandleSource)) {
                     if (meta_buf->meta_handle->numFds + meta_buf->meta_handle->numInts > 3 &&
                         meta_buf->meta_handle->data[3] & private_handle_t::PRIV_FLAGS_ITU_R_709) {
                         buf.flags = V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;

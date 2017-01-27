@@ -3454,10 +3454,12 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         media_buffer = (encoder_media_buffer_type *)meta_buffer_hdr[nBufIndex].pBuffer;
         if (media_buffer) {
             if (media_buffer->buffer_type != kMetadataBufferTypeCameraSource &&
-                    media_buffer->buffer_type != kMetadataBufferTypeGrallocSource) {
+                    media_buffer->buffer_type != kMetadataBufferTypeGrallocSource &&
+                    media_buffer->buffer_type != kMetadataBufferTypeNativeHandleSource) {
                 met_error = true;
             } else {
-                if (media_buffer->buffer_type == kMetadataBufferTypeCameraSource) {
+                if ((media_buffer->buffer_type == kMetadataBufferTypeCameraSource) ||
+                        (media_buffer->buffer_type == kMetadataBufferTypeNativeHandleSource)) {
                     if (media_buffer->meta_handle == NULL)
                         met_error = true;
                     else if ((media_buffer->meta_handle->numFds != 1 &&
@@ -4474,7 +4476,8 @@ void omx_video::omx_release_meta_buffer(OMX_BUFFERHEADERTYPE *buffer)
         } else {
             media_ptr = (encoder_media_buffer_type *) buffer->pBuffer;
             if (media_ptr && media_ptr->meta_handle) {
-                if (media_ptr->buffer_type == kMetadataBufferTypeCameraSource &&
+                if ((media_ptr->buffer_type == kMetadataBufferTypeCameraSource ||
+                        media_ptr->buffer_type == kMetadataBufferTypeNativeHandleSource) &&
                         media_ptr->meta_handle->numFds == 1 &&
                         media_ptr->meta_handle->numInts >= 2) {
                     Input_pmem.fd = media_ptr->meta_handle->data[0];
