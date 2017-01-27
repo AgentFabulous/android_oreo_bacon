@@ -430,8 +430,7 @@ static inline void save_v4l2_buffer(struct v4l2_buffer *b,
 	int i = 0;
 	for (i = 0; i < b->length; ++i) {
 		if (EXTRADATA_IDX(b->length) &&
-			(i == EXTRADATA_IDX(b->length)) &&
-			!b->m.planes[i].length) {
+			i == EXTRADATA_IDX(b->length)) {
 			continue;
 		}
 		populate_buf_info(binfo, b, i);
