@@ -41,23 +41,7 @@ endif
 #             Deploy the headers that can be exposed
 #===============================================================================
 
-LOCAL_COPY_HEADERS_TO   := mm-core/omxcore
-LOCAL_COPY_HEADERS      := inc/OMX_Audio.h
-LOCAL_COPY_HEADERS      += inc/OMX_Component.h
-LOCAL_COPY_HEADERS      += inc/OMX_ContentPipe.h
-LOCAL_COPY_HEADERS      += inc/OMX_Core.h
-LOCAL_COPY_HEADERS      += inc/OMX_Image.h
-LOCAL_COPY_HEADERS      += inc/OMX_Index.h
-LOCAL_COPY_HEADERS      += inc/OMX_IVCommon.h
-LOCAL_COPY_HEADERS      += inc/OMX_Other.h
-LOCAL_COPY_HEADERS      += inc/OMX_QCOMExtns.h
-LOCAL_COPY_HEADERS      += inc/OMX_Types.h
-LOCAL_COPY_HEADERS      += inc/OMX_Video.h
-LOCAL_COPY_HEADERS      += inc/qc_omx_common.h
-LOCAL_COPY_HEADERS      += inc/qc_omx_component.h
-LOCAL_COPY_HEADERS      += inc/qc_omx_msg.h
-LOCAL_COPY_HEADERS      += inc/QOMX_AudioExtensions.h
-LOCAL_COPY_HEADERS      += inc/QOMX_AudioIndexExtensions.h
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/inc
 
 #===============================================================================
 #             LIBRARY for Android apps
