@@ -871,6 +871,14 @@ wifi_error LLStatsCommand::notifyResponse()
         ret = WIFI_ERROR_INVALID_ARGS;
     }
 
+    clearStats();
+
+    return ret;
+}
+
+
+void LLStatsCommand::clearStats()
+{
     if(mResultsParams.radio_stat)
     {
         if (mResultsParams.radio_stat->tx_time_per_levels)
@@ -888,8 +896,6 @@ wifi_error LLStatsCommand::notifyResponse()
         free(mResultsParams.iface_stat);
         mResultsParams.iface_stat = NULL;
      }
-
-     return ret;
 }
 
 
@@ -1233,24 +1239,7 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
     return NL_SKIP;
 
 cleanup:
-    if(mResultsParams.radio_stat)
-    {
-        if (mResultsParams.radio_stat->tx_time_per_levels)
-        {
-            free(mResultsParams.radio_stat->tx_time_per_levels);
-            mResultsParams.radio_stat->tx_time_per_levels = NULL;
-        }
-        free(mResultsParams.radio_stat);
-        mResultsParams.radio_stat = NULL;
-        mRadioStatsSize = 0;
-        mNumRadios = 0;
-    }
-
-    if(mResultsParams.iface_stat)
-    {
-        free(mResultsParams.iface_stat);
-        mResultsParams.iface_stat = NULL;
-    }
+    clearStats();
     return status;
 }
 
