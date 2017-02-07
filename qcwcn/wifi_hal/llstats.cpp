@@ -93,7 +93,6 @@ LLStatsCommand* LLStatsCommand::instance(wifi_handle handle)
 void LLStatsCommand::initGetContext(u32 reqId)
 {
     mRequestId = reqId;
-    memset(&mResultsParams, 0,sizeof(LLStatsResultsParams));
     memset(&mHandler, 0,sizeof(mHandler));
 }
 
@@ -1347,8 +1346,10 @@ wifi_error wifi_get_link_stats(wifi_request_id id,
     if (ret != 0) {
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
     }
-    if (ret < 0)
+    if (ret < 0) {
+        LLCommand->clearStats();
         goto cleanup;
+    }
 
     if (ret == 0) {
         ret = LLCommand->notifyResponse();
