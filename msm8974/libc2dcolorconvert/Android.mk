@@ -6,8 +6,9 @@ LOCAL_SRC_FILES := \
         C2DColorConverter.cpp
 
 LOCAL_C_INCLUDES := \
+    $(TARGET_OUT_HEADERS)/qcom/display
 
-LOCAL_SHARED_LIBRARIES := liblog libdl copybit.$(TARGET_BOARD_PLATFORM)
+LOCAL_SHARED_LIBRARIES := liblog libdl
 
 LOCAL_MODULE_TAGS := optional
 
