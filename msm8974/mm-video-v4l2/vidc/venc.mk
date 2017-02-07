@@ -77,7 +77,12 @@ include $(CLEAR_VARS)
 
 libmm-venc-inc      := $(LOCAL_PATH)/venc/inc
 libmm-venc-inc      += $(OMX_VIDEO_PATH)/vidc/common/inc
+libmm-venc-inc      += hardware/qcom/media/msm8974/mm-core/inc
+libmm-venc-inc      += hardware/qcom/media/msm8974/libstagefrighthw
+libmm-venc-inc      += $(TARGET_OUT_HEADERS)/qcom/display
+libmm-venc-inc      += $(TARGET_OUT_HEADERS)/adreno
 libmm-venc-inc      += frameworks/native/include/media/hardware
+libmm-venc-inc      += frameworks/native/include/media/openmax
 libmm-venc-inc      += hardware/qcom/media/msm8974/libc2dcolorconvert
 libmm-venc-inc      += frameworks/av/include/media/stagefright
 libmm-venc-inc      += frameworks/av/include/media/hardware
@@ -89,8 +94,7 @@ LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 
 LOCAL_SHARED_LIBRARIES    := liblog libutils libbinder libcutils \
-                             libc2dcolorconvert libdl libgui libOmxCore libstagefrighthw
-LOCAL_SHARED_LIBRARIES  += gralloc.$(TARGET_BOARD_PLATFORM) copybit.$(TARGET_BOARD_PLATFORM)
+                             libc2dcolorconvert libdl libgui
 
 LOCAL_SRC_FILES   := venc/src/omx_video_base.cpp
 LOCAL_SRC_FILES   += venc/src/omx_video_encoder.cpp
