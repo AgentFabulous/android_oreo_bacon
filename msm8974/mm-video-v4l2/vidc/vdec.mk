@@ -97,8 +97,12 @@ LOCAL_PATH:= $(ROOT_DIR)
 
 libmm-vdec-inc          := $(LOCAL_PATH)/vdec/inc
 libmm-vdec-inc          += $(OMX_VIDEO_PATH)/vidc/common/inc
+libmm-vdec-inc          += hardware/qcom/media/msm8974/mm-core/inc
 #DRM include - Interface which loads the DRM library
-libmm-vdec-inc          += $(OMX_VIDEO_PATH)/DivxDrmDecrypt/inc/mm-video-v4l2/DivxDrmDecrypt/
+libmm-vdec-inc	        += $(OMX_VIDEO_PATH)/DivxDrmDecrypt/inc
+libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/qcom/display
+libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
+libmm-vdec-inc          += frameworks/native/include/media/openmax
 libmm-vdec-inc          += frameworks/native/include/media/hardware
 libmm-vdec-inc          += $(vdec-inc)
 libmm-vdec-inc      += hardware/qcom/media/msm8974/libc2dcolorconvert
@@ -113,7 +117,7 @@ LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_SHARED_LIBRARIES  := liblog libutils libbinder libcutils libdl
 
 LOCAL_SHARED_LIBRARIES  += libdivxdrmdecrypt
-LOCAL_SHARED_LIBRARIES  += libqdMetaData libstagefrighthw libOmxCore
+LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
 LOCAL_SRC_FILES         := vdec/src/frameparser.cpp
 LOCAL_SRC_FILES         += vdec/src/h264_utils.cpp
@@ -124,7 +128,7 @@ ifneq ($(filter msm8974 msm8610 msm8226 msm8084 msm8952 msm8992 msm8994,$(TARGET
 LOCAL_SRC_FILES         += vdec/src/omx_vdec_msm8974.cpp
 else
 LOCAL_SHARED_LIBRARIES  += libhardware
-LOCAL_SHARED_LIBRARIES  += gralloc.$(TARGET_BOARD_PLATFORM) copybit.$(TARGET_BOARD_PLATFORM)
+libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/qcom/display
 LOCAL_SRC_FILES         += vdec/src/power_module.cpp
 LOCAL_SRC_FILES         += vdec/src/omx_vdec.cpp
 endif
@@ -156,7 +160,6 @@ LOCAL_SHARED_LIBRARIES  := liblog libutils libbinder libcutils libdl
 
 LOCAL_SHARED_LIBRARIES  += libdivxdrmdecrypt
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
-LOCAL_SHARED_LIBRARIES  += gralloc.$(TARGET_BOARD_PLATFORM) copybit.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_SRC_FILES         := vdec/src/frameparser.cpp
 LOCAL_SRC_FILES         += vdec/src/h264_utils.cpp
