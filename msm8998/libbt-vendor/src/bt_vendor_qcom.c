@@ -731,7 +731,7 @@ bool is_soc_initialized() {
 }
 
 /* flavor of op without locks */
-static int __op(bt_vendor_opcode_t opcode, void *param)
+static int op(bt_vendor_opcode_t opcode, void *param)
 {
     int retval = BT_STATUS_SUCCESS;
     int nCnt = 0;
@@ -1289,23 +1289,6 @@ out:
     return retval;
 }
 
-static int op(bt_vendor_opcode_t opcode, void *param)
-{
-    int ret;
-    ALOGV("++%s", __FUNCTION__);
-    pthread_mutex_lock(&q_lock);
-    if (!q) {
-        ALOGE("op called with NULL context");
-        ret = -BT_STATUS_INVAL;
-        goto out;
-    }
-    ret = __op(opcode, param);
-out:
-    pthread_mutex_unlock(&q_lock);
-    ALOGV("--%s ret = 0x%x", __FUNCTION__, ret);
-    return ret;
-}
-
 static void ssr_cleanup(int reason)
 {
     int pwr_state = BT_VND_PWR_OFF;
@@ -1342,22 +1325,22 @@ static void ssr_cleanup(int reason)
         }
 
         /* Close both ANT channel */
-        __op(BT_VND_OP_ANT_USERIAL_CLOSE, NULL);
+        op(BT_VND_OP_ANT_USERIAL_CLOSE, NULL);
 #endif
         /* Close both BT channel */
-        __op(BT_VND_OP_USERIAL_CLOSE, NULL);
+        op(BT_VND_OP_USERIAL_CLOSE, NULL);
 
 #ifdef FM_OVER_UART
-        __op(BT_VND_OP_FM_USERIAL_CLOSE, NULL);
+        op(BT_VND_OP_FM_USERIAL_CLOSE, NULL);
 #endif
         /*CTRL OFF twice to make sure hw
          * turns off*/
 #ifdef ENABLE_ANT
-        __op(BT_VND_OP_POWER_CTRL, &pwr_state);
+        op(BT_VND_OP_POWER_CTRL, &pwr_state);
 #endif
     }
     /*Generally switching of chip should be enough*/
-    __op(BT_VND_OP_POWER_CTRL, &pwr_state);
+    op(BT_VND_OP_POWER_CTRL, &pwr_state);
 
 out:
     pthread_mutex_unlock(&q_lock);
