@@ -43,6 +43,8 @@
 
 namespace qcamera {
 // Parameter keys to communicate between camera application and driver.
+const char QCameraParameters::FOCUS_MODE_MANUAL_POSITION[] = "manual";
+const char QCameraParameters::WHITE_BALANCE_MANUAL_CCT[] = "manual-cct";
 const char QCameraParameters::KEY_QC_SUPPORTED_HFR_SIZES[] = "hfr-size-values";
 const char QCameraParameters::KEY_QC_PREVIEW_FRAME_RATE_MODE[] = "preview-frame-rate-mode";
 const char QCameraParameters::KEY_QC_SUPPORTED_PREVIEW_FRAME_RATE_MODES[] = "preview-frame-rate-modes";

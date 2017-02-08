@@ -87,7 +87,7 @@ private:
     int32_t setSensorSupportedPicSize();
     uint8_t checkScaleSizeTable(uint8_t scale_cnt, cam_dimension_t *scale_tbl, uint8_t org_cnt, cam_dimension_t *org_tbl);
 
-    QCameraParameters (__unused *mParent);
+    QCameraParameters (*mParent);
     bool mScaleEnabled;
     bool mIsUnderScaling;   //if in scale status
 
@@ -112,6 +112,8 @@ class QCameraParameters: public CameraParameters
 public:
     QCameraParameters();
     QCameraParameters(const String8 &params);
+    static const char CameraParameters::FOCUS_MODE_MANUAL_POSITION[];
+    static const char CameraParameters::WHITE_BALANCE_MANUAL_CCT[];
     ~QCameraParameters();
 
     // Supported PREVIEW/RECORDING SIZES IN HIGH FRAME RATE recording, sizes in pixels.
