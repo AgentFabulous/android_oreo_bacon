@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2017, The Linux Foundation. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -49,6 +49,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstddef>
 #include <cutils/atomic.h>
 #include <qdMetaData.h>
+#include <color_metadata.h>
 
 static ptrdiff_t x;
 
@@ -243,6 +244,14 @@ enum vidc_perf_level {
     VIDC_NOMINAL = 1,
     VIDC_TURBO = 2
 };
+
+enum turbo_mode {
+    TURBO_MODE_NONE = 0x0,
+    TURBO_MODE_CLIENT_REQUESTED = 0x1,
+    TURBO_MODE_HIGH_FPS = 0x2,
+    TURBO_MODE_MAX = 0xFF
+};
+
 #ifdef USE_ION
 struct vdec_ion {
     int ion_device_fd;
@@ -697,13 +706,21 @@ class omx_vdec: public qc_omx_component
         void convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
             OMX_U32 transfer, OMX_U32 matrix, ColorSpace_t *color_space,
             ColorAspects *aspects);
-        bool handle_color_space_info(void *data, unsigned int buf_index);
+        bool handle_color_space_info(void *data,
+                                     ColorSpace_t *color_space,
+                                     ColorMetaData* color_mdata,
+                                     bool& set_color_aspects_only);
         void set_colorspace_in_handle(ColorSpace_t color, unsigned int buf_index);
         void print_debug_color_aspects(ColorAspects *aspects, const char *prefix);
         void print_debug_hdr_color_info(HDRStaticInfo *hdr_info, const char *prefix);
-        bool handle_content_light_level_info(void* data);
-        bool handle_mastering_display_color_info(void* data);
+        void print_debug_hdr_color_info_mdata(ColorMetaData* color_mdata);
+        bool handle_content_light_level_info(void* data, ContentLightLevel* light_level_mdata);
+        bool handle_mastering_display_color_info(void* data, MasteringDisplay* mastering_display_mdata);
         void print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra);
+        void set_colormetadata_in_handle(ColorMetaData *color_mdata, unsigned int buf_index);
+        void prepare_color_aspects_metadata(OMX_U32 primaries, OMX_U32 range,
+                                            OMX_U32 transfer, OMX_U32 matrix,
+                                            ColorMetaData *color_mdata);
 #ifdef _MSM8974_
         void append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 interlaced_format_type);
@@ -711,6 +728,7 @@ class omx_vdec: public qc_omx_component
                 bool enable = true);
         void append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 num_conceal_mb,
+                OMX_U32 recovery_sei_flag,
                 OMX_U32 picture_type,
                 OMX_U32 frame_rate,
                 OMX_TICKS time_stamp,
@@ -723,6 +741,7 @@ class omx_vdec: public qc_omx_component
 #endif
         void append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 num_conceal_mb,
+                OMX_U32 recovery_sei_flag,
                 OMX_U32 picture_type,
                 OMX_S64 timestamp,
                 OMX_U32 frame_rate,
@@ -1034,9 +1053,10 @@ class omx_vdec: public qc_omx_component
         DescribeHDRStaticInfoParams m_internal_hdr_info;
         bool m_change_client_hdr_info;
         pthread_mutex_t m_hdr_info_client_lock;
+        ColorMetaData m_color_mdata;
 
         OMX_U32 operating_frame_rate;
-        bool high_fps;
+        uint8_t m_need_turbo;
 
         OMX_U32 m_smoothstreaming_width;
         OMX_U32 m_smoothstreaming_height;
@@ -1045,6 +1065,7 @@ class omx_vdec: public qc_omx_component
         bool is_thulium_v1;
         bool m_disable_ubwc_mode;
         bool m_disable_split_mode;
+        bool m_enable_downscalar;
         OMX_U32 m_downscalar_width;
         OMX_U32 m_downscalar_height;
         int decide_downscalar();

@@ -112,6 +112,8 @@ typedef struct OMX_VIDEO_VP8REFERENCEFRAMEINFOTYPE {
 typedef enum OMX_VIDEO_HEVCPROFILETYPE {
     OMX_VIDEO_HEVCProfileMain    = 0x01,
     OMX_VIDEO_HEVCProfileMain10  = 0x02,
+    // Main10 profile with HDR SEI support.
+    OMX_VIDEO_HEVCProfileMain10HDR10  = 0x1000,
     OMX_VIDEO_HEVCProfileUnknown = 0x6EFFFFFF,
     OMX_VIDEO_HEVCProfileMax      = 0x7FFFFFFF
 } OMX_VIDEO_HEVCPROFILETYPE;

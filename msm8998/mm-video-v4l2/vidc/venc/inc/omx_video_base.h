@@ -691,6 +691,8 @@ class omx_video: public qc_omx_component
         int pending_input_buffers;
         int pending_output_buffers;
 
+        bool allocate_native_handle;
+
         uint64_t m_out_bm_count;
         uint64_t m_inp_bm_count;
         uint64_t m_flags;

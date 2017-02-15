@@ -54,6 +54,10 @@ if TARGET_MSM8996
 TARGET_REGISTRY = msm8996
 endif
 
+if TARGET_MSM8909
+TARGET_REGISTRY = 8909
+endif
+
 c_sources +=src/${TARGET_REGISTRY}/registry_table_android.c
 
 lib_LTLIBRARIES = libOmxCore.la
@@ -61,8 +65,8 @@ include_HEADERS = $(h_sources)
 libOmxCore_la_SOURCES = $(c_sources)
 libOmxCore_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libOmxCore_la_CPPFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
-libOmxCore_la_LDFLAGS = -ldl -lrt -lpthread -lglib-2.0
-libOmxCore_la_LDFLAGS += -shared -version-info 0
+libOmxCore_la_LDFLAGS = -ldl -lrt -lpthread -lglib-2.0 -lcutils
+libOmxCore_la_LDFLAGS += -shared -avoid-version
 
 lib_LTLIBRARIES += libmm-omxcore.la
 
@@ -74,6 +78,6 @@ include_HEADERS = $(h_sources)
 libmm_omxcore_la_SOURCES = $(c_sources)
 libmm_omxcore_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libmm_omxcore_la_CPPFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
-libmm_omxcore_la_LDFLAGS = -ldl -lrt -lpthread -lglib-2.0
-libmm_omxcore_la_LDFLAGS += -shared -version-info 0
+libmm_omxcore_la_LDFLAGS = -ldl -lrt -lpthread -lglib-2.0 -lcutils
+libmm_omxcore_la_LDFLAGS += -shared -avoid-version
 

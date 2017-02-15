@@ -28,6 +28,8 @@ AM_CPPFLAGS += "-std=c++11"
 AM_CPPFLAGS += -Wno-undef
 AM_CPPFLAGS += -Wno-multichar
 AM_CPPFLAGS += -g -O3
+AM_CPPFLAGS += "-DHAVE_ANDROID_OS"
+AM_CPPFLAGS += "-DUSE_CAMERA_METABUFFER_UTILS"
 
 if USE_GLIB
 AM_CPPFLAGS += -D_USE_GLIB_
@@ -80,6 +82,6 @@ libOmxVenc_la_SOURCES = $(sources)
 libOmxVenc_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 #libOmxVenc_la_LDLIBS = ../libc2d2colorconvert/libc2dcolorconvert.la
 #libOmxVenc_la_LIBADD  = ../../../mm-core/libOmxCore.la
-libOmxVenc_la_LDFLAGS = -lstdc++ -lpthread -llog -lutils -lbinder -lcutils -lglib-2.0 -lbase -ldl -lpthread -shared
-# -lqdMetaData  -lc2d2 -lgui -lOmxCore -lgpustats -ldl -lpthread
+libOmxVenc_la_LDFLAGS = -lstdc++ -lpthread -llog -lutils -lbinder -lcutils -lglib-2.0 -lbase -ldl -lpthread -shared -lqdMetaData
+#  -lc2d2 -lgui -lOmxCore -lgpustats -ldl -lpthread
 libOmxVenc_la_LDFLAGS += -version-info 0

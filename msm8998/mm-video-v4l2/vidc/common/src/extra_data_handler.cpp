@@ -26,6 +26,10 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------*/
 
+#include <inttypes.h>
+#include <cstddef>
+#include <qdMetaData.h>
+#include <gralloc_priv.h>
 #include "extra_data_handler.h"
 
 int debug_level = PRIO_ERROR;

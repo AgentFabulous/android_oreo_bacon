@@ -1148,6 +1148,31 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 break;
 
             }
+        case OMX_GoogleAndroidIndexAllocateNativeHandle:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, AllocateNativeHandleParams);
+
+                AllocateNativeHandleParams* allocateNativeHandleParams = (AllocateNativeHandleParams *) paramData;
+
+                if (!secure_session) {
+                    DEBUG_PRINT_ERROR("Enable/Disable allocate-native-handle allowed only in secure session");
+                    eRet = OMX_ErrorUnsupportedSetting;
+                    break;
+                } else if (allocateNativeHandleParams->nPortIndex != PORT_INDEX_OUT) {
+                    DEBUG_PRINT_ERROR("Enable/Disable allocate-native-handle allowed only on Output port!");
+                    eRet = OMX_ErrorUnsupportedSetting;
+                    break;
+                } else if (m_out_mem_ptr) {
+                    DEBUG_PRINT_ERROR("Enable/Disable allocate-native-handle is not allowed since Output port is not free !");
+                    eRet = OMX_ErrorInvalidState;
+                    break;
+                }
+
+                if (allocateNativeHandleParams != NULL) {
+                    allocate_native_handle = allocateNativeHandleParams->enable;
+                }
+                break;
+            }
         case OMX_IndexParamVideoQuantization:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_QUANTIZATIONTYPE);
@@ -1292,14 +1317,9 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         }
                     }
                 } else if (pParam->nPortIndex == PORT_INDEX_OUT && secure_session) {
-                    if (pParam->bStoreMetaData != meta_mode_enable) {
-                        if (!handle->venc_set_meta_mode(pParam->bStoreMetaData)) {
-                            DEBUG_PRINT_ERROR("\nERROR: set Metabuffer mode %d fail",
-                                    pParam->bStoreMetaData);
+                            DEBUG_PRINT_ERROR("set_parameter: metamode is "
+                            "valid for input port only in secure session");
                             return OMX_ErrorUnsupportedSetting;
-                        }
-                        meta_mode_enable = pParam->bStoreMetaData;
-                    }
                 } else {
                     DEBUG_PRINT_ERROR("set_parameter: metamode is "
                             "valid for input port only");
@@ -1725,6 +1745,16 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 VALIDATE_OMX_PARAM_DATA(paramData, QOMX_DISABLETYPE);
                 handle->venc_set_param(paramData,
                         (OMX_INDEXTYPE)OMX_QTIIndexParamDisablePQ);
+                break;
+            }
+        case OMX_QTIIndexParamIframeSizeType:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_IFRAMESIZE);
+                if (!handle->venc_set_param(paramData,
+                            (OMX_INDEXTYPE)OMX_QTIIndexParamIframeSizeType)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamIframeSizeType failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:
@@ -2612,13 +2642,22 @@ int omx_venc::async_message_process (void *context, void* message)
                                 m_sVenc_msg->buf.len);
                     }
                 } else if (omx->is_secure_session()) {
-                    output_metabuffer *meta_buf = (output_metabuffer *)(omxhdr->pBuffer);
-                    native_handle_t *nh = meta_buf->nh;
-                    nh->data[1] = m_sVenc_msg->buf.offset;
-                    nh->data[2] = m_sVenc_msg->buf.len;
-                    omxhdr->nFilledLen = sizeof(output_metabuffer);
-                    omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
-                    omxhdr->nFlags = m_sVenc_msg->buf.flags;
+                    if (omx->allocate_native_handle) {
+                        native_handle_t *nh = (native_handle_t *)(omxhdr->pBuffer);
+                        nh->data[1] = m_sVenc_msg->buf.offset;
+                        nh->data[2] = m_sVenc_msg->buf.len;
+                        omxhdr->nFilledLen = m_sVenc_msg->buf.len;
+                        omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
+                        omxhdr->nFlags = m_sVenc_msg->buf.flags;
+                    } else {
+                        output_metabuffer *meta_buf = (output_metabuffer *)(omxhdr->pBuffer);
+                        native_handle_t *nh = meta_buf->nh;
+                        nh->data[1] = m_sVenc_msg->buf.offset;
+                        nh->data[2] = m_sVenc_msg->buf.len;
+                        omxhdr->nFilledLen = sizeof(output_metabuffer);
+                        omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
+                        omxhdr->nFlags = m_sVenc_msg->buf.flags;
+                    }
                 } else {
                     omxhdr->nFilledLen = 0;
                 }

@@ -2,4 +2,10 @@
 #
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = mm-core mm-video-v4l2
+BUILD_COMPONENTS := mm-core
+
+if BUILD_MM_VIDEO
+BUILD_COMPONENTS += mm-video-v4l2
+endif
+
+SUBDIRS := $(BUILD_COMPONENTS)
