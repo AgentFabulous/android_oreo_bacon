@@ -136,10 +136,6 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
            sizeof(u32)) : 0 \
         ) + \
         (
-           pReq->config_responder_auto_response ? (SIZEOF_TLV_HDR + \
-           sizeof(u32)) : 0 \
-        ) + \
-        (
            pReq->discovery_indication_cfg ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
         );
@@ -291,11 +287,6 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
                       sizeof(u32),
                       (const u8*)&pReq->disc_mac_addr_rand_interval_sec, tlvs);
     }
-    if (pReq->config_responder_auto_response) {
-        tlvs = addTlv(NAN_TLV_TYPE_RANGING_AUTO_RESPONSE_CFG,
-                      sizeof(u32),
-                      (const u8*)&pReq->ranging_auto_response_cfg, tlvs);
-    }
     if (pReq->discovery_indication_cfg) {
         NanConfigDiscoveryIndications discovery_indications;
         discovery_indications.disableDiscoveryMacAddressEvent =
@@ -423,10 +414,6 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
            sizeof(u32)) : 0 \
         ) + \
         (
-           pReq->config_responder_auto_response ? (SIZEOF_TLV_HDR + \
-           sizeof(u32)) : 0 \
-        )  + \
-        (
            pReq->discovery_indication_cfg ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
         );
@@ -536,11 +523,6 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
         tlvs = addTlv(NAN_TLV_TYPE_DISC_MAC_ADDR_RANDOM_INTERVAL,
                       sizeof(u32),
                       (const u8*)&pReq->disc_mac_addr_rand_interval_sec, tlvs);
-    }
-    if (pReq->config_responder_auto_response) {
-        tlvs = addTlv(NAN_TLV_TYPE_RANGING_AUTO_RESPONSE_CFG,
-                      sizeof(u32),
-                      (const u8*)&pReq->ranging_auto_response_cfg, tlvs);
     }
 
     if (pReq->discovery_indication_cfg) {
