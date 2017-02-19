@@ -21,6 +21,8 @@
 
 #define MAPLE_IOSCHED_PATCHLEVEL	(7)
 
+enum { ASYNC, SYNC };
+
 /* Tunables */
 static const int sync_read_expire = 100;	/* max time before a read sync is submitted. */
 static const int sync_write_expire = 350;	/* max time before a write sync is submitted. */
