@@ -570,11 +570,14 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
         (pReq->cipher_type ? SIZEOF_TLV_HDR + sizeof(NanCsidType) : 0) +
         (pReq->pmk_len ? SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN : 0) +
         ((pReq->sdea_params.config_nan_data_path || pReq->sdea_params.security_cfg ||
-          pReq->sdea_params.ranging_state) ?
+          pReq->sdea_params.ranging_state || pReq->sdea_params.range_report) ?
           SIZEOF_TLV_HDR + sizeof(NanFWSdeaCtrlParams) : 0) +
         ((pReq->ranging_cfg.ranging_interval_msec || pReq->ranging_cfg.config_ranging_indications ||
           pReq->ranging_cfg.distance_ingress_cm || pReq->ranging_cfg.distance_egress_cm) ?
-          SIZEOF_TLV_HDR + sizeof(NanRangingCfg) : 0);
+          SIZEOF_TLV_HDR + sizeof(NanFWRangeConfigParams) : 0) +
+        ((pReq->range_response_cfg.publish_id ||
+          pReq->range_response_cfg.ranging_response) ?
+          SIZEOF_TLV_HDR + sizeof(NanFWRangeReqMsg) : 0);
 
     pNanPublishServiceReqMsg pFwReq = (pNanPublishServiceReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -647,7 +650,8 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
     }
     if (pReq->sdea_params.config_nan_data_path ||
         pReq->sdea_params.security_cfg ||
-        pReq->sdea_params.ranging_state) {
+        pReq->sdea_params.ranging_state ||
+        pReq->sdea_params.range_report) {
         NanFWSdeaCtrlParams pNanFWSdeaCtrlParams;
         memset(&pNanFWSdeaCtrlParams, 0, sizeof(NanFWSdeaCtrlParams));
 
@@ -667,19 +671,29 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
             pNanFWSdeaCtrlParams.ranging_required =
                                          pReq->sdea_params.ranging_state;
         }
+        if (pReq->sdea_params.range_report) {
+            pNanFWSdeaCtrlParams.range_report =
+                (((pReq->sdea_params.range_report & NAN_ENABLE_RANGE_REPORT) >> 1) ? 1 : 0);
+        }
         tlvs = addTlv(NAN_TLV_TYPE_SDEA_CTRL_PARAMS, sizeof(NanFWSdeaCtrlParams),
                         (const u8*)&pNanFWSdeaCtrlParams, tlvs);
     }
 
-    if (pReq->ranging_cfg.ranging_interval_msec || pReq->ranging_cfg.config_ranging_indications) {
+    if (pReq->ranging_cfg.ranging_interval_msec ||
+        pReq->ranging_cfg.config_ranging_indications ||
+        pReq->ranging_cfg.distance_ingress_cm ||
+        pReq->ranging_cfg.distance_ingress_cm) {
         NanFWRangeConfigParams pNanFWRangingCfg;
+
         memset(&pNanFWRangingCfg, 0, sizeof(NanFWRangeConfigParams));
         pNanFWRangingCfg.range_interval =
                                 pReq->ranging_cfg.ranging_interval_msec;
         pNanFWRangingCfg.ranging_indication_event =
-                                         ((pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_CONTINUOUS_MASK) |
-                                          (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_INGRESS_MET_MASK) |
-                                          (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_EGRESS_MET_MASK));
+            ((pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_CONTINUOUS_MASK) |
+            (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_INGRESS_MET_MASK) |
+            (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_EGRESS_MET_MASK));
+
+        pNanFWRangingCfg.ranging_indication_event = pReq->ranging_cfg.config_ranging_indications;
         if (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_INGRESS_MET_MASK)
             pNanFWRangingCfg.geo_fence_threshold.inner_threshold =
                                         pReq->ranging_cfg.distance_ingress_cm;
@@ -688,6 +702,23 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
                                        pReq->ranging_cfg.distance_egress_cm;
         tlvs = addTlv(NAN_TLV_TYPE_NAN_RANGING_CFG, sizeof(NanFWRangeConfigParams),
                                                     (const u8*)&pNanFWRangingCfg, tlvs);
+    }
+
+    if (pReq->range_response_cfg.publish_id || pReq->range_response_cfg.ranging_response) {
+
+        NanFWRangeReqMsg pNanFWRangeReqMsg;
+        memset(&pNanFWRangeReqMsg, 0, sizeof(NanFWRangeReqMsg));
+        pNanFWRangeReqMsg.range_id =
+                                (u16)pReq->range_response_cfg.publish_id;
+        CHAR_ARRAY_TO_MAC_ADDR(pReq->range_response_cfg.peer_addr, pNanFWRangeReqMsg.range_mac_addr);
+        pNanFWRangeReqMsg.ranging_accept =
+            ((pReq->range_response_cfg.ranging_response == NAN_RANGE_REQUEST_ACCEPT) ? 1 : 0);
+        pNanFWRangeReqMsg.ranging_reject =
+            ((pReq->range_response_cfg.ranging_response == NAN_RANGE_REQUEST_REJECT) ? 1 : 0);
+        pNanFWRangeReqMsg.ranging_cancel =
+            ((pReq->range_response_cfg.ranging_response == NAN_RANGE_REQUEST_CANCEL) ? 1 : 0);
+        tlvs = addTlv(NAN_TLV_TYPE_NAN20_RANGING_REQUEST, sizeof(NanFWRangeReqMsg),
+                                                    (const u8*)&pNanFWRangeReqMsg, tlvs);
     }
 
     mVendorData = (char *)pFwReq;
@@ -759,11 +790,14 @@ int NanCommand::putNanSubscribe(transaction_id id,
         (pReq->cipher_type ? SIZEOF_TLV_HDR + sizeof(NanCsidType) : 0) +
         (pReq->pmk_len ? SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN : 0) +
         ((pReq->sdea_params.config_nan_data_path || pReq->sdea_params.security_cfg ||
-          pReq->sdea_params.ranging_state) ?
+          pReq->sdea_params.ranging_state || pReq->sdea_params.range_report) ?
           SIZEOF_TLV_HDR + sizeof(NanFWSdeaCtrlParams) : 0) +
         ((pReq->ranging_cfg.ranging_interval_msec || pReq->ranging_cfg.config_ranging_indications ||
           pReq->ranging_cfg.distance_ingress_cm || pReq->ranging_cfg.distance_egress_cm) ?
-          SIZEOF_TLV_HDR + sizeof(NanRangingCfg) : 0);
+          SIZEOF_TLV_HDR + sizeof(NanFWRangeConfigParams) : 0) +
+        ((pReq->range_response_cfg.requestor_instance_id ||
+          pReq->range_response_cfg.ranging_response) ?
+          SIZEOF_TLV_HDR + sizeof(NanFWRangeReqMsg) : 0);
 
     message_len += \
         (pReq->num_intf_addr_present * (SIZEOF_TLV_HDR + NAN_MAC_ADDR_LEN));
@@ -843,7 +877,8 @@ int NanCommand::putNanSubscribe(transaction_id id,
     }
     if (pReq->sdea_params.config_nan_data_path ||
         pReq->sdea_params.security_cfg ||
-        pReq->sdea_params.ranging_state) {
+        pReq->sdea_params.ranging_state ||
+        pReq->sdea_params.range_report) {
         NanFWSdeaCtrlParams pNanFWSdeaCtrlParams;
         memset(&pNanFWSdeaCtrlParams, 0, sizeof(NanFWSdeaCtrlParams));
 
@@ -863,20 +898,28 @@ int NanCommand::putNanSubscribe(transaction_id id,
             pNanFWSdeaCtrlParams.ranging_required =
                                          pReq->sdea_params.ranging_state;
         }
+        if (pReq->sdea_params.range_report) {
+            pNanFWSdeaCtrlParams.range_report =
+                ((pReq->sdea_params.range_report & NAN_ENABLE_RANGE_REPORT >> 1) ? 1 : 0);
+        }
         tlvs = addTlv(NAN_TLV_TYPE_SDEA_CTRL_PARAMS, sizeof(NanFWSdeaCtrlParams),
                         (const u8*)&pNanFWSdeaCtrlParams, tlvs);
 
     }
 
-    if (pReq->ranging_cfg.ranging_interval_msec || pReq->ranging_cfg.config_ranging_indications) {
+    if (pReq->ranging_cfg.ranging_interval_msec || pReq->ranging_cfg.config_ranging_indications || pReq->ranging_cfg.distance_ingress_cm
+        || pReq->ranging_cfg.distance_ingress_cm) {
         NanFWRangeConfigParams pNanFWRangingCfg;
         memset(&pNanFWRangingCfg, 0, sizeof(NanFWRangeConfigParams));
         pNanFWRangingCfg.range_interval =
                                 pReq->ranging_cfg.ranging_interval_msec;
         pNanFWRangingCfg.ranging_indication_event =
-                                         ((pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_CONTINUOUS_MASK) |
-                                          (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_INGRESS_MET_MASK) |
-                                          (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_EGRESS_MET_MASK));
+            ((pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_CONTINUOUS_MASK) |
+            (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_INGRESS_MET_MASK) |
+            (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_EGRESS_MET_MASK));
+
+        pNanFWRangingCfg.ranging_indication_event =
+                                          pReq->ranging_cfg.config_ranging_indications;
         if (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_INGRESS_MET_MASK)
             pNanFWRangingCfg.geo_fence_threshold.inner_threshold =
                                         pReq->ranging_cfg.distance_ingress_cm;
@@ -885,6 +928,22 @@ int NanCommand::putNanSubscribe(transaction_id id,
                                        pReq->ranging_cfg.distance_egress_cm;
         tlvs = addTlv(NAN_TLV_TYPE_NAN_RANGING_CFG, sizeof(NanFWRangeConfigParams),
                                                     (const u8*)&pNanFWRangingCfg, tlvs);
+    }
+
+    if (pReq->range_response_cfg.requestor_instance_id || pReq->range_response_cfg.ranging_response) {
+        NanFWRangeReqMsg pNanFWRangeReqMsg;
+        memset(&pNanFWRangeReqMsg, 0, sizeof(NanFWRangeReqMsg));
+        pNanFWRangeReqMsg.range_id =
+                                pReq->range_response_cfg.requestor_instance_id;
+        memcpy(&pNanFWRangeReqMsg.range_mac_addr, &pReq->range_response_cfg.peer_addr, NAN_MAC_ADDR_LEN);
+        pNanFWRangeReqMsg.ranging_accept =
+            ((pReq->range_response_cfg.ranging_response == NAN_RANGE_REQUEST_ACCEPT) ? 1 : 0);
+        pNanFWRangeReqMsg.ranging_reject =
+            ((pReq->range_response_cfg.ranging_response == NAN_RANGE_REQUEST_REJECT) ? 1 : 0);
+        pNanFWRangeReqMsg.ranging_cancel =
+            ((pReq->range_response_cfg.ranging_response == NAN_RANGE_REQUEST_CANCEL) ? 1 : 0);
+        tlvs = addTlv(NAN_TLV_TYPE_NAN20_RANGING_REQUEST, sizeof(NanFWRangeReqMsg),
+                                                    (const u8*)&pNanFWRangeReqMsg, tlvs);
     }
 
     mVendorData = (char *)pFwReq;
