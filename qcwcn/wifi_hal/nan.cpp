@@ -845,6 +845,16 @@ wifi_error nan_data_request_initiator(transaction_id id,
         /* TBD Qos Info */
         nanCommand->attr_end(nlCfgQos);
     }
+    if (msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) {
+        if (nanCommand->put_u32(QCA_WLAN_VENDOR_ATTR_NDP_CSID,
+                msg->cipher_type))
+            goto cleanup;
+    }
+    if (msg->pmk_len == NAN_PMK_INFO_LEN) {
+        if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
+            (char *)msg->pmk, msg->pmk_len))
+            goto cleanup;
+    }
     nanCommand->attr_end(nlData);
 
     ret = nanCommand->requestEvent();
@@ -925,6 +935,16 @@ wifi_error nan_data_indication_response(transaction_id id,
 
         /* TBD Qos Info */
         nanCommand->attr_end(nlCfgQos);
+    }
+    if (msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) {
+        if (nanCommand->put_u32(QCA_WLAN_VENDOR_ATTR_NDP_CSID,
+                msg->cipher_type))
+            goto cleanup;
+    }
+    if (msg->pmk_len == NAN_PMK_INFO_LEN) {
+        if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
+            (char *)msg->pmk, msg->pmk_len))
+            goto cleanup;
     }
     nanCommand->attr_end(nlData);
 
