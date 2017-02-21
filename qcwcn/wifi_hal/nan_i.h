@@ -988,6 +988,7 @@ typedef struct PACKED
     u32 max_ndp_sessions;
     u32 max_app_info_len;
     u32 max_queued_transmit_followup_msgs;
+    u32 cipher_suites_supported;
 } NanCapabilitiesRspMsg, *pNanCapabilitiesRspMsg;
 
 /* NAN Self Transmit Followup */
