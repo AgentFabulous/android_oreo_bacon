@@ -360,6 +360,10 @@ enum qca_wlan_vendor_attr_ndp_params
     QCA_WLAN_VENDOR_ATTR_NDP_DRV_RETURN_VALUE,
     /* Unsigned 32-bit value for Channel setup configuration */
     QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL_CONFIG,
+    /* Unsigned 32-bit value for Cipher Suite Shared Key Type */
+    QCA_WLAN_VENDOR_ATTR_NDP_CSID,
+    /* Array of u8: len = NAN_PMK_INFO_LEN */
+    QCA_WLAN_VENDOR_ATTR_NDP_PMK,
 
     /* KEEP LAST */
     QCA_WLAN_VENDOR_ATTR_NDP_AFTER_LAST,
