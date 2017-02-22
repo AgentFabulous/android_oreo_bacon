@@ -2804,10 +2804,10 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 eRet = OMX_ErrorUnsupportedSetting;
                             } else {
                                 eRet = get_buffer_req(&drv_ctx.ip_buf);
-                                if (ret)
+                                if (eRet)
                                     DEBUG_PRINT_ERROR("%s:Requesting buffer requirements failed for input port",__FUNCTION__);
                                 eRet = get_buffer_req(&drv_ctx.op_buf);
-                                if (ret)
+                                if (eRet)
                                     DEBUG_PRINT_ERROR("%s:Requesting buffer requirements failed for output port",__FUNCTION__);
                             }
                         }
