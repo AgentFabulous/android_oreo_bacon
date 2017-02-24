@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -48,6 +48,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/videodev2.h>
 #include <media/msm_vidc.h>
 #include <poll.h>
+#include <list>
 
 #define TIMEOUT 5*60*1000
 #define BIT(num) (1 << (num))
@@ -356,6 +357,7 @@ class venc_dev
         bool venc_get_vqzip_sei_info(OMX_U32 *enabled);
         bool venc_get_peak_bitrate(OMX_U32 *peakbitrate);
         bool venc_get_batch_size(OMX_U32 *size);
+        bool venc_get_pq_status(OMX_BOOL *pq_status);
         bool venc_get_temporal_layer_caps(OMX_U32 * /*nMaxLayers*/,
                 OMX_U32 * /*nMaxBLayers*/);
         bool venc_get_output_log_flag();
@@ -607,11 +609,15 @@ class venc_dev
         bool is_thulium_v1;
         bool camera_mode_enabled;
         OMX_BOOL low_latency_mode;
-        struct {
+        struct roidata {
             bool dirty;
+            OMX_TICKS timestamp;
             OMX_QTI_VIDEO_CONFIG_ROIINFO info;
-        } roi;
-
+        };
+        bool m_roi_enabled;
+        pthread_mutex_t m_roilock;
+        std::list<roidata> m_roilist;
+        void get_roi_for_timestamp(struct roidata &roi, OMX_TICKS timestamp);
         bool venc_empty_batch (OMX_BUFFERHEADERTYPE *buf, unsigned index);
         static const int kMaxBuffersInBatch = 16;
         unsigned int mBatchSize;

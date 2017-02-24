@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -86,6 +86,7 @@ class omx_venc: public omx_video
         bool dev_get_batch_size(OMX_U32 *);
         bool dev_get_temporal_layer_caps(OMX_U32 * /*nMaxLayers*/,
                 OMX_U32 * /*nMaxBLayers*/);
+        bool dev_get_pq_status(OMX_BOOL *);
         bool dev_is_video_session_supported(OMX_U32 width, OMX_U32 height);
         bool dev_color_align(OMX_BUFFERHEADERTYPE *buffer, OMX_U32 width,
                         OMX_U32 height);

@@ -30,6 +30,7 @@ AM_CPPFLAGS += "-Dstrlcat=g_strlcat"
 AM_CPPFLAGS += "-std=c++11"
 AM_CPPFLAGS += "-DHAVE_ANDROID_OS"
 AM_CPPFLAGS += -DSYS_IOCTL
+AM_CPPFLAGS += -Wno-multichar
 
 if USE_GLIB
 AM_CPPFLAGS += -D_USE_GLIB_
@@ -63,9 +64,12 @@ c_sources         += src/ts_parser.cpp
 c_sources         += src/mp4_utils.cpp
 c_sources         += src/hevc_utils.cpp
 c_sources         += src/omx_vdec_v4l2.cpp
+c_sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/extra_data_handler.cpp
+c_sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_color_converter.cpp
 
 lib_LTLIBRARIES = libOmxVdec.la
 libOmxVdec_la_SOURCES = $(c_sources)
 libOmxVdec_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libOmxVdec_la_CFLAGS += ../libc2d2colorconvert/libc2dcolorconvert.la
-libOmxVdec_la_LDFLAGS = -lglib-2.0 -shared -version-info 0
+libOmxVdec_la_LDFLAGS = -llog -lutils -lbinder -lcutils -ldl -lqdMetaData -lglib-2.0 -shared -version-info 0
+

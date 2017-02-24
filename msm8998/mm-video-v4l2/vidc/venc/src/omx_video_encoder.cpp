@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -44,6 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern int m_pipe;
 static int bframes;
 static int entropy;
+static int perfmode;
 static int lowlatency;
 // factory function executed by the core to create instances
 void *get_omx_component_factory_fn(void)
@@ -146,6 +147,9 @@ omx_venc::omx_venc()
     property_value[0] = '\0';
     property_get("vidc.debug.entropy", property_value, "1");
     entropy = !!atoi(property_value);
+    property_value[0] = '\0';
+    property_get("vidc.debug.perf.mode", property_value, "0");
+    perfmode = atoi(property_value);
     property_value[0] = '\0';
     handle = NULL;
     property_get("vidc.debug.lowlatency", property_value, "0");
@@ -602,6 +606,14 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
             } else
                 dev_set_message_thread_id(async_thread_id);
         }
+    }
+
+    if (perfmode) {
+        QOMX_EXTNINDEX_VIDEO_PERFMODE pParam;
+        pParam.nPerfMode = perfmode;
+        DEBUG_PRINT_LOW("Perfmode = 0x%x", pParam.nPerfMode);
+        if (!handle->venc_set_config(&pParam, (OMX_INDEXTYPE)OMX_QcomIndexConfigVideoVencPerfMode))
+            DEBUG_PRINT_ERROR("Failed setting PerfMode to %d", pParam.nPerfMode);
     }
 
     if (lowlatency)
@@ -1384,8 +1396,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         break;
                     }
                 }
-
-#ifndef _MSM8974_
                 else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoLTRInfo) {
                     if (pParam->nPortIndex == PORT_INDEX_OUT) {
                         if (pParam->bEnabled == OMX_TRUE)
@@ -1400,7 +1410,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         break;
                     }
                 }
-#endif
                 else {
                     DEBUG_PRINT_ERROR("set_parameter: unsupported extrdata index (%x)",
                             pParam->nIndex);
@@ -2246,6 +2255,15 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 DEBUG_PRINT_ERROR("Setting/modifying Temporal layers at run-time is not supported !");
                 return OMX_ErrorUnsupportedSetting;
             }
+        case OMX_QcomIndexConfigPerfLevel:
+            {
+                VALIDATE_OMX_PARAM_DATA(configData, OMX_QCOM_VIDEO_CONFIG_PERF_LEVEL);
+                if (!handle->venc_set_config(configData,
+                        (OMX_INDEXTYPE)OMX_QcomIndexConfigPerfLevel)) {
+                    DEBUG_PRINT_ERROR("Failed to set perf level");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+            }
         default:
             DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);
             break;
@@ -2483,6 +2501,10 @@ bool omx_venc::dev_get_batch_size(OMX_U32 *size)
 bool omx_venc::dev_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
         OMX_U32 *nMaxBLayers) {
     return handle->venc_get_temporal_layer_caps(nMaxLayers, nMaxBLayers);
+}
+
+bool omx_venc::dev_get_pq_status(OMX_BOOL *pq_status) {
+    return handle->venc_get_pq_status(pq_status);
 }
 
 bool omx_venc::dev_loaded_start()

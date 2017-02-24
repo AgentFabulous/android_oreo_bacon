@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2009-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -2069,6 +2069,8 @@ typedef struct QOMX_VIDEO_CLIENT_EXTRADATA {
 
 #if defined(__cplusplus) && defined(USE_CAMERA_METABUFFER_UTILS)
 
+#define CAM_META_BUFFER_EVENT_PERF 0x01
+
 /**
  * Camera1 meta-buffer payload create/access/modify utility
  */
@@ -2081,7 +2083,8 @@ struct MetaBufferUtil {
         INT_TIMESTAMP   = 4,
         INT_COLORFORMAT = 5,
         INT_BUFINDEX    = 6,
-        INT_TOTAL       = INT_BUFINDEX,
+        INT_BUFEVENT    = 7,
+        INT_TOTAL       = INT_BUFEVENT,
     };
 
     static int getNumFdsForBatch(int batchSize) {
