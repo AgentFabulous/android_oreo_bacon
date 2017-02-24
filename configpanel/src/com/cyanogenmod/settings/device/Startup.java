@@ -63,7 +63,16 @@ public class Startup extends BroadcastReceiver {
                 for (String pref : Constants.sGesturePrefKeys) {
                     boolean value = Constants.isPreferenceEnabled(context, pref);
                     String node = Constants.sBooleanNodePreferenceMap.get(pref);
-                    if (!FileUtils.writeLine(node, value ? "1" : "0")) {
+                    // If music gestures are toggled, update values of all music gesture proc files
+                    if (pref.equals(Constants.TOUCHSCREEN_MUSIC_GESTURE_KEY)) {
+                        for (String music_nodes: Constants.TOUCHSCREEN_MUSIC_GESTURES_ARRAY) {
+                            if (!FileUtils.writeLine(music_nodes, value ? "1" : "0")) {
+                                Log.w(TAG, "Write to node " + music_nodes +
+                                    " failed while restoring saved preference values");
+                            }
+                        }
+                    }
+                    else if (!FileUtils.writeLine(node, value ? "1" : "0")) {
                         Log.w(TAG, "Write to node " + node +
                             " failed while restoring saved preference values");
                     }
@@ -186,7 +195,7 @@ public class Startup extends BroadcastReceiver {
 
     static  boolean hasTouchscreenGestures() {
         return new File(Constants.TOUCHSCREEN_CAMERA_NODE).exists() &&
-            new File(Constants.TOUCHSCREEN_MUSIC_NODE).exists() &&
+            new File(Constants.TOUCHSCREEN_DOUBLE_SWIPE_NODE).exists() &&
             new File(Constants.TOUCHSCREEN_FLASHLIGHT_NODE).exists();
     }
 
