@@ -155,30 +155,30 @@ int get_vs_hci_event(unsigned char *rsp)
         {
             case EDL_PATCH_VER_RES_EVT:
             case EDL_APP_VER_RES_EVT:
-                ALOGI("\t Current Product ID\t\t: 0x%08x",
-                    productid = (unsigned int)(rsp[PATCH_PROD_ID_OFFSET +3] << 24 |
-                                        rsp[PATCH_PROD_ID_OFFSET+2] << 16 |
-                                        rsp[PATCH_PROD_ID_OFFSET+1] << 8 |
-                                        rsp[PATCH_PROD_ID_OFFSET]  ));
+                productid = (unsigned int)(rsp[PATCH_PROD_ID_OFFSET +3] << 24 |
+                                    rsp[PATCH_PROD_ID_OFFSET+2] << 16 |
+                                    rsp[PATCH_PROD_ID_OFFSET+1] << 8 |
+                                    rsp[PATCH_PROD_ID_OFFSET]  );
+                ALOGI("\t Current Product ID\t\t: 0x%08x", productid);
 
                 /* Patch Version indicates FW patch version */
-                ALOGI("\t Current Patch Version\t\t: 0x%04x",
-                    (patchversion = (unsigned short)(rsp[PATCH_PATCH_VER_OFFSET + 1] << 8 |
-                                            rsp[PATCH_PATCH_VER_OFFSET] )));
+                patchversion = (unsigned short)(rsp[PATCH_PATCH_VER_OFFSET + 1] << 8 |
+                                       rsp[PATCH_PATCH_VER_OFFSET] );
+                ALOGI("\t Current Patch Version\t\t: 0x%04x", patchversion);
 
                 /* ROM Build Version indicates ROM build version like 1.0/1.1/2.0 */
-                ALOGI("\t Current ROM Build Version\t: 0x%04x", buildversion =
-                    (int)(rsp[PATCH_ROM_BUILD_VER_OFFSET + 1] << 8 |
-                                            rsp[PATCH_ROM_BUILD_VER_OFFSET] ));
+                buildversion = (int)(rsp[PATCH_ROM_BUILD_VER_OFFSET + 1] << 8 |
+                                       rsp[PATCH_ROM_BUILD_VER_OFFSET] );
+                ALOGI("\t Current ROM Build Version\t: 0x%04x", buildversion);
 
                 /* In case rome 1.0/1.1, there is no SOC ID version available */
                 if (paramlen - 10)
                 {
-                    ALOGI("\t Current SOC Version\t\t: 0x%08x", soc_id =
-                        (unsigned int)(rsp[PATCH_SOC_VER_OFFSET +3] << 24 |
-                                                rsp[PATCH_SOC_VER_OFFSET+2] << 16 |
-                                                rsp[PATCH_SOC_VER_OFFSET+1] << 8 |
-                                                rsp[PATCH_SOC_VER_OFFSET]  ));
+                    soc_id = (unsigned int)(rsp[PATCH_SOC_VER_OFFSET +3] << 24 |
+                                     rsp[PATCH_SOC_VER_OFFSET+2] << 16 |
+                                     rsp[PATCH_SOC_VER_OFFSET+1] << 8 |
+                                     rsp[PATCH_SOC_VER_OFFSET]  );
+                    ALOGI("\t Current SOC Version\t\t: 0x%08x", soc_id);
                 }
 
                 if (NULL != (btversionfile = fopen(BT_VERSION_FILEPATH, "wb"))) {
@@ -817,7 +817,6 @@ error:
     return err;
 }
 
-/* This function is called with q_lock held and q is non-NULL */
 int rome_get_tlv_file(char *file_path)
 {
     FILE * pFile;
@@ -908,7 +907,7 @@ int rome_get_tlv_file(char *file_path)
 
             /* Write BD Address */
             if(nvm_ptr->tag_id == TAG_NUM_2){
-                memcpy(nvm_byte_ptr, q->bdaddr, 6);
+                memcpy(nvm_byte_ptr, q.bdaddr, 6);
                 ALOGI("BD Address: %.02x:%.02x:%.02x:%.02x:%.02x:%.02x",
                     *nvm_byte_ptr, *(nvm_byte_ptr+1), *(nvm_byte_ptr+2),
                     *(nvm_byte_ptr+3), *(nvm_byte_ptr+4), *(nvm_byte_ptr+5));
@@ -1348,7 +1347,7 @@ int rome_1_0_nvm_tag_dnld(int fd)
     {
         /* Write BD Address */
         if(cmds[i][TAG_NUM_OFFSET] == TAG_NUM_2){
-            memcpy(&cmds[i][TAG_BDADDR_OFFSET], q->bdaddr, 6);
+            memcpy(&cmds[i][TAG_BDADDR_OFFSET], q.bdaddr, 6);
             ALOGI("BD Address: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x",
                 cmds[i][TAG_BDADDR_OFFSET ], cmds[i][TAG_BDADDR_OFFSET + 1],
                 cmds[i][TAG_BDADDR_OFFSET + 2], cmds[i][TAG_BDADDR_OFFSET + 3],
@@ -1780,12 +1779,10 @@ end:
    return;
 }
 
-
-/* This function is called with q_lock held and q is non-NULL */
 static int disable_internal_ldo(int fd)
 {
     int ret = 0;
-    if (q->enable_extldo) {
+    if (q.enable_extldo) {
         unsigned char cmd[5] = {0x01, 0x0C, 0xFC, 0x01, 0x32};
         unsigned char rsp[HCI_MAX_EVENT_SIZE];
 
