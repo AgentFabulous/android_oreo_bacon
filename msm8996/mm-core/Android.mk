@@ -107,6 +107,11 @@ endif
 
 include $(BUILD_SHARED_LIBRARY)
 
+include $(CLEAR_VARS)
+LOCAL_MODULE := OmxCore_headers
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/inc
+include $(BUILD_HEADER_LIBRARY)
+
 #===============================================================================
 #             LIBRARY for command line test apps
 #===============================================================================
