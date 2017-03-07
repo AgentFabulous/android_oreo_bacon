@@ -1546,22 +1546,25 @@ int NanCommand::putNanCapabilities(transaction_id id)
     return ret;
 }
 
-int NanCommand::putNanAvailabilityDebug(NanAvailabilityDebug debug)
+int NanCommand::putNanDebugCommand(NanDebugParams debug,
+                                   int debug_msg_length)
 {
     ALOGV("NAN_AVAILABILITY_DEBUG");
     size_t message_len = sizeof(NanTestModeReqMsg);
-    ALOGV("Message Len %zu", message_len);
 
-    message_len += (SIZEOF_TLV_HDR + sizeof(NanAvailabilityDebug));
+    message_len += (SIZEOF_TLV_HDR + debug_msg_length);
     pNanTestModeReqMsg pFwReq = (pNanTestModeReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
         cleanup();
         return WIFI_ERROR_OUT_OF_MEMORY;
     }
 
-    ALOGV("Message Len %zu", message_len);
-    ALOGV("Valid %d 2g %d 5g %d", debug.valid, debug.band_availability_2g,
-                                               debug.band_availability_5g);
+    ALOGV("Message Len %zu\n", message_len);
+    ALOGV("%s: Debug Command Type = 0x%x \n", __func__, debug.cmd);
+    ALOGV("%s: ** Debug Command Data Start **", __func__);
+    hexdump(debug.debug_cmd_data, debug_msg_length);
+    ALOGV("%s: ** Debug Command Data End **", __func__);
+
     memset (pFwReq, 0, message_len);
     pFwReq->fwHeader.msgVersion = (u16)NAN_MSG_VERSION1;
     pFwReq->fwHeader.msgId = NAN_MSG_ID_TESTMODE_REQ;
@@ -1569,7 +1572,7 @@ int NanCommand::putNanAvailabilityDebug(NanAvailabilityDebug debug)
     pFwReq->fwHeader.transactionId = 0;
 
     u8* tlvs = pFwReq->ptlv;
-    tlvs = addTlv(NAN_TLV_TYPE_TM_NAN_AVAILABILITY, sizeof(NanAvailabilityDebug),
+    tlvs = addTlv(NAN_TLV_TYPE_TESTMODE_GENERIC_CMD, debug_msg_length,
                   (const u8*)&debug, tlvs);
 
     mVendorData = (char*)pFwReq;
