@@ -84,7 +84,8 @@ struct bt_qcom_struct {
     char *rfkill_state;
     bool enable_extldo;
 };
-extern struct bt_qcom_struct q;
+extern struct bt_qcom_struct *q;
+extern pthread_mutex_t q_lock;
 
 #endif /* BT_VENDOR_QCOM_H */
 

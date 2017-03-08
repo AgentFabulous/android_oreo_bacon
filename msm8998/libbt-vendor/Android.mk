@@ -30,9 +30,11 @@ LOCAL_SRC_FILES := \
         src/hw_ar3k.c \
         src/bt_vendor_persist.cpp
 
+ifneq ($(TARGET_USES_AOSP),true)
 #Disable this flag in case if FM over UART support not needed
 ifeq ($(QCOM_BT_FM_OVER_UART),true)
 LOCAL_CFLAGS := -DFM_OVER_UART
+endif
 endif
 
 ifneq (,$(filter userdebug eng,$(TARGET_BUILD_VARIANT)))
