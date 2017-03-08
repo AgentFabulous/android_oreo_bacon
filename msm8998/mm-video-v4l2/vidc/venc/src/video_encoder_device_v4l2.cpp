@@ -1521,6 +1521,12 @@ bool venc_dev::venc_open(OMX_U32 codec)
     }
 #endif // _PQ_
 
+    /* Enable Low power mode by default for better power */
+
+    if (venc_set_perf_mode(V4L2_MPEG_VIDC_VIDEO_PERF_POWER_SAVE) == false) {
+        DEBUG_PRINT_HIGH("Failed to set Perf Mode");
+    }
+
     input_extradata_info.port_index = OUTPUT_PORT;
     output_extradata_info.port_index = CAPTURE_PORT;
 
