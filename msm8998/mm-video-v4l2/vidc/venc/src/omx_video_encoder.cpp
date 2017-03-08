@@ -44,7 +44,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern int m_pipe;
 static int bframes;
 static int entropy;
-static int perfmode;
 static int lowlatency;
 // factory function executed by the core to create instances
 void *get_omx_component_factory_fn(void)
@@ -147,9 +146,6 @@ omx_venc::omx_venc()
     property_value[0] = '\0';
     property_get("vidc.debug.entropy", property_value, "1");
     entropy = !!atoi(property_value);
-    property_value[0] = '\0';
-    property_get("vidc.debug.perf.mode", property_value, "0");
-    perfmode = atoi(property_value);
     property_value[0] = '\0';
     handle = NULL;
     property_get("vidc.debug.lowlatency", property_value, "0");
@@ -606,14 +602,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
             } else
                 dev_set_message_thread_id(async_thread_id);
         }
-    }
-
-    if (perfmode) {
-        QOMX_EXTNINDEX_VIDEO_PERFMODE pParam;
-        pParam.nPerfMode = perfmode;
-        DEBUG_PRINT_LOW("Perfmode = 0x%x", pParam.nPerfMode);
-        if (!handle->venc_set_config(&pParam, (OMX_INDEXTYPE)OMX_QcomIndexConfigVideoVencPerfMode))
-            DEBUG_PRINT_ERROR("Failed setting PerfMode to %d", pParam.nPerfMode);
     }
 
     if (lowlatency)
