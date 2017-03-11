@@ -27,8 +27,7 @@ LOCAL_SRC_FILES := \
         src/hci_uart.c \
         src/hci_smd.c \
         src/hw_rome.c \
-        src/hw_ar3k.c \
-        src/bt_vendor_persist.cpp
+        src/hw_ar3k.c
 
 ifneq ($(TARGET_USES_AOSP),true)
 #Disable this flag in case if FM over UART support not needed
@@ -65,8 +64,7 @@ endif #WIFI_BT_STATUS_SYNC
 
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
-        liblog \
-        libbtnv
+        liblog
 
 LOCAL_MODULE := libbt-vendor
 LOCAL_MODULE_TAGS := optional
@@ -80,7 +78,7 @@ else
 LOCAL_MODULE_PATH := $(TARGET_OUT_VENDOR_SHARED_LIBRARIES)
 endif
 
-LOCAL_CFLAGS += -DBT_NV_SUPPORT
+#LOCAL_CFLAGS += -DBT_NV_SUPPORT
 
 ifneq ($(BOARD_ANT_WIRELESS_DEVICE),)
 LOCAL_CFLAGS += -DENABLE_ANT
