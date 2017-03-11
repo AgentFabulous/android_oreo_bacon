@@ -29,6 +29,7 @@
 
     <!-- Gesture shortcuts -->
     <string name="screen_gestures_panel_title">OnePlus Gestures</string>
+    <string name="gestures_dashboard_summary">Gestures specific to OnePlus devices</string>
 
     <string name="touchscreen_double_tap_gesture_title">Wake device</string>
     <string name="touchscreen_double_tap_gesture_summary">Double tap to wake the device</string>
@@ -79,6 +80,7 @@
     <string name="button_panel_title">Alert Slider</string>
     <string name="button_swap_title">Swap buttons</string>
     <string name="button_swap_summary">Swap the order of recents and back buttons</string>
+    <string name="buttons_dashboard_summary">Alert Slider settings</string>
 
     <!-- Notification slider -->
     <string name="notification_slider_category_title">Notification slider</string>
