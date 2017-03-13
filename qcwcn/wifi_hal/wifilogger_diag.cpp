@@ -38,6 +38,7 @@
 #include <netlink/genl/ctrl.h>
 #include <linux/rtnetlink.h>
 #include <netinet/in.h>
+#include <cld80211_lib.h>
 #include "wifiloggercmd.h"
 #include "wifilogger_event_defs.h"
 #include "wifilogger_diag.h"
@@ -2101,22 +2102,60 @@ wifi_error process_driver_prints(hal_info *info, u8 *buf, u16 length)
 
 wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
 {
-    tAniNlHdr *wnl = (tAniNlHdr *)nlmsg_hdr(msg);
+    tAniNlHdr *wnl;
     u8 *buf;
     wifi_error status;
+    tAniCLDHdr *clh = NULL;
+    int cmd = 0;
+
+    if (info->cldctx) {
+        struct nlattr *attrs[CLD80211_ATTR_MAX + 1];
+        struct genlmsghdr *genlh;
+        struct nlattr *tb_vendor[CLD80211_ATTR_MAX + 1];
+        struct  nlmsghdr *nlh = nlmsg_hdr(msg);
+
+        genlh = (struct genlmsghdr *)nlmsg_data(nlh);
+        if (genlh->cmd == ANI_NL_MSG_PUMAC ||
+            genlh->cmd == ANI_NL_MSG_LOG ||
+            genlh->cmd == ANI_NL_MSG_CNSS_DIAG) {
+            cmd = genlh->cmd;
+            int result = nla_parse(attrs, CLD80211_ATTR_MAX, genlmsg_attrdata(genlh, 0),
+                    genlmsg_attrlen(genlh, 0), NULL);
+
+            if (!result && attrs[CLD80211_ATTR_VENDOR_DATA]) {
+                nla_parse(tb_vendor, CLD80211_ATTR_MAX,
+                          (struct nlattr *)nla_data(attrs[CLD80211_ATTR_VENDOR_DATA]),
+                          nla_len(attrs[CLD80211_ATTR_VENDOR_DATA]), NULL);
+
+                if (tb_vendor[CLD80211_ATTR_DATA]) {
+                    clh = (tAniCLDHdr *)nla_data(tb_vendor[CLD80211_ATTR_DATA]);
+                }
+            }
+            if (!clh) {
+                ALOGE("Invalid data received from driver");
+                return WIFI_SUCCESS;
+            }
+        }
+    } else {
+        wnl = (tAniNlHdr *)nlmsg_hdr(msg);
+        cmd = wnl->nlh.nlmsg_type;
+    }
 
     /* Check nlmsg_type also to avoid processing unintended msgs */
-    if (wnl->nlh.nlmsg_type == ANI_NL_MSG_PUMAC) {
-        if ((wnl->nlh.nlmsg_len <= sizeof(tAniNlHdr)) ||
-            (wnl->nlh.nlmsg_len < (sizeof(tAniNlHdr) + ntohs(wnl->wmsg.length)))) {
-            ALOGE("Received UMAC message with insufficent length: %d",
-                  wnl->nlh.nlmsg_len);
-            return WIFI_ERROR_UNKNOWN;
+    if (cmd == ANI_NL_MSG_PUMAC) {
+        if (!info->cldctx) {
+            if ((wnl->nlh.nlmsg_len <= sizeof(tAniNlHdr)) ||
+                (wnl->nlh.nlmsg_len < (sizeof(tAniNlHdr) + ntohs(wnl->clh.wmsg.length)))) {
+                ALOGE("Received UMAC message with insufficent length: %d",
+                      wnl->nlh.nlmsg_len);
+                return WIFI_ERROR_UNKNOWN;
+            }
+            clh = &wnl->clh;
         }
-        if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_EVENT_LOG_TYPE) {
+        if (clh->wmsg.type == ANI_NL_MSG_LOG_HOST_EVENT_LOG_TYPE) {
             uint32_t diag_host_type;
 
-            buf = (uint8_t *)(wnl + 1);
+            buf = (uint8_t *)(clh + 1);
             diag_host_type = *(uint32_t *)(buf);
 #ifdef QC_HAL_DEBUG
             ALOGV("diag type = %d", diag_host_type);
@@ -2184,30 +2223,40 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                 }
             }
         }
-    } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_LOG) {
-        if ((wnl->nlh.nlmsg_len <= sizeof(tAniNlHdr)) ||
-            (wnl->nlh.nlmsg_len < (sizeof(tAniNlHdr) + wnl->wmsg.length))) {
-            ALOGE("Received LOG message with insufficent length: %d",
-                  wnl->nlh.nlmsg_len);
-            return WIFI_ERROR_UNKNOWN;
+     } else if (cmd == ANI_NL_MSG_LOG) {
+         if (!info->cldctx) {
+             if ((wnl->nlh.nlmsg_len <= sizeof(tAniNlHdr)) ||
+                 (wnl->nlh.nlmsg_len < (sizeof(tAniNlHdr) + wnl->clh.wmsg.length))) {
+                 ALOGE("Received LOG message with insufficent length: %d",
+                       wnl->nlh.nlmsg_len);
+                 return WIFI_ERROR_UNKNOWN;
+             }
+             clh = &wnl->clh;
         }
-        if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_PRINT_TYPE) {
-            process_driver_prints(info, (u8 *)(wnl + 1), wnl->wmsg.length);
-        } else if (wnl->wmsg.type == ANI_NL_MSG_LOG_FW_MSG_TYPE) {
-            process_firmware_prints(info, (u8 *)(wnl + 1), wnl->wmsg.length);
+        if (clh->wmsg.type == ANI_NL_MSG_LOG_HOST_PRINT_TYPE) {
+            process_driver_prints(info, (u8 *)(clh + 1), clh->wmsg.length);
+        } else if (clh->wmsg.type == ANI_NL_MSG_LOG_FW_MSG_TYPE) {
+            process_firmware_prints(info, (u8 *)(clh + 1), clh->wmsg.length);
         }
-    } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_CNSS_DIAG) {
+    } else if (cmd == ANI_NL_MSG_CNSS_DIAG) {
         uint16_t diag_fw_type;
-        buf = (uint8_t *)NLMSG_DATA(wnl);
+
+        if (!info->cldctx) {
+            buf = (uint8_t *)NLMSG_DATA(wnl) + sizeof(wnl->clh.radio);
+        } else {
+            buf = (uint8_t *)&clh->wmsg;
+        }
 
         fw_event_hdr_t *event_hdr =
                           (fw_event_hdr_t *)(buf);
-        if ((wnl->nlh.nlmsg_len <= NLMSG_HDRLEN + sizeof(fw_event_hdr_t)) ||
-            (wnl->nlh.nlmsg_len < (NLMSG_HDRLEN + sizeof(fw_event_hdr_t) +
-                                    event_hdr->length))) {
-            ALOGE("Received CNSS_DIAG message with insufficent length: %d",
-                  wnl->nlh.nlmsg_len);
-            return WIFI_ERROR_UNKNOWN;
+        if (!info->cldctx) {
+            if ((wnl->nlh.nlmsg_len <= NLMSG_HDRLEN + sizeof(fw_event_hdr_t)) ||
+                (wnl->nlh.nlmsg_len < (NLMSG_HDRLEN + sizeof(fw_event_hdr_t) +
+                                        event_hdr->length))) {
+                ALOGE("Received CNSS_DIAG message with insufficent length: %d",
+                      wnl->nlh.nlmsg_len);
+                return WIFI_ERROR_UNKNOWN;
+            }
         }
         diag_fw_type = event_hdr->diag_type;
         if (diag_fw_type == DIAG_TYPE_FW_MSG) {
