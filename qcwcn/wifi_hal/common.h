@@ -91,6 +91,7 @@ typedef struct {
 
 struct gscan_event_handlers_s;
 struct rssi_monitor_event_handler_s;
+struct cld80211_ctx;
 
 typedef struct hal_info_s {
 
@@ -146,6 +147,7 @@ typedef struct hal_info_s {
     pthread_mutex_t pkt_fate_stats_lock;
     struct rssi_monitor_event_handler_s *rssi_handlers;
     wifi_capa capa;
+    struct cld80211_ctx *cldctx;
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);
