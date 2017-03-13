@@ -92,7 +92,7 @@ libOmxVdec-def += -DFLEXYUV_SUPPORTED
 endif
 
 ifeq ($(TARGET_USES_MEDIA_EXTENSIONS),true)
-libmm-vdec-def += -DALLOCATE_OUTPUT_NATIVEHANDLE
+libOmxVdec-def += -DALLOCATE_OUTPUT_NATIVEHANDLE
 endif
 
 # ---------------------------------------------------------------------------------
