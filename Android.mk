@@ -1,1 +1,1 @@
-include $(call all-named-subdir-makefiles,qcwcn)
+include $(call all-subdir-makefiles)
