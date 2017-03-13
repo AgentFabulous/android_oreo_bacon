@@ -627,7 +627,7 @@ static int init(const bt_vendor_callbacks_t *cb, unsigned char *bdaddr)
 
     temp->rfkill_id = -1;
     temp->enable_extldo = FALSE;
-    temp->cb = cb;
+    temp->cb = (bt_vendor_callbacks_t*)cb;
     temp->ant_fd = -1;
     temp->soc_type = get_bt_soc_type();
     soc_init(temp->soc_type);
@@ -1296,6 +1296,9 @@ static void ssr_cleanup(int reason)
     int pwr_state = BT_VND_PWR_OFF;
     int ret;
     unsigned char trig_ssr = 0xEE;
+#ifndef ENABLE_ANT
+    (void)reason;  // unused
+#endif
 
     ALOGI("++%s", __FUNCTION__);
 
@@ -1447,6 +1450,5 @@ const bt_vendor_interface_t BLUETOOTH_VENDOR_LIB_INTERFACE = {
     sizeof(bt_vendor_interface_t),
     init,
     op,
-    cleanup,
-    ssr_cleanup
+    cleanup
 };
