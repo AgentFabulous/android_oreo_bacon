@@ -113,6 +113,9 @@ class omx_venc: public omx_video
 #ifdef _UBWC_
     #define QOMX_DEFAULT_COLOR_FMT    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed
     #define V4L2_DEFAULT_OUTPUT_COLOR_FMT   V4L2_PIX_FMT_NV12_UBWC
+#elif _NV21_
+    #define QOMX_DEFAULT_COLOR_FMT    QOMX_COLOR_FormatYVU420SemiPlanar
+    #define V4L2_DEFAULT_OUTPUT_COLOR_FMT   V4L2_PIX_FMT_NV21
 #else
     #define QOMX_DEFAULT_COLOR_FMT    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m
     #define V4L2_DEFAULT_OUTPUT_COLOR_FMT   V4L2_PIX_FMT_NV12

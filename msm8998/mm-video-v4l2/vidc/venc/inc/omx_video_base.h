@@ -537,8 +537,7 @@ class omx_video: public qc_omx_component
                 struct pmem &Input_pmem_info,unsigned long &index);
         OMX_ERRORTYPE queue_meta_buffer(OMX_HANDLETYPE hComp,
                 struct pmem &Input_pmem_info);
-        OMX_ERRORTYPE push_empty_eos_buffer(OMX_HANDLETYPE hComp,
-                OMX_BUFFERHEADERTYPE *buffer);
+        OMX_ERRORTYPE push_empty_eos_buffer(OMX_HANDLETYPE hComp);
         OMX_ERRORTYPE fill_this_buffer_proxy(OMX_HANDLETYPE hComp,
                 OMX_BUFFERHEADERTYPE *buffer);
         bool release_done();

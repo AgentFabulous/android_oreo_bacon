@@ -102,9 +102,9 @@ LOCAL_MODULE_TAGS       := optional
 LOCAL_SHARED_LIBRARIES  := liblog libdl libcutils
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
-ifneq (,$(filter msm8996 msm8998,$(TARGET_BOARD_PLATFORM)))
-LOCAL_SHARED_LIBRARIES  += libgpustats
-endif
+#ifneq (,$(filter msm8996 msm8998 sdm660,$(TARGET_BOARD_PLATFORM)))
+#LOCAL_SHARED_LIBRARIES  += libgpustats
+#endif
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
@@ -130,9 +130,9 @@ LOCAL_MODULE_TAGS       := optional
 LOCAL_SHARED_LIBRARIES  := liblog libdl libcutils
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
-ifneq (,$(filter msm8996 msm8998,$(TARGET_BOARD_PLATFORM)))
-LOCAL_SHARED_LIBRARIES  += libgpustats
-endif
+#ifneq (,$(filter msm8996 msm8998 sdm660,$(TARGET_BOARD_PLATFORM)))
+#LOCAL_SHARED_LIBRARIES  += libgpustats
+#endif
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c

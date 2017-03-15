@@ -55,6 +55,10 @@ if TARGETS_THAT_SUPPORT_UBWC
 AM_CPPFLAGS += -D_UBWC_
 endif
 
+if TARGETS_THAT_SUPPORT_VQZIP
+AM_CPPFLAGS += -D_VQZIP_
+endif
+
 if TARGETS_THAT_USE_FLAG_MSM8226
 AM_CPPFLAGS += -D_MSM8226_
 endif
@@ -89,3 +93,4 @@ libOmxVenc_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libOmxVenc_la_LDFLAGS = -lstdc++ -lpthread -llog -lutils -lbinder -lcutils -lglib-2.0 -lbase -ldl -lpthread -shared -lqdMetaData
 #  -lc2d2 -lgui -lOmxCore -lgpustats -ldl -lpthread
 libOmxVenc_la_LDFLAGS += -version-info 0
+

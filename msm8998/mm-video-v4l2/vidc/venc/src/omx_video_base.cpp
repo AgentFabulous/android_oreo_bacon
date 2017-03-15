@@ -5361,7 +5361,7 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
         // separately by queueing an intermediate color-conversion buffer
         // and propagate the EOS.
         if (psource_frame->nFilledLen == 0 && (psource_frame->nFlags & OMX_BUFFERFLAG_EOS)) {
-            return push_empty_eos_buffer(hComp, psource_frame);
+            return push_empty_eos_buffer(hComp);
         }
         media_buffer = (LEGACY_CAM_METADATA_TYPE *)psource_frame->pBuffer;
         /*Will enable to verify camcorder in current TIPS can be removed*/
@@ -5398,8 +5398,7 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
     return ret;
 }
 
-OMX_ERRORTYPE omx_video::push_empty_eos_buffer(OMX_HANDLETYPE hComp,
-        OMX_BUFFERHEADERTYPE* buffer) {
+OMX_ERRORTYPE omx_video::push_empty_eos_buffer(OMX_HANDLETYPE hComp) {
     OMX_BUFFERHEADERTYPE* opqBuf = NULL;
     OMX_ERRORTYPE retVal = OMX_ErrorNone;
     unsigned index = 0;
@@ -5419,7 +5418,7 @@ OMX_ERRORTYPE omx_video::push_empty_eos_buffer(OMX_HANDLETYPE hComp,
             }
             index = opqBuf - m_inp_mem_ptr;
         } else {
-            opqBuf = (OMX_BUFFERHEADERTYPE* ) buffer;
+            opqBuf = (OMX_BUFFERHEADERTYPE* ) psource_frame;
             index = opqBuf - meta_buffer_hdr;
         }
 
@@ -5448,8 +5447,8 @@ OMX_ERRORTYPE omx_video::push_empty_eos_buffer(OMX_HANDLETYPE hComp,
         OMX_BUFFERHEADERTYPE emptyEosBufHdr;
         memcpy(&emptyEosBufHdr, opqBuf, sizeof(OMX_BUFFERHEADERTYPE));
         emptyEosBufHdr.nFilledLen = 0;
-        emptyEosBufHdr.nTimeStamp = buffer->nTimeStamp;
-        emptyEosBufHdr.nFlags = buffer->nFlags;
+        emptyEosBufHdr.nTimeStamp = psource_frame->nTimeStamp;
+        emptyEosBufHdr.nFlags = psource_frame->nFlags;
         emptyEosBufHdr.pBuffer = NULL;
         if (!mUsesColorConversion)
             emptyEosBufHdr.nAllocLen =
@@ -5466,7 +5465,8 @@ OMX_ERRORTYPE omx_video::push_empty_eos_buffer(OMX_HANDLETYPE hComp,
 
     //return client's buffer regardless since intermediate color-conversion
     //buffer is sent to the the encoder
-    m_pCallbacks.EmptyBufferDone(hComp, m_app_data, buffer);
+    m_pCallbacks.EmptyBufferDone(hComp, m_app_data, psource_frame);
+    psource_frame = NULL;
     --pending_input_buffers;
     VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
     return retVal;

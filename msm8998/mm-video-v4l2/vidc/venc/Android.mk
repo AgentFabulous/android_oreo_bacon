@@ -26,7 +26,8 @@ TARGETS_THAT_NEED_SW_VENC_MPEG4 := msm8909 msm8937
 TARGETS_THAT_NEED_SW_VENC_HEVC := msm8992
 TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8998
 TARGETS_THAT_SUPPORT_VQZIP := msm8996 msm8998
-TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 sdm660
+TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 sdm660 msm8953
+TARGETS_THAT_USE_NV21 := sdm660 msm8953
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
 libmm-venc-def += -DMAX_RES_720P
@@ -42,6 +43,10 @@ endif
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_UBWC)),true)
 libmm-venc-def += -D_UBWC_
+endif
+
+ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_USE_NV21)),true)
+libmm-venc-def += -D_NV21_
 endif
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_VQZIP)),true)
