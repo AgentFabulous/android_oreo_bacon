@@ -93,7 +93,6 @@ LLStatsCommand* LLStatsCommand::instance(wifi_handle handle)
 void LLStatsCommand::initGetContext(u32 reqId)
 {
     mRequestId = reqId;
-    memset(&mResultsParams, 0,sizeof(LLStatsResultsParams));
     memset(&mHandler, 0,sizeof(mHandler));
 }
 
@@ -871,6 +870,14 @@ wifi_error LLStatsCommand::notifyResponse()
         ret = WIFI_ERROR_INVALID_ARGS;
     }
 
+    clearStats();
+
+    return ret;
+}
+
+
+void LLStatsCommand::clearStats()
+{
     if(mResultsParams.radio_stat)
     {
         if (mResultsParams.radio_stat->tx_time_per_levels)
@@ -888,8 +895,6 @@ wifi_error LLStatsCommand::notifyResponse()
         free(mResultsParams.iface_stat);
         mResultsParams.iface_stat = NULL;
      }
-
-     return ret;
 }
 
 
@@ -1233,24 +1238,7 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
     return NL_SKIP;
 
 cleanup:
-    if(mResultsParams.radio_stat)
-    {
-        if (mResultsParams.radio_stat->tx_time_per_levels)
-        {
-            free(mResultsParams.radio_stat->tx_time_per_levels);
-            mResultsParams.radio_stat->tx_time_per_levels = NULL;
-        }
-        free(mResultsParams.radio_stat);
-        mResultsParams.radio_stat = NULL;
-        mRadioStatsSize = 0;
-        mNumRadios = 0;
-    }
-
-    if(mResultsParams.iface_stat)
-    {
-        free(mResultsParams.iface_stat);
-        mResultsParams.iface_stat = NULL;
-    }
+    clearStats();
     return status;
 }
 
@@ -1358,8 +1346,10 @@ wifi_error wifi_get_link_stats(wifi_request_id id,
     if (ret != 0) {
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
     }
-    if (ret < 0)
+    if (ret < 0) {
+        LLCommand->clearStats();
         goto cleanup;
+    }
 
     if (ret == 0) {
         ret = LLCommand->notifyResponse();
