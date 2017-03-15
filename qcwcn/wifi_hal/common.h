@@ -191,6 +191,10 @@ wifi_error wifi_stop_rssi_monitoring(wifi_request_id id, wifi_interface_handle i
 #define get_requestid() ((arc4random()%REQUEST_ID_MAX) + 1)
 #define WAIT_TIME_FOR_SET_REG_DOMAIN 50000
 
+#ifndef UNUSED
+#define UNUSED(x)    (void)(x)
+#endif
+
 #ifdef __cplusplus
 extern "C"
 {
