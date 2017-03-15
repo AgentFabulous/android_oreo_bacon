@@ -112,6 +112,8 @@ public:
                                             struct nlattr **tb_vendor);
 
     virtual void setHandler(wifi_stats_result_handler handler);
+
+    virtual void clearStats();
 };
 
 #ifdef __cplusplus
