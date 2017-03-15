@@ -364,6 +364,15 @@ enum qca_nl80211_vendor_subcmds {
 	/* 144 - reserved for QCA */
 	QCA_NL80211_VENDOR_SUBCMD_ABORT_SCAN = 145,
 	QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS = 146,
+	/* @QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET:
+	 * Start / Stop the NUD stats collection.
+	 */
+	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET =  149,
+	/* @QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET:
+	 * Get the NUD stats.These stats are represented
+	 * by the enum qca_attr_nud_stats_get.
+	 */
+	QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET = 150
 };
 
 
@@ -2914,4 +2923,62 @@ enum qca_wlan_vendor_attr_pno_config_params {
 	QCA_WLAN_VENDOR_ATTR_PNO_AFTER_LAST - 1,
 };
 
+/**
+ * qca_wlan_vendor_attr_nud_stats_set: attribute to vendor subcmd
+ * QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET. This carry the requisite
+ * information to start / stop the NUD stats collection.
+ */
+enum qca_attr_nud_stats_set {
+        QCA_ATTR_NUD_STATS_SET_INVALID = 0,
+
+        /* Flag to Start / Stop the NUD stats collection
+         * Start - If included , Stop - If not included
+         */
+        QCA_ATTR_NUD_STATS_SET_START = 1,
+        /* IPv4 address of Default Gateway (in network byte order) */
+        QCA_ATTR_NUD_STATS_GW_IPV4 = 2,
+
+        /* keep last */
+        QCA_ATTR_NUD_STATS_SET_LAST,
+        QCA_ATTR_NUD_STATS_SET_MAX =
+                QCA_ATTR_NUD_STATS_SET_LAST - 1,
+};
+
+/**
+ * qca_attr_nud_stats_get: attribute to vendor subcmd
+ * QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET. This carry the requisite
+ * NUD stats collected when queried.
+ */
+enum qca_attr_nud_stats_get {
+        QCA_ATTR_NUD_STATS_GET_INVALID = 0,
+        /* ARP Request Count from net dev */
+        QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_FROM_NETDEV = 1,
+        /* ARP Request Count sent to lower MAC from upper MAC */
+        QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TO_LOWER_MAC = 2,
+        /* ARP Request Count received by lower MAC from upper MAC */
+        QCA_ATTR_NUD_STATS_ARP_REQ_RX_COUNT_BY_LOWER_MAC = 3,
+        /* ARP Request Count successfully transmitted by the device */
+        QCA_ATTR_NUD_STATS_ARP_REQ_COUNT_TX_SUCCESS = 4,
+        /* ARP Response Count received by lower MAC */
+        QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_LOWER_MAC = 5,
+        /* ARP Response Count received by upper MAC */
+        QCA_ATTR_NUD_STATS_ARP_RSP_RX_COUNT_BY_UPPER_MAC = 6,
+        /* ARP Response Count delivered to netdev */
+        QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_TO_NETDEV = 7,
+        /* ARP Response Count delivered to netdev */
+        QCA_ATTR_NUD_STATS_ARP_RSP_COUNT_OUT_OF_ORDER_DROP = 8,
+        /* Flag indicating if the Stations Link to AP is active.
+         * Active Link - If exists, Inactive link - If not included
+         */
+        QCA_ATTR_NUD_STATS_AP_LINK_ACTIVE= 9,
+        /* Flag indicating if there is any Duplicate Address Detected(DAD).
+         * Yes - If Detected, No - If not detected.
+         */
+        QCA_ATTR_NUD_STATS_IS_DAD = 10,
+
+        /* keep last */
+        QCA_ATTR_NUD_STATS_GET_LAST,
+        QCA_ATTR_NUD_STATS_GET_MAX =
+                QCA_ATTR_NUD_STATS_GET_LAST - 1,
+};
 #endif /* QCA_VENDOR_H */
