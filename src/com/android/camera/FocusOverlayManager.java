@@ -264,16 +264,16 @@ public class FocusOverlayManager {
     public void doSnap() {
         if (!mInitialized) return;
 
-        // If the user has half-pressed the shutter and focus is completed, we
-        // can take the photo right away. If the focus mode is infinity, we can
-        // also take the photo.
-        if (!needAutoFocusCall() || (mState == STATE_SUCCESS || mState == STATE_FAIL)) {
-            capture();
-        } else if (mState == STATE_FOCUSING) {
+        if (mIsAFRunning || mState == STATE_FOCUSING) {
             // Half pressing the shutter (i.e. the focus button event) will
             // already have requested AF for us, so just request capture on
             // focus here.
             mState = STATE_FOCUSING_SNAP_ON_FINISH;
+        } else if (!needAutoFocusCall() || (mState == STATE_SUCCESS || mState == STATE_FAIL)) {
+            // If the user has half-pressed the shutter and focus is completed, we
+            // can take the photo right away. If the focus mode is infinity, we can
+            // also take the photo.
+            capture();
         } else if (mState == STATE_IDLE) {
             // We didn't do focus. This can happen if the user press focus key
             // while the snapshot is still in progress. The user probably wants
@@ -336,11 +336,6 @@ public class FocusOverlayManager {
     public void onAutoFocusMoving(boolean moving) {
         if (!mInitialized) return;
 
-
-        // Ignore if we have requested autofocus. This method only handles
-        // continuous autofocus.
-        if (mState != STATE_IDLE) return;
-
         // animate on false->true trasition only b/8219520
         if (moving && !mPreviousMoving) {
             mFocusRing.startPassiveFocus();
@@ -348,6 +343,11 @@ public class FocusOverlayManager {
         } else if (!moving) {
             mFocusRing.stopFocusAnimations();
             mIsAFRunning = false;
+            if (mState == STATE_FOCUSING_SNAP_ON_FINISH) {
+                // Sleep for 25ms so lens can finish moving
+                try { Thread.sleep(25); } catch (InterruptedException e) { }
+                capture();
+            }
         }
         mPreviousMoving = moving;
     }
