@@ -62,7 +62,26 @@ extern "C"
 #define BIT_29              0x20000000
 #define BIT_30              0x40000000
 #define BIT_31              0x80000000
-typedef u8 SirMacAddr[NAN_MAC_ADDR_LEN];
+
+/** macro to convert FW MAC address from WMI word format to User Space MAC char array */
+#define FW_MAC_ADDR_TO_CHAR_ARRAY(fw_mac_addr, mac_addr) do { \
+     (mac_addr)[0] =    ((fw_mac_addr).mac_addr31to0) & 0xff; \
+     (mac_addr)[1] =  (((fw_mac_addr).mac_addr31to0) >> 8) & 0xff; \
+     (mac_addr)[2] =  (((fw_mac_addr).mac_addr31to0) >> 16) & 0xff; \
+     (mac_addr)[3] =  (((fw_mac_addr).mac_addr31to0) >> 24) & 0xff; \
+     (mac_addr)[4] =    ((fw_mac_addr).mac_addr47to32) & 0xff; \
+     (mac_addr)[5] =  (((fw_mac_addr).mac_addr47to32) >> 8) & 0xff; \
+} while (0)
+
+/** macro to convert User space MAC address from char array to FW WMI word format */
+#define CHAR_ARRAY_TO_MAC_ADDR(mac_addr, fw_mac_addr)  do { \
+    (fw_mac_addr).mac_addr31to0  =                   \
+         ((mac_addr)[0] | ((mac_addr)[1] << 8)            \
+           | ((mac_addr)[2] << 16) | ((mac_addr)[3] << 24));          \
+    (fw_mac_addr).mac_addr47to32  =                  \
+         ((mac_addr)[4] | ((mac_addr)[5] << 8));          \
+} while (0)
+
 /*---------------------------------------------------------------------------
 * WLAN NAN CONSTANTS
 *--------------------------------------------------------------------------*/
@@ -105,6 +124,8 @@ typedef enum
     NAN_MSG_ID_CAPABILITIES_REQ             = 33,
     NAN_MSG_ID_CAPABILITIES_RSP             = 34,
     NAN_MSG_ID_SELF_TRANSMIT_FOLLOWUP_IND   = 35,
+    NAN_MSG_ID_RANGING_REQUEST_RECEVD_IND   = 36,
+    NAN_MSG_ID_RANGING_RESULT_IND           = 37,
     NAN_MSG_ID_TESTMODE_REQ                 = 1025,
     NAN_MSG_ID_TESTMODE_RSP                 = 1026
 } NanMsgId;
@@ -143,6 +164,9 @@ typedef enum
     NAN_TLV_TYPE_SDEA_CTRL_PARAMS = 21,
     NAN_TLV_TYPE_NAN_RANGING_CFG = 22,
     NAN_TLV_TYPE_CONFIG_DISCOVERY_INDICATIONS = 23,
+    NAN_TLV_TYPE_NAN20_RANGING_REQUEST = 24,
+    NAN_TLV_TYPE_NAN20_RANGING_RESULT = 25,
+    NAN_TLV_TYPE_NAN20_RANGING_REQUEST_RECEIVED = 26,
     NAN_TLV_TYPE_SDF_LAST = 4095,
 
     /* Configuration types */
@@ -185,7 +209,6 @@ typedef enum
     NAN_TLV_TYPE_5G_CHANNEL,
     NAN_TLV_TYPE_DISC_MAC_ADDR_RANDOM_INTERVAL,
     NAN_TLV_TYPE_RANGING_AUTO_RESPONSE_CFG = 4134,
-    NAN_TLV_TYPE_NAN_RANGE_RESULT,
     NAN_TLV_TYPE_CONFIG_LAST = 8191,
 
     /* Attributes types */
@@ -959,6 +982,8 @@ typedef enum {
     NAN_INDICATION_TCA                     =8,
     NAN_INDICATION_BEACON_SDF_PAYLOAD      =9,
     NAN_INDICATION_SELF_TRANSMIT_FOLLOWUP  =10,
+    NAN_INDICATION_RANGING_REQUEST_RECEIVED =11,
+    NAN_INDICATION_RANGING_RESULT           =12,
     NAN_INDICATION_UNKNOWN                 =0xFFFF
 } NanIndicationType;
 
@@ -1018,7 +1043,8 @@ typedef struct PACKED
     u32 security_required:1;
     u32 ranging_required:1;
     u32 range_limit_present:1;
-    u32 reserved:23;
+    u32 range_report:1;
+    u32 reserved:22;
 } NanFWSdeaCtrlParams;
 
 /* NAN Ranging Configuration params */
@@ -1138,6 +1164,61 @@ typedef enum {
     /* 9500 onwards vendor specific error codes */
     NDP_I_VENDOR_SPECIFIC_ERROR = 9500
 } NanInternalStatusType;
+
+/* This is the TLV used for range report */
+typedef struct PACKED
+{
+    u32 publish_id;
+    u32 event_type;
+    u32 range_measurement;
+} NanFWRangeReportParams;
+
+typedef struct PACKED
+{
+    NanMsgHeader fwHeader;
+    /*TLV Required:
+        MANDATORY
+            1. MAC_ADDRESS
+            2. NanFWRangeReportParams
+        OPTIONAL:
+            1. A_UINT32 event type
+    */
+    u8 ptlv[1];
+} NanFWRangeReportInd, *pNanFWRangeReportInd;
+
+/** 2 word representation of MAC addr */
+typedef struct {
+    /** upper 4 bytes of  MAC address */
+    u32 mac_addr31to0;
+    /** lower 2 bytes of  MAC address */
+    u32 mac_addr47to32;
+} fw_mac_addr;
+
+/* This is the TLV used to trigger ranging requests*/
+typedef struct PACKED
+{
+    fw_mac_addr  range_mac_addr;
+    u32 range_id; //Match handle in match_ind, publish_id in result ind
+    u32 ranging_accept:1;
+    u32 ranging_reject:1;
+    u32 ranging_cancel:1;
+    u32 reserved:29;
+} NanFWRangeReqMsg, *pNanFWRangeReqMsg;
+
+typedef struct PACKED
+{
+    fw_mac_addr  range_mac_addr;
+    u32 range_id;//This will publish_id in case of receiving publish.
+} NanFWRangeReqRecvdMsg, *pNanFWRangeReqRecvdMsg;
+
+typedef struct PACKED
+{
+    NanMsgHeader fwHeader;
+    /*TLV Required
+       1. t_nan_range_req_recvd_msg
+    */
+    u8 ptlv[1];
+} NanFWRangeReqRecvdInd, *pNanFWRangeReqRecvdInd;
 
 /* Function for NAN error translation
    For NanResponse, NanPublishTerminatedInd, NanSubscribeTerminatedInd,
