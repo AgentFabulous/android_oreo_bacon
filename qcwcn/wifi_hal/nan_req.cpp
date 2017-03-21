@@ -577,7 +577,8 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
           SIZEOF_TLV_HDR + sizeof(NanFWRangeConfigParams) : 0) +
         ((pReq->range_response_cfg.publish_id ||
           pReq->range_response_cfg.ranging_response) ?
-          SIZEOF_TLV_HDR + sizeof(NanFWRangeReqMsg) : 0);
+          SIZEOF_TLV_HDR + sizeof(NanFWRangeReqMsg) : 0)  +
+        (pReq->sdea_service_specific_info_len ? SIZEOF_TLV_HDR + pReq->sdea_service_specific_info_len : 0);
 
     pNanPublishServiceReqMsg pFwReq = (pNanPublishServiceReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -704,6 +705,11 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
                                                     (const u8*)&pNanFWRangingCfg, tlvs);
     }
 
+    if (pReq->sdea_service_specific_info_len) {
+        tlvs = addTlv(NAN_TLV_TYPE_SDEA_SERVICE_SPECIFIC_INFO, pReq->sdea_service_specific_info_len,
+                      (const u8*)&pReq->sdea_service_specific_info[0], tlvs);
+    }
+
     if (pReq->range_response_cfg.publish_id || pReq->range_response_cfg.ranging_response) {
 
         NanFWRangeReqMsg pNanFWRangeReqMsg;
@@ -797,7 +803,8 @@ int NanCommand::putNanSubscribe(transaction_id id,
           SIZEOF_TLV_HDR + sizeof(NanFWRangeConfigParams) : 0) +
         ((pReq->range_response_cfg.requestor_instance_id ||
           pReq->range_response_cfg.ranging_response) ?
-          SIZEOF_TLV_HDR + sizeof(NanFWRangeReqMsg) : 0);
+          SIZEOF_TLV_HDR + sizeof(NanFWRangeReqMsg) : 0) +
+        (pReq->sdea_service_specific_info_len ? SIZEOF_TLV_HDR + pReq->sdea_service_specific_info_len : 0);
 
     message_len += \
         (pReq->num_intf_addr_present * (SIZEOF_TLV_HDR + NAN_MAC_ADDR_LEN));
@@ -930,6 +937,11 @@ int NanCommand::putNanSubscribe(transaction_id id,
                                                     (const u8*)&pNanFWRangingCfg, tlvs);
     }
 
+    if (pReq->sdea_service_specific_info_len) {
+        tlvs = addTlv(NAN_TLV_TYPE_SDEA_SERVICE_SPECIFIC_INFO, pReq->sdea_service_specific_info_len,
+                      (const u8*)&pReq->sdea_service_specific_info[0], tlvs);
+    }
+
     if (pReq->range_response_cfg.requestor_instance_id || pReq->range_response_cfg.ranging_response) {
         NanFWRangeReqMsg pNanFWRangeReqMsg;
         memset(&pNanFWRangeReqMsg, 0, sizeof(NanFWRangeReqMsg));
@@ -1007,7 +1019,8 @@ int NanCommand::putNanTransmitFollowup(transaction_id id,
     size_t message_len =
         sizeof(NanMsgHeader) + sizeof(NanTransmitFollowupReqParams) +
         (pReq->service_specific_info_len ? SIZEOF_TLV_HDR +
-         pReq->service_specific_info_len : 0);
+         pReq->service_specific_info_len : 0) +
+        (pReq->sdea_service_specific_info_len ? SIZEOF_TLV_HDR + pReq->sdea_service_specific_info_len : 0);
 
     /* Mac address needs to be added in TLV */
     message_len += (SIZEOF_TLV_HDR + sizeof(pReq->addr));
@@ -1047,6 +1060,11 @@ int NanCommand::putNanTransmitFollowup(transaction_id id,
     if (pReq->service_specific_info_len) {
         tlvs = addTlv(tlv_type, pReq->service_specific_info_len,
                       (const u8*)&pReq->service_specific_info[0], tlvs);
+    }
+
+    if (pReq->sdea_service_specific_info_len) {
+        tlvs = addTlv(NAN_TLV_TYPE_SDEA_SERVICE_SPECIFIC_INFO, pReq->sdea_service_specific_info_len,
+                      (const u8*)&pReq->sdea_service_specific_info[0], tlvs);
     }
 
     mVendorData = (char *)pFwReq;
