@@ -674,6 +674,7 @@ wifi_error nan_data_interface_create(transaction_id id,
                                      wifi_interface_handle iface,
                                      char* iface_name)
 {
+    ALOGV("NAN_DP_INTERFACE_CREATE");
     int ret = WIFI_SUCCESS;
     struct nlattr *nlData;
     NanCommand *nanCommand = NULL;
@@ -721,6 +722,7 @@ wifi_error nan_data_interface_delete(transaction_id id,
                                      wifi_interface_handle iface,
                                      char* iface_name)
 {
+    ALOGV("NAN_DP_INTERFACE_DELETE");
     int ret = WIFI_SUCCESS;
     struct nlattr *nlData;
     NanCommand *nanCommand = NULL;
@@ -768,6 +770,7 @@ wifi_error nan_data_request_initiator(transaction_id id,
                                       wifi_interface_handle iface,
                                       NanDataPathInitiatorRequest* msg)
 {
+    ALOGV("NAN_DP_REQUEST_INITIATOR");
     int ret = WIFI_SUCCESS;
     struct nlattr *nlData, *nlCfgSecurity, *nlCfgQos;
     NanCommand *nanCommand = NULL;
@@ -870,6 +873,7 @@ wifi_error nan_data_indication_response(transaction_id id,
                                         wifi_interface_handle iface,
                                         NanDataPathIndicationResponse* msg)
 {
+    ALOGV("NAN_DP_INDICATION_RESPONSE");
     int ret = WIFI_SUCCESS;
     struct nlattr *nlData, *nlCfgSecurity, *nlCfgQos;
     NanCommand *nanCommand = NULL;
@@ -961,6 +965,7 @@ wifi_error nan_data_end(transaction_id id,
                         wifi_interface_handle iface,
                         NanDataPathEndRequest* msg)
 {
+    ALOGV("NAN_DP_END");
     int ret = WIFI_SUCCESS;
     struct nlattr *nlData;
     NanCommand *nanCommand = NULL;
