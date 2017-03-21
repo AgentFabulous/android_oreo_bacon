@@ -347,6 +347,14 @@ int NanCommand::getNanMatch(NanMatchInd *event)
             }
             memcpy(&event->range_info, outputTlv.value, outputTlv.length);
             break;
+        case NAN_TLV_TYPE_SDEA_SERVICE_SPECIFIC_INFO:
+            if (outputTlv.length > NAN_MAX_SDEA_SERVICE_SPECIFIC_INFO_LEN) {
+                outputTlv.length = NAN_MAX_SDEA_SERVICE_SPECIFIC_INFO_LEN;
+            }
+            event->sdea_service_specific_info_len = outputTlv.length;
+            memcpy(event->sdea_service_specific_info, outputTlv.value,
+                   outputTlv.length);
+            break;
         default:
             ALOGV("Unknown TLV type skipped");
             break;
@@ -432,6 +440,14 @@ int NanCommand::getNanFollowup(NanFollowupInd *event)
                 outputTlv.length = sizeof(event->addr);
             }
             memcpy(event->addr, outputTlv.value, outputTlv.length);
+            break;
+        case NAN_TLV_TYPE_SDEA_SERVICE_SPECIFIC_INFO:
+            if (outputTlv.length > NAN_MAX_SDEA_SERVICE_SPECIFIC_INFO_LEN) {
+                outputTlv.length = NAN_MAX_SDEA_SERVICE_SPECIFIC_INFO_LEN;
+            }
+            event->sdea_service_specific_info_len = outputTlv.length;
+            memcpy(event->sdea_service_specific_info, outputTlv.value,
+                   outputTlv.length);
             break;
         default:
             ALOGV("Unknown TLV type skipped");
