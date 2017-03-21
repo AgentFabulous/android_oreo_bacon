@@ -341,27 +341,36 @@ void NanCommand::NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
                                      u32 valueRcvd,
                                      void* pResponse)
 {
-    int i = 0;
+    int i = 0, j = 0;
     u16 msg_id; /* Based on the message_id in the header determine the Indication type */
     NanResponseMsg *pRsp;
     NanPublishTerminatedInd* pRspInd;
     NanDisabledInd* pRspdInd;
+    char tlvInfo[NAN_ERROR_STR_LEN];
 
     if (isNanResponse()) {
         pRsp = (NanResponseMsg*)pResponse;
         for (i = 0; i < (int)(sizeof(errorCodeTranslation)/ sizeof(errorCode)); i++) {
-                if (errorCodeTranslation[i].firmwareError == firmwareErrorRecvd) {
-                        pRsp->status =  errorCodeTranslation[i].frameworkError;
-                        strlcpy(pRsp->nan_error, errorCodeTranslation[i].nan_error, NAN_ERROR_STR_LEN);
-                        break;
+            if (errorCodeTranslation[i].firmwareError == firmwareErrorRecvd) {
+                pRsp->status =  errorCodeTranslation[i].frameworkError;
+                strlcpy(pRsp->nan_error, errorCodeTranslation[i].nan_error, NAN_ERROR_STR_LEN);
+                if (NAN_I_STATUS_INVALID_TLV_TYPE == firmwareErrorRecvd) {
+                    for (j = 0; j < (int)(sizeof(tlvToStr)/sizeof(verboseTlv)); j++) {
+                        if (tlvToStr[j].tlvType == valueRcvd) {
+                            strlcpy(tlvInfo, tlvToStr[i].strTlv, NAN_ERROR_STR_LEN);
+                            break;
+                        }
+                    }
                 }
+                strlcat(pRsp->nan_error, tlvInfo, sizeof(pRsp->nan_error));
+                break;
+            }
         }
         if (i == (int)(sizeof(errorCodeTranslation)/sizeof(errorCode))) {
                 pRsp->status =  NAN_STATUS_INTERNAL_FAILURE;
                 strlcpy(pRsp->nan_error, "NAN Discovery engine failure", NAN_ERROR_STR_LEN);
         }
-        ALOGD("%s: Status : %d", __FUNCTION__, pRsp->status);
-        ALOGD("%s: Value : %s", __FUNCTION__, pRsp->nan_error);
+        ALOGD("%s: Status: %d Error Info[value %d]: %s", __FUNCTION__, pRsp->status, valueRcvd, pRsp->nan_error);
     } else {
         msg_id = getIndicationType();
 
@@ -381,8 +390,7 @@ void NanCommand::NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
                         pRspInd->reason =  NAN_STATUS_INTERNAL_FAILURE;
                         strlcpy(pRspInd->nan_reason, "NAN Discovery engine failure", NAN_ERROR_STR_LEN);
                 }
-                ALOGD("%s: Status : %d", __FUNCTION__, pRspInd->reason);
-                ALOGD("%s: Value : %s", __FUNCTION__, pRspInd->nan_reason);
+                ALOGD("%s: Status: %d Error Info[value %d]: %s", __FUNCTION__, pRspInd->reason, valueRcvd, pRspInd->nan_reason);
                 break;
         case NAN_INDICATION_DISABLED:
                 pRspdInd = (NanDisabledInd*)pResponse;
@@ -397,8 +405,7 @@ void NanCommand::NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
                         pRspdInd->reason =  NAN_STATUS_INTERNAL_FAILURE;
                         strlcpy(pRspdInd->nan_reason, "NAN Discovery engine failure", NAN_ERROR_STR_LEN);
                 }
-                ALOGD("%s: Status : %d", __FUNCTION__, pRspdInd->reason);
-                ALOGD("%s: Value : %s", __FUNCTION__, pRspdInd->nan_reason);
+                ALOGD("%s: Status: %d Error Info[value %d]: %s", __FUNCTION__, pRspdInd->reason, valueRcvd, pRspdInd->nan_reason);
                 break;
         }
     }

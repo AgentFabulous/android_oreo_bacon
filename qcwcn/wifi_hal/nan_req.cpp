@@ -1470,6 +1470,7 @@ int NanCommand::calcNanFurtherAvailabilityMapSize(
 
 int NanCommand::putNanCapabilities(transaction_id id)
 {
+    ALOGV("NAN_CAPABILITIES");
     size_t message_len = sizeof(NanCapabilitiesReqMsg);
 
     pNanCapabilitiesReqMsg pFwReq = (pNanCapabilitiesReqMsg)malloc(message_len);
@@ -1499,7 +1500,7 @@ int NanCommand::putNanCapabilities(transaction_id id)
 
 int NanCommand::putNanAvailabilityDebug(NanAvailabilityDebug debug)
 {
-
+    ALOGV("NAN_AVAILABILITY_DEBUG");
     size_t message_len = sizeof(NanTestModeReqMsg);
     ALOGV("Message Len %zu", message_len);
 
