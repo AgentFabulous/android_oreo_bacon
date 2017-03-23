@@ -834,22 +834,14 @@ int NanCommand::getNanStaParameter(wifi_interface_handle iface,
     int ret = WIFI_ERROR_NONE;
     int res = -1;
     transaction_id id = 1;
-    NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
-    wifi_handle wifiHandle = getWifiHandle(iface);
 
-    nanCommand = NanCommand::instance(wifiHandle);
-    if (nanCommand == NULL) {
-        ALOGE("%s: Error NanCommand NULL", __func__);
-        return WIFI_ERROR_UNKNOWN;
-    }
-
-    ret = nanCommand->create();
+    ret = create();
     if (ret < 0)
         goto cleanup;
 
     /* Set the interface Id of the message. */
-    ret = nanCommand->set_iface_id(ifaceInfo->name);
+    ret = set_iface_id(ifaceInfo->name);
     if (ret < 0)
         goto cleanup;
 
