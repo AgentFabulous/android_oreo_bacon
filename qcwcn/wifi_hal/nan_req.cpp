@@ -568,7 +568,6 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
         (pReq->tx_match_filter_len ? SIZEOF_TLV_HDR + pReq->tx_match_filter_len : 0) +
         (SIZEOF_TLV_HDR + sizeof(NanServiceAcceptPolicy)) +
         (pReq->cipher_type ? SIZEOF_TLV_HDR + sizeof(NanCsidType) : 0) +
-        (pReq->pmk_len ? SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN : 0) +
         ((pReq->sdea_params.config_nan_data_path || pReq->sdea_params.security_cfg ||
           pReq->sdea_params.ranging_state || pReq->sdea_params.range_report) ?
           SIZEOF_TLV_HDR + sizeof(NanFWSdeaCtrlParams) : 0) +
@@ -579,6 +578,17 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
           pReq->range_response_cfg.ranging_response) ?
           SIZEOF_TLV_HDR + sizeof(NanFWRangeReqMsg) : 0)  +
         (pReq->sdea_service_specific_info_len ? SIZEOF_TLV_HDR + pReq->sdea_service_specific_info_len : 0);
+
+    if ((pReq->key_info.key_type ==  NAN_SECURITY_KEY_INPUT_PMK) &&
+        (pReq->key_info.body.pmk_info.pmk_len == NAN_PMK_INFO_LEN))
+        message_len += SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN;
+    else if ((pReq->key_info.key_type ==  NAN_SECURITY_KEY_INPUT_PASSPHRASE) &&
+             (pReq->key_info.body.passphrase_info.passphrase_len >=
+              NAN_SECURITY_MIN_PASSPHRASE_LEN) &&
+             (pReq->key_info.body.passphrase_info.passphrase_len <=
+              NAN_SECURITY_MAX_PASSPHRASE_LEN))
+        message_len += SIZEOF_TLV_HDR +
+                       pReq->key_info.body.passphrase_info.passphrase_len;
 
     pNanPublishServiceReqMsg pFwReq = (pNanPublishServiceReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -645,10 +655,23 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
         tlvs = addTlv(NAN_TLV_TYPE_NAN_CSID, sizeof(NanCsidType),
                         (const u8*)&pNanCsidType, tlvs);
     }
-    if (pReq->pmk_len) {
-        tlvs = addTlv(NAN_TLV_TYPE_NAN_PMK, pReq->pmk_len,
-                      (const u8*)&pReq->pmk[0], tlvs);
+
+    if ((pReq->key_info.key_type ==  NAN_SECURITY_KEY_INPUT_PMK) &&
+        (pReq->key_info.body.pmk_info.pmk_len == NAN_PMK_INFO_LEN)) {
+        tlvs = addTlv(NAN_TLV_TYPE_NAN_PMK,
+                      pReq->key_info.body.pmk_info.pmk_len,
+                      (const u8*)&pReq->key_info.body.pmk_info.pmk[0], tlvs);
+    } else if ((pReq->key_info.key_type == NAN_SECURITY_KEY_INPUT_PASSPHRASE) &&
+        (pReq->key_info.body.passphrase_info.passphrase_len >=
+         NAN_SECURITY_MIN_PASSPHRASE_LEN) &&
+        (pReq->key_info.body.passphrase_info.passphrase_len <=
+         NAN_SECURITY_MAX_PASSPHRASE_LEN)) {
+        tlvs = addTlv(NAN_TLV_TYPE_NAN_PASSPHRASE,
+                  pReq->key_info.body.passphrase_info.passphrase_len,
+                  (const u8*)&pReq->key_info.body.passphrase_info.passphrase[0],
+                  tlvs);
     }
+
     if (pReq->sdea_params.config_nan_data_path ||
         pReq->sdea_params.security_cfg ||
         pReq->sdea_params.ranging_state ||
@@ -794,7 +817,6 @@ int NanCommand::putNanSubscribe(transaction_id id,
         (pReq->rx_match_filter_len ? SIZEOF_TLV_HDR + pReq->rx_match_filter_len : 0) +
         (pReq->tx_match_filter_len ? SIZEOF_TLV_HDR + pReq->tx_match_filter_len : 0) +
         (pReq->cipher_type ? SIZEOF_TLV_HDR + sizeof(NanCsidType) : 0) +
-        (pReq->pmk_len ? SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN : 0) +
         ((pReq->sdea_params.config_nan_data_path || pReq->sdea_params.security_cfg ||
           pReq->sdea_params.ranging_state || pReq->sdea_params.range_report) ?
           SIZEOF_TLV_HDR + sizeof(NanFWSdeaCtrlParams) : 0) +
@@ -808,6 +830,19 @@ int NanCommand::putNanSubscribe(transaction_id id,
 
     message_len += \
         (pReq->num_intf_addr_present * (SIZEOF_TLV_HDR + NAN_MAC_ADDR_LEN));
+
+
+    if ((pReq->key_info.key_type ==  NAN_SECURITY_KEY_INPUT_PMK) &&
+        (pReq->key_info.body.pmk_info.pmk_len == NAN_PMK_INFO_LEN))
+        message_len += SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN;
+    else if ((pReq->key_info.key_type ==  NAN_SECURITY_KEY_INPUT_PASSPHRASE) &&
+             (pReq->key_info.body.passphrase_info.passphrase_len >=
+              NAN_SECURITY_MIN_PASSPHRASE_LEN) &&
+             (pReq->key_info.body.passphrase_info.passphrase_len <=
+              NAN_SECURITY_MAX_PASSPHRASE_LEN))
+        message_len += SIZEOF_TLV_HDR +
+                       pReq->key_info.body.passphrase_info.passphrase_len;
+
 
     pNanSubscribeServiceReqMsg pFwReq = (pNanSubscribeServiceReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -878,10 +913,23 @@ int NanCommand::putNanSubscribe(transaction_id id,
         tlvs = addTlv(NAN_TLV_TYPE_NAN_CSID, sizeof(NanCsidType),
                         (const u8*)&pNanCsidType, tlvs);
     }
-    if (pReq->pmk_len) {
-        tlvs = addTlv(NAN_TLV_TYPE_NAN_PMK, pReq->pmk_len,
-                      (const u8*)&pReq->pmk[0], tlvs);
+
+    if ((pReq->key_info.key_type ==  NAN_SECURITY_KEY_INPUT_PMK) &&
+        (pReq->key_info.body.pmk_info.pmk_len == NAN_PMK_INFO_LEN)) {
+        tlvs = addTlv(NAN_TLV_TYPE_NAN_PMK,
+                      pReq->key_info.body.pmk_info.pmk_len,
+                      (const u8*)&pReq->key_info.body.pmk_info.pmk[0], tlvs);
+    } else if ((pReq->key_info.key_type == NAN_SECURITY_KEY_INPUT_PASSPHRASE) &&
+        (pReq->key_info.body.passphrase_info.passphrase_len >=
+         NAN_SECURITY_MIN_PASSPHRASE_LEN) &&
+        (pReq->key_info.body.passphrase_info.passphrase_len <=
+         NAN_SECURITY_MAX_PASSPHRASE_LEN)) {
+        tlvs = addTlv(NAN_TLV_TYPE_NAN_PASSPHRASE,
+                  pReq->key_info.body.passphrase_info.passphrase_len,
+                  (const u8*)&pReq->key_info.body.passphrase_info.passphrase[0],
+                  tlvs);
     }
+
     if (pReq->sdea_params.config_nan_data_path ||
         pReq->sdea_params.security_cfg ||
         pReq->sdea_params.ranging_state ||
