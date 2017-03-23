@@ -21,6 +21,7 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include <utils/Log.h>
+#include <errno.h>
 #include "nancommand.h"
 #include "vendor_definitions.h"
 
@@ -594,9 +595,10 @@ cleanup:
 }
 
 /*  Function to get NAN capabilities */
-wifi_error nan_availability_config(transaction_id id,
+wifi_error nan_debug_command_config(transaction_id id,
                                    wifi_interface_handle iface,
-                                   NanAvailabilityDebug debug)
+                                   NanDebugParams debug,
+                                   int debug_msg_length)
 {
     int ret = 0;
     NanCommand *nanCommand = NULL;
@@ -612,6 +614,12 @@ wifi_error nan_availability_config(transaction_id id,
         return WIFI_ERROR_UNKNOWN;
     }
 
+    if (debug_msg_length <= 0) {
+        ALOGE("%s: Invalid debug message length = %d", __FUNCTION__,
+                                                       debug_msg_length);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
     ret = nanCommand->create();
     if (ret < 0)
         goto cleanup;
@@ -621,9 +629,9 @@ wifi_error nan_availability_config(transaction_id id,
     if (ret < 0)
         goto cleanup;
 
-    ret = nanCommand->putNanAvailabilityDebug(debug);
+    ret = nanCommand->putNanDebugCommand(debug, debug_msg_length);
     if (ret != 0) {
-        ALOGE("%s: putNanAvailabilityDebug Error:%d",__FUNCTION__, ret);
+        ALOGE("%s: putNanDebugCommand Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
 
