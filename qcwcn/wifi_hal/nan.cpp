@@ -32,6 +32,8 @@
 #define STRUCT_PACKED
 #endif
 
+#define OUT_OF_BAND_SERVICE_INSTANCE_ID 0
+
 //Singleton Static Instance
 NanCommand* NanCommand::mNanCommandInstance  = NULL;
 
@@ -785,6 +787,22 @@ wifi_error nan_data_request_initiator(transaction_id id,
         return (wifi_error)ret;
     }
 
+    if ((msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) &&
+        (msg->key_info.body.pmk_info.pmk_len == 0) &&
+        (msg->key_info.body.passphrase_info.passphrase_len == 0)) {
+        ALOGE("%s: Failed-Initiator req, missing pmk and passphrase",
+               __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    if ((msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) &&
+        (msg->requestor_instance_id == OUT_OF_BAND_SERVICE_INSTANCE_ID) &&
+        (msg->service_name_len == 0)) {
+        ALOGE("%s: Failed-Initiator req, missing service name for out of band request",
+              __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
     /* Add the vendor specific attributes for the NL command. */
     nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData)
@@ -852,11 +870,30 @@ wifi_error nan_data_request_initiator(transaction_id id,
         if (nanCommand->put_u32(QCA_WLAN_VENDOR_ATTR_NDP_CSID,
                 msg->cipher_type))
             goto cleanup;
-    }
-    if (msg->pmk_len == NAN_PMK_INFO_LEN) {
-        if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
-            (char *)msg->pmk, msg->pmk_len))
-            goto cleanup;
+
+        if ( msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PMK &&
+             msg->key_info.body.pmk_info.pmk_len == NAN_PMK_INFO_LEN) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
+                (char *)msg->key_info.body.pmk_info.pmk,
+                msg->key_info.body.pmk_info.pmk_len))
+                goto cleanup;
+        } else if (msg->key_info.key_type ==
+            NAN_SECURITY_KEY_INPUT_PASSPHRASE &&
+            msg->key_info.body.passphrase_info.passphrase_len >=
+            NAN_SECURITY_MIN_PASSPHRASE_LEN &&
+            msg->key_info.body.passphrase_info.passphrase_len <=
+            NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
+                (char *)msg->key_info.body.passphrase_info.passphrase,
+                msg->key_info.body.passphrase_info.passphrase_len))
+                goto cleanup;
+        }
+
+        if (msg->service_name_len) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_NAME,
+                (char *)msg->service_name, msg->service_name_len))
+                goto cleanup;
+        }
     }
     nanCommand->attr_end(nlData);
 
@@ -886,6 +923,14 @@ wifi_error nan_data_indication_response(transaction_id id,
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
         return (wifi_error)ret;
+    }
+
+    if ((msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) &&
+        (msg->key_info.body.pmk_info.pmk_len == 0) &&
+        (msg->key_info.body.passphrase_info.passphrase_len == 0)) {
+        ALOGE("%s: Failed-Initiator req, missing pmk and passphrase",
+               __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
     }
 
     /* Add the vendor specific attributes for the NL command. */
@@ -944,11 +989,29 @@ wifi_error nan_data_indication_response(transaction_id id,
         if (nanCommand->put_u32(QCA_WLAN_VENDOR_ATTR_NDP_CSID,
                 msg->cipher_type))
             goto cleanup;
-    }
-    if (msg->pmk_len == NAN_PMK_INFO_LEN) {
-        if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
-            (char *)msg->pmk, msg->pmk_len))
-            goto cleanup;
+
+        if ( msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PMK &&
+             msg->key_info.body.pmk_info.pmk_len == NAN_PMK_INFO_LEN) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
+                (char *)msg->key_info.body.pmk_info.pmk,
+                msg->key_info.body.pmk_info.pmk_len))
+                goto cleanup;
+        } else if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PASSPHRASE &&
+            msg->key_info.body.passphrase_info.passphrase_len >=
+            NAN_SECURITY_MIN_PASSPHRASE_LEN &&
+            msg->key_info.body.passphrase_info.passphrase_len <=
+            NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
+                (char *)msg->key_info.body.passphrase_info.passphrase,
+                msg->key_info.body.passphrase_info.passphrase_len))
+                goto cleanup;
+        }
+
+        if (msg->service_name_len) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_NAME,
+                (char *)msg->service_name, msg->service_name_len))
+                goto cleanup;
+        }
     }
     nanCommand->attr_end(nlData);
 
