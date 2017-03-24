@@ -600,6 +600,13 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     }
 
     DEBUG_PRINT_INFO("Component_init : %s : return = 0x%x", m_nkind, eRet);
+
+    {
+        VendorExtensionStore *extStore = const_cast<VendorExtensionStore *>(&mVendorExtensionStore);
+        init_vendor_extensions(*extStore);
+        mVendorExtensionStore.dumpExtensions((const char *)m_nkind);
+    }
+
     return eRet;
 init_error:
     handle->venc_close();
@@ -2117,6 +2124,17 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                memcpy(&m_sConfigColorAspects, configData, sizeof(m_sConfigColorAspects));
                break;
            }
+        case OMX_IndexConfigAndroidVendorExtension:
+            {
+                VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE);
+
+                OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext =
+                    reinterpret_cast<OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *>(configData);
+                VALIDATE_OMX_VENDOR_EXTENSION_PARAM_DATA(ext);
+
+                return set_vendor_extension_config(ext);
+            }
+
         default:
             DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);
             break;

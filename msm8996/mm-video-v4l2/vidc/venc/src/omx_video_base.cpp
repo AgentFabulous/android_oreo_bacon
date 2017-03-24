@@ -2282,6 +2282,16 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                 }
                 break;
             }
+        case OMX_IndexConfigAndroidVendorExtension:
+            {
+                VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE);
+
+                OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext =
+                    reinterpret_cast<OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *>(configData);
+                VALIDATE_OMX_VENDOR_EXTENSION_PARAM_DATA(ext);
+                return get_vendor_extension_config(ext);
+            }
+
         default:
             DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);
             return OMX_ErrorUnsupportedIndex;
@@ -5290,3 +5300,8 @@ OMX_ERRORTYPE omx_video::push_empty_eos_buffer(OMX_HANDLETYPE hComp,
     --pending_input_buffers;
     return retVal;
 }
+
+// no code beyond this !
+
+// inline import of vendor extensions implementation
+#include "omx_video_extensions.hpp"
