@@ -269,12 +269,7 @@ public class FocusOverlayManager {
             // already have requested AF for us, so just request capture on
             // focus here.
             mState = STATE_FOCUSING_SNAP_ON_FINISH;
-        } else if (!needAutoFocusCall() || (mState == STATE_SUCCESS || mState == STATE_FAIL)) {
-            // If the user has half-pressed the shutter and focus is completed, we
-            // can take the photo right away. If the focus mode is infinity, we can
-            // also take the photo.
-            capture();
-        } else if (mState == STATE_IDLE) {
+        } else {
             // We didn't do focus. This can happen if the user press focus key
             // while the snapshot is still in progress. The user probably wants
             // the next snapshot as soon as possible, so we just do a snapshot
