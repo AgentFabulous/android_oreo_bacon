@@ -333,8 +333,8 @@ public class FocusOverlayManager {
 
         // animate on false->true trasition only b/8219520
         if (moving && !mPreviousMoving) {
-            mFocusRing.startPassiveFocus();
             mIsAFRunning = true;
+            mFocusRing.startPassiveFocus();
         } else if (!moving) {
             mFocusRing.stopFocusAnimations();
             mIsAFRunning = false;
