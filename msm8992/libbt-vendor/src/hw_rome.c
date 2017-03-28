@@ -1734,6 +1734,10 @@ void enable_controller_log (int fd)
    if (ret != 6) {
      ALOGE("%s: command failed", __func__);
    }
+   ret = read_hci_event(fd, rsp, HCI_MAX_EVENT_SIZE);
+   if (ret < 0) {
+       ALOGE("%s: Failed to get CC for enable SoC log", __FUNCTION__);
+   }
 }
 
 
