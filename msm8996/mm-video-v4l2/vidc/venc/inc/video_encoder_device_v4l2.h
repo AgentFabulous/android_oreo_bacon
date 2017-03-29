@@ -598,6 +598,7 @@ class venc_dev
             static inline int getTimeStampAt(native_handle_t *, int index);
         };
         BatchInfo mBatchInfo;
+        bool mUseAVTimerTimestamps;
 };
 
 enum instance_state {

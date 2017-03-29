@@ -44,6 +44,9 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_EXTENSION("qti-ext-enc-custom-profile-level", OMX_IndexParamVideoProfileLevelCurrent, OMX_DirOutput)
     ADD_PARAM    ("profile", OMX_AndroidVendorValueInt32)
     ADD_PARAM_END("level",   OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-timestamp-source-avtimer", OMX_QTIIndexParamEnableAVTimerTimestamps, OMX_DirInput)
+    ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -66,7 +69,7 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
 
     bool setStatus = true;
 
-    switch (vExt.extensionIndex()) {
+    switch ((OMX_U32)vExt.extensionIndex()) {
         case OMX_IndexConfigCommonRotate:
         {
             setStatus &= vExt.setParamInt32(ext, "angle", m_sConfigFrameRotation.nRotation);
@@ -90,6 +93,11 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
             setStatus &= vExt.setParamInt32(ext, "profile", m_sParamProfileLevel.eProfile);
             setStatus &= vExt.setParamInt32(ext, "level", m_sParamProfileLevel.eLevel);
 
+            break;
+        }
+        case OMX_QTIIndexParamEnableAVTimerTimestamps:
+        {
+            setStatus &= vExt.setParamInt32(ext, "enable", m_sParamAVTimerTimestampMode.bEnable);
             break;
         }
         default:
@@ -124,7 +132,7 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
     vExt.set();
 
     bool valueSet = false;
-    switch (vExt.extensionIndex()) {
+    switch ((OMX_U32)vExt.extensionIndex()) {
         case OMX_IndexConfigCommonRotate:
         {
             OMX_CONFIG_ROTATIONTYPE rotationParam;
@@ -205,7 +213,25 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
 
             break;
         }
+        case OMX_QTIIndexParamEnableAVTimerTimestamps:
+        {
+            QOMX_ENABLETYPE avTimerEnableParam;
+            memcpy(&avTimerEnableParam, &m_sParamAVTimerTimestampMode, sizeof(QOMX_ENABLETYPE));
+            valueSet |= vExt.readParamInt32(ext, "enable", (OMX_S32 *)&(avTimerEnableParam.bEnable));
+            if (!valueSet) {
+                break;
+            }
 
+            DEBUG_PRINT_HIGH("VENDOR-EXT: AV-timer timestamp mode enable=%u", avTimerEnableParam.bEnable);
+
+            err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamEnableAVTimerTimestamps, &avTimerEnableParam);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamEnableAVTimerTimestamps failed !");
+            }
+
+            break;
+        }
         default:
         {
             return OMX_ErrorNotImplemented;

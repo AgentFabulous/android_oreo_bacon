@@ -304,6 +304,8 @@ venc_dev::venc_dev(class omx_venc *venc_class):mInputExtradata(venc_class), mOut
     }
     snprintf(m_debug.log_loc, PROPERTY_VALUE_MAX,
              "%s", BUFFER_LOG_LOC);
+
+    mUseAVTimerTimestamps = false;
 }
 
 venc_dev::~venc_dev()
@@ -2309,6 +2311,13 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 }
                 break;
             }
+        case OMX_QTIIndexParamEnableAVTimerTimestamps:
+            {
+                QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
+                mUseAVTimerTimestamps = pParam->bEnable == OMX_TRUE;
+                DEBUG_PRINT_INFO("AVTimer timestamps enabled");
+                break;
+            }
         case OMX_IndexParamVideoSliceFMO:
         default:
             DEBUG_PRINT_ERROR("ERROR: Unsupported parameter in venc_set_param: %u",
@@ -3501,8 +3510,22 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             fd, plane[0].bytesused, plane[0].length, buf.flags, m_sVenc_cfg.inputformat);
                 } else if (meta_buf->buffer_type == kMetadataBufferTypeGrallocSource) {
                     private_handle_t *handle = (private_handle_t *)meta_buf->meta_handle;
-                    if (!streaming[OUTPUT_PORT] && handle) {
 
+                    if (!handle) {
+                        DEBUG_PRINT_ERROR("%s : handle is null!", __FUNCTION__);
+                        return false;
+                    }
+
+                    if (mUseAVTimerTimestamps) {
+                        uint64_t avTimerTimestampNs = bufhdr->nTimeStamp * 1000;
+                        if (getMetaData(handle, GET_VT_TIMESTAMP, &avTimerTimestampNs) == 0
+                                && avTimerTimestampNs > 0) {
+                            bufhdr->nTimeStamp = avTimerTimestampNs / 1000;
+                            DEBUG_PRINT_LOW("AVTimer TS : %llu us", (unsigned long long)bufhdr->nTimeStamp);
+                        }
+                    }
+
+                    if (!streaming[OUTPUT_PORT]) {
                         // Moment of truth... actual colorspace is known here..
                         ColorSpace_t colorSpace = ITU_R_601;
                         if (getMetaData(handle, GET_COLOR_SPACE, &colorSpace) == 0) {
