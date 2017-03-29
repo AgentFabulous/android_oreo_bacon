@@ -1453,6 +1453,22 @@ bool venc_dev::venc_get_seq_hdr(void *buffer,
     return true;
 }
 
+bool venc_dev::venc_get_dimensions(OMX_U32 portIndex, OMX_U32 *w, OMX_U32 *h) {
+    struct v4l2_format fmt;
+    memset(&fmt, 0, sizeof(fmt));
+    fmt.type = portIndex == PORT_INDEX_OUT ? V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE :
+            V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+
+    if (ioctl(m_nDriver_fd, VIDIOC_G_FMT, &fmt)) {
+        DEBUG_PRINT_ERROR("Failed to get format on %s port",
+                portIndex == PORT_INDEX_OUT ? "capture" : "output");
+        return false;
+    }
+    *w = fmt.fmt.pix_mp.width;
+    *h = fmt.fmt.pix_mp.height;
+    return true;
+}
+
 bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         OMX_U32 *actual_buff_count,
         OMX_U32 *buff_size,
@@ -5789,6 +5805,15 @@ bool venc_dev::venc_set_vpe_rotation(OMX_S32 rotation_angle)
 
     memset(&fmt, 0, sizeof(fmt));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+    if (rotation_angle == 90 || rotation_angle == 270) {
+        OMX_U32 nWidth = m_sVenc_cfg.dvs_height;
+        OMX_U32 nHeight = m_sVenc_cfg.dvs_width;
+        m_sVenc_cfg.dvs_height = nHeight;
+        m_sVenc_cfg.dvs_width = nWidth;
+        DEBUG_PRINT_LOW("Rotation (%u) Flipping wxh to %lux%lu",
+                rotation_angle, m_sVenc_cfg.dvs_width, m_sVenc_cfg.dvs_height);
+    }
+
     fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
     fmt.fmt.pix_mp.width = m_sVenc_cfg.dvs_width;
     fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
