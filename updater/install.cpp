@@ -336,13 +336,13 @@ Value* FormatFn(const char* name, State* state, const std::vector<std::unique_pt
 // rename(src_name, dst_name)
 //   Renames src_name to dst_name. It automatically creates the necessary directories for dst_name.
 //   Example: rename("system/app/Hangouts/Hangouts.apk", "system/priv-app/Hangouts/Hangouts.apk")
-Value* RenameFn(const char* name, State* state, int argc, Expr* argv[]) {
-  if (argc != 2) {
-    return ErrorAbort(state, kArgsParsingFailure, "%s() expects 2 args, got %d", name, argc);
+Value* RenameFn(const char* name, State* state, const std::vector<std::unique_ptr<Expr>>& argv) {
+  if (argv.size() != 2) {
+    return ErrorAbort(state, kArgsParsingFailure, "%s() expects 2 args, got %d", name, argv.size());
   }
 
   std::vector<std::string> args;
-  if (!ReadArgs(state, argc, argv, &args)) {
+  if (!ReadArgs(state, argv, &args)) {
     return ErrorAbort(state, kArgsParsingFailure, "%s() Failed to parse the argument(s)", name);
   }
   const std::string& src_name = args[0];
@@ -374,9 +374,9 @@ Value* RenameFn(const char* name, State* state, int argc, Expr* argv[]) {
 // delete_recursive([dirname, ...])
 //   Recursively deletes dirnames and all their contents. Returns the number of directories
 //   successfully deleted.
-Value* DeleteFn(const char* name, State* state, int argc, Expr* argv[]) {
-  std::vector<std::string> paths(argc);
-  for (int i = 0; i < argc; ++i) {
+Value* DeleteFn(const char* name, State* state, const std::vector<std::unique_ptr<Expr>>& argv) {
+  std::vector<std::string> paths(argv.size());
+  for (size_t i = 0; i < argv.size(); ++i) {
     if (!Evaluate(state, argv[i], &paths[i])) {
       return nullptr;
     }
@@ -385,7 +385,7 @@ Value* DeleteFn(const char* name, State* state, int argc, Expr* argv[]) {
   bool recursive = (strcmp(name, "delete_recursive") == 0);
 
   int success = 0;
-  for (int i = 0; i < argc; ++i) {
+  for (size_t i = 0; i < argv.size(); ++i) {
     if ((recursive ? dirUnlinkHierarchy(paths[i].c_str()) : unlink(paths[i].c_str())) == 0) {
       ++success;
     }
@@ -564,43 +564,6 @@ Value* PackageExtractFileFn(const char* name, State* state,
 
     return new Value(VAL_BLOB, buffer);
   }
-}
-
-// symlink(target, [src1, src2, ...])
-//   Creates all sources as symlinks to target. It unlinks any previously existing src1, src2, etc
-//   before creating symlinks.
-Value* SymlinkFn(const char* name, State* state, int argc, Expr* argv[]) {
-  if (argc == 0) {
-    return ErrorAbort(state, kArgsParsingFailure, "%s() expects 1+ args, got %d", name, argc);
-  }
-  std::string target;
-  if (!Evaluate(state, argv[0], &target)) {
-    return nullptr;
-  }
-
-  std::vector<std::string> srcs;
-  if (!ReadArgs(state, argc - 1, argv + 1, &srcs)) {
-    return ErrorAbort(state, kArgsParsingFailure, "%s(): Failed to parse the argument(s)", name);
-  }
-
-  size_t bad = 0;
-  for (const auto& src : srcs) {
-    if (unlink(src.c_str()) == -1 && errno != ENOENT) {
-      PLOG(ERROR) << name << ": failed to remove " << src;
-      ++bad;
-    } else if (!make_parents(src)) {
-      LOG(ERROR) << name << ": failed to symlink " << src << " to " << target
-                 << ": making parents failed";
-      ++bad;
-    } else if (symlink(target.c_str(), src.c_str()) == -1) {
-      PLOG(ERROR) << name << ": failed to symlink " << src << " to " << target;
-      ++bad;
-    }
-  }
-  if (bad != 0) {
-    return ErrorAbort(state, kSymlinkFailure, "%s: Failed to create %zu symlink(s)", name, bad);
-  }
-  return StringValue("t");
 }
 
 struct perm_parsed_args {
@@ -810,14 +773,14 @@ static int do_SetMetadataRecursive(const char* filename, const struct stat* stat
   return ApplyParsedPerms(recursive_state, filename, statptr, recursive_parsed_args);
 }
 
-static Value* SetMetadataFn(const char* name, State* state, int argc, Expr* argv[]) {
-  if ((argc % 2) != 1) {
+static Value* SetMetadataFn(const char* name, State* state, const std::vector<std::unique_ptr<Expr>>& argv) {
+  if ((argv.size() % 2) != 1) {
     return ErrorAbort(state, kArgsParsingFailure, "%s() expects an odd number of arguments, got %d",
-                      name, argc);
+                      name, argv.size());
   }
 
   std::vector<std::string> args;
-  if (!ReadArgs(state, argc, argv, &args)) {
+  if (!ReadArgs(state, argv, &args)) {
     return ErrorAbort(state, kArgsParsingFailure, "%s() Failed to parse the argument(s)", name);
   }
 
@@ -827,7 +790,7 @@ static Value* SetMetadataFn(const char* name, State* state, int argc, Expr* argv
                       args[0].c_str(), strerror(errno));
   }
 
-  struct perm_parsed_args parsed = ParsePermArgs(state, argc, args);
+  struct perm_parsed_args parsed = ParsePermArgs(state, argv.size(), args);
   int bad = 0;
   bool recursive = (strcmp(name, "set_metadata_recursive") == 0);
 
@@ -1383,7 +1346,6 @@ void RegisterInstallFunctions() {
   RegisterFunction("delete_recursive", DeleteFn);
   RegisterFunction("package_extract_dir", PackageExtractDirFn);
   RegisterFunction("package_extract_file", PackageExtractFileFn);
-  RegisterFunction("symlink", SymlinkFn);
 
   // Usage:
   //   set_metadata("filename", "key1", "value1", "key2", "value2", ...)

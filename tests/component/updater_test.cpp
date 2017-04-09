@@ -299,44 +299,6 @@ TEST_F(UpdaterTest, rename) {
     ASSERT_EQ(0, rmdir((temp_dir + "/aaa").c_str()));
 }
 
-TEST_F(UpdaterTest, symlink) {
-    // symlink expects 1+ argument.
-    expect(nullptr, "symlink()", kArgsParsingFailure);
-
-    // symlink should fail if src is an empty string.
-    TemporaryFile temp_file1;
-    std::string script1("symlink(\"" + std::string(temp_file1.path) + "\", \"\")");
-    expect(nullptr, script1.c_str(), kSymlinkFailure);
-
-    std::string script2("symlink(\"" + std::string(temp_file1.path) + "\", \"src1\", \"\")");
-    expect(nullptr, script2.c_str(), kSymlinkFailure);
-
-    // symlink failed to remove old src.
-    std::string script3("symlink(\"" + std::string(temp_file1.path) + "\", \"/proc\")");
-    expect(nullptr, script3.c_str(), kSymlinkFailure);
-
-    // symlink can create symlinks.
-    TemporaryFile temp_file;
-    std::string content = "magicvalue";
-    ASSERT_TRUE(android::base::WriteStringToFile(content, temp_file.path));
-
-    TemporaryDir td;
-    std::string src1 = std::string(td.path) + "/symlink1";
-    std::string src2 = std::string(td.path) + "/symlink2";
-    std::string script4("symlink(\"" + std::string(temp_file.path) + "\", \"" +
-                        src1 + "\", \"" + src2 + "\")");
-    expect("t", script4.c_str(), kNoCause);
-
-    // Verify the created symlinks.
-    struct stat sb;
-    ASSERT_TRUE(lstat(src1.c_str(), &sb) == 0 && S_ISLNK(sb.st_mode));
-    ASSERT_TRUE(lstat(src2.c_str(), &sb) == 0 && S_ISLNK(sb.st_mode));
-
-    // Clean up the leftovers.
-    ASSERT_EQ(0, unlink(src1.c_str()));
-    ASSERT_EQ(0, unlink(src2.c_str()));
-}
-
 TEST_F(UpdaterTest, package_extract_dir) {
   // package_extract_dir expects 2 arguments.
   expect(nullptr, "package_extract_dir()", kArgsParsingFailure);
