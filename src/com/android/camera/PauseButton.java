@@ -51,6 +51,7 @@ public class PauseButton extends ImageView {
         super(context, attrs);
         setClickable(true);
         setSelected(false);
+        setVisibility(View.INVISIBLE);
     }
 
     public void setPaused(boolean paused) {
