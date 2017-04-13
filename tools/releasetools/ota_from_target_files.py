@@ -205,7 +205,6 @@ def AppendAssertions(script, info_dict, oem_dicts=None):
       device = GetBuildProp("ro.product.device", info_dict)
     else:
       device = OPTIONS.override_device
-    script.AssertDevice(device)
   else:
     if not oem_dicts:
       raise common.ExternalError(
@@ -411,10 +410,6 @@ def WriteFullOTAPackage(input_zip, output_zip):
   assert HasRecoveryPatch(input_zip)
 
   metadata["ota-type"] = "BLOCK"
-
-  ts = GetBuildProp("ro.build.date.utc", OPTIONS.info_dict)
-  ts_text = GetBuildProp("ro.build.date", OPTIONS.info_dict)
-  script.AssertOlderBuild(ts, ts_text)
 
   AppendAssertions(script, OPTIONS.info_dict, oem_dicts)
   device_specific.FullOTA_Assertions()
