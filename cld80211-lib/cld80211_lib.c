@@ -38,7 +38,7 @@
 #include <netlink/genl/ctrl.h>
 #include <linux/pkt_sched.h>
 #include <unistd.h>
-#include <utils/Log.h>
+#include <log/log.h>
 #include "cld80211_lib.h"
 
 #undef LOG_TAG
