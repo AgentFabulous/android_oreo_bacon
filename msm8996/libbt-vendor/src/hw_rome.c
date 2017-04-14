@@ -143,7 +143,7 @@ int get_vs_hci_event(unsigned char *rsp)
     int build_lbl_len;
 
     if( (rsp[EVENTCODE_OFFSET] == VSEVENT_CODE) || (rsp[EVENTCODE_OFFSET] == EVT_CMD_COMPLETE))
-        ALOGI("%s: Received HCI-Vendor Specific event", __FUNCTION__);
+        ALOGV("%s: Received HCI-Vendor Specific event", __FUNCTION__);
     else {
         ALOGI("%s: Failed to receive HCI-Vendor Specific event", __FUNCTION__);
         err = -EIO;
@@ -198,7 +198,7 @@ int get_vs_hci_event(unsigned char *rsp)
                 switch (err = rsp[CMD_STATUS_OFFSET])
                     {
                     case HCI_CMD_SUCCESS:
-                        ALOGI("%s: Download Packet successfully!", __FUNCTION__);
+                        ALOGV("%s: Download Packet successfully!", __FUNCTION__);
                         break;
                     case PATCH_LEN_ERROR:
                         ALOGI("%s: Invalid patch length argument passed for EDL PATCH "
@@ -465,7 +465,7 @@ void frame_hci_cmd_pkt(
             cmd[9]  = EXTRACT_BYTE(p_base_addr, 3);
             memcpy(&cmd[10], (pdata_buffer + offset), size);
 
-            ALOGD("%s: Sending EDL_PATCH_DLD_REQ_CMD: size: %d bytes",
+            ALOGV("%s: Sending EDL_PATCH_DLD_REQ_CMD: size: %d bytes",
                 __FUNCTION__, size);
             ALOGV("HCI-CMD %d:\t0x%x\t0x%x\t0x%x\t0x%x\t0x%x\t0x%x\t0x%x\t"
                 "0x%x\t0x%x\t0x%x\t\n", segtNo, cmd[0], cmd[1], cmd[2],
@@ -487,7 +487,7 @@ void frame_hci_cmd_pkt(
             segtNo, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4]);
             break;
         case EDL_PATCH_TLV_REQ_CMD:
-            ALOGD("%s: Sending EDL_PATCH_TLV_REQ_CMD", __FUNCTION__);
+            ALOGV("%s: Sending EDL_PATCH_TLV_REQ_CMD", __FUNCTION__);
             /* Parameter Total Length */
             cmd[3] = size +2;
 
@@ -977,7 +977,7 @@ int rome_tlv_dnld_segment(int fd, int index, int seg_size, unsigned char wait_cc
         }
     }
 
-    ALOGI("%s: Successfully downloaded patch segment: %d", __FUNCTION__, index);
+    ALOGV("%s: Successfully downloaded patch segment: %d", __FUNCTION__, index);
     return err;
 }
 
