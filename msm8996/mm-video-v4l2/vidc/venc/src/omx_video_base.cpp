@@ -2924,6 +2924,14 @@ OMX_ERRORTYPE omx_video::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
     if (index < m_sInPortDef.nBufferCountActual && m_pInput_pmem) {
         auto_lock l(m_lock);
 
+        if (mUseProxyColorFormat) {
+            if (m_opq_pmem_q.m_size) {
+                unsigned long addr, p1, id;
+                m_opq_pmem_q.pop_entry(&addr, &p1, &id);
+                DEBUG_PRINT_LOW("Removed entry in m_opq_pmem_q: address %lu", addr);
+            }
+        }
+
         if (m_pInput_pmem[index].fd > 0 && input_use_buffer == false) {
             DEBUG_PRINT_LOW("FreeBuffer:: i/p AllocateBuffer case");
             if(!secure_session) {
