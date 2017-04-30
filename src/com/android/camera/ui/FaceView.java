@@ -62,6 +62,7 @@ public class FaceView extends View
     private final int mFailColor;
     private Paint mPaint;
     private volatile boolean mBlocked;
+    private final boolean DEBUG = false;
 
     private int mUncroppedWidth;
     private int mUncroppedHeight;
@@ -238,8 +239,10 @@ public class FaceView extends View
                     float[] point = new float[4];
                     int delta_x = mFaces[i].rect.width() / 12;
                     int delta_y = mFaces[i].rect.height() / 12;
-                    Log.e(TAG, "blink: (" + face.getLeftEyeBlinkDegree()+ ", " +
-                        face.getRightEyeBlinkDegree() + ")");
+                    if (DEBUG) {
+                        Log.e(TAG, "blink: (" + face.getLeftEyeBlinkDegree()+ ", " +
+                            face.getRightEyeBlinkDegree() + ")");
+                    }
                     if (face.leftEye != null) {
                         if ((mDisplayRotation == 0) ||
                                 (mDisplayRotation == 180)) {
@@ -349,8 +352,10 @@ public class FaceView extends View
                     }
 
                     if (face.mouth != null) {
-                        Log.e(TAG, "smile: " + face.getSmileDegree() + "," +
-                            face.getSmileScore());
+                        if (DEBUG) {
+                            Log.e(TAG, "smile: " + face.getSmileDegree() + "," +
+                                face.getSmileScore());
+                        }
                         if (face.getSmileDegree() < smile_threashold_no_smile) {
                             if ((mDisplayRotation == 90) ||
                                 (mDisplayRotation == 270)) {
