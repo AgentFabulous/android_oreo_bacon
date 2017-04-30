@@ -264,6 +264,12 @@ public class FocusOverlayManager {
     public void doSnap() {
         if (!mInitialized) return;
 
+        // No need to do any focus checks for the front camera (no actuator)
+        if (mMirror) {
+            capture();
+            return;
+        }
+
         if (mIsAFRunning || mState == STATE_FOCUSING) {
             // Half pressing the shutter (i.e. the focus button event) will
             // already have requested AF for us, so just request capture on
