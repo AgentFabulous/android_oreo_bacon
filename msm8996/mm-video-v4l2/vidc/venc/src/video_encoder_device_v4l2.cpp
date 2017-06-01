@@ -236,6 +236,9 @@ venc_dev::venc_dev(class omx_venc *venc_class):mInputExtradata(venc_class), mOut
     color_format = 0;
     hw_overload = false;
     mBatchSize = 0;
+    m_profile_set = false;
+    m_level_set = false;
+    rc_off_level = 0;
     pthread_mutex_init(&pause_resume_mlock, NULL);
     pthread_cond_init(&pause_resume_cond, NULL);
     memset(&idrperiod, 0, sizeof(idrperiod));
