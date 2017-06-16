@@ -99,7 +99,7 @@
     <dimen name="focus_circle_min_size">24dp</dimen>
     <dimen name="focus_circle_max_size">96dp</dimen>
     <dimen name="focus_circle_initial_size">48dp</dimen>
-    <dimen name="zoom_font_size">14pt</dimen>
+    <dimen name="zoom_font_size">36pt</dimen>
     <dimen name="shutter_offset">11dp</dimen>
     <dimen name="shutter_offset_top">2dp</dimen>
     <dimen name="size_thumbnail">200dip</dimen>
