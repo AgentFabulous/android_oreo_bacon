@@ -335,8 +335,7 @@ static void cpu_down_work(struct work_struct *work)
 			continue;
 		lowest_cpu = get_lowest_load_cpu();
 		if (lowest_cpu > 0 && lowest_cpu <= stats.total_cpus) {
-			if (check_lock(lowest_cpu) ||
-			    check_cpuboost(lowest_cpu))
+			if (check_lock(lowest_cpu))
 				break;
 			cpu_down(lowest_cpu);
 		}
@@ -521,7 +520,7 @@ static void msm_hotplug_resume(void)
 	}
 
 #ifdef CONFIG_CPU_BOOST
-	if (wakeup_boost || required_wakeup) {
+	if (required_wakeup) {
 #else
 	if (required_wakeup) {
 #endif
