@@ -1881,19 +1881,6 @@ config MSM_CPU_FREQ_MAX
 
 endif # CPU_FREQ_MSM
 
-<<<<<<< HEAD
-config CPU_VOLTAGE_TABLE
-	bool "Enable CPU Voltage Table via sysfs for adjustements"
-	default n
-	help
-	  DTS based kernel User Votlage Control
-=======
-config THUNDERPLUG_CONTROL
-	bool "Enable plugging down/up of cores based on load per core"
-	help
-	  This driver hotplugs cpu cores based on per-core load
->>>>>>> bc38fb7... Revert "Voltage Control: generic voltage control for DTS based kernels"
-
 config CPU_VOLTAGE_TABLE
 	bool "Enable CPU Voltage Table via sysfs for adjustements"
 	default n
