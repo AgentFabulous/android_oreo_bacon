@@ -1039,7 +1039,7 @@ QCamera2HardwareInterface::QCamera2HardwareInterface(int cameraId)
       mReprocJob(-1),
       mPreviewFrameSkipValid(0),
       mCurrFrameCnt(0),
-      mVideoMem(NULL)
+      mVideoMem(NULL),
       mLastAFScanTime(0),
       mLastCaptureTime(0)
 {
