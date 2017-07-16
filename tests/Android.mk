@@ -11,7 +11,8 @@ LOCAL_STATIC_JAVA_LIBRARIES := littlemock dexmaker
 # Include all test java files.
 LOCAL_SRC_FILES := $(call all-java-files-under, src)
 
-LOCAL_PACKAGE_NAME := SnapTests
+LOCAL_PACKAGE_NAME := SnapTests-bacon
+LOCAL_OVERRIDES_PACKAGES := SnapTests
 
 LOCAL_INSTRUMENTATION_FOR := Snap
 
