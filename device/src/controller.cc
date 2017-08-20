@@ -416,6 +416,7 @@ static bool supports_ble_periodic_advertising(void) {
   CHECK(readable);
   CHECK(ble_supported);
   return HCI_LE_PERIODIC_ADVERTISING_SUPPORTED(features_ble.as_array);
+}
 
 static bool supports_ble_offload_features(void) {
   assert(readable);

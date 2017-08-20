@@ -635,7 +635,7 @@ static void dispatch_reassembled(BT_HDR* packet) {
 // Misc internal functions
 
 static waiting_command_t* get_waiting_command(command_opcode_t opcode) {
-  std::lock_guard<std::recursive_mutex> lock(commands_pending_response_mutex);
+  std::unique_lock<std::recursive_mutex> lock(commands_pending_response_mutex);
 
   for (const list_node_t* node = list_begin(commands_pending_response);
        node != list_end(commands_pending_response); node = list_next(node)) {
@@ -647,19 +647,19 @@ static waiting_command_t* get_waiting_command(command_opcode_t opcode) {
 
     list_remove(commands_pending_response, wait_entry);
 
-    pthread_mutex_unlock(&commands_pending_response_lock);
+    lock.unlock();
     return wait_entry;
   }
   // look for any command complete with improper VS Opcode
   for (const list_node_t *node = list_begin(commands_pending_response);
       node != list_end(commands_pending_response);
       node = list_next(node)) {
-    waiting_command_t *wait_entry = list_node(node);
+    waiting_command_t *wait_entry = reinterpret_cast<waiting_command_t*>(list_node(node));
 
     if (!wait_entry || wait_entry->opcode != opcode) {
         if(((wait_entry->opcode & HCI_GRP_VENDOR_SPECIFIC) == HCI_GRP_VENDOR_SPECIFIC) &&
            ((opcode & HCI_GRP_VENDOR_SPECIFIC) == HCI_GRP_VENDOR_SPECIFIC)) {
-            LOG_DEBUG("%s VS event found treat it as valid 0x%x", __func__, opcode);
+            LOG_DEBUG(LOG_TAG, "%s VS event found treat it as valid 0x%x", __func__, opcode);
         }
         else {
             continue;
