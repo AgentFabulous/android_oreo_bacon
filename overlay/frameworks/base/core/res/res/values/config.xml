@@ -382,4 +382,5 @@
 
     <!-- Enable blur support
     <bool name="config_uiBlurEnabled">true</bool>-->
+    <bool name="config_showNavigationBar">true</bool>
 </resources>
