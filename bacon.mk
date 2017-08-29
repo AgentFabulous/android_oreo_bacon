@@ -159,6 +159,10 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/sec_config:system/etc/sec_config
 
+# Keylayout
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/configs/synaptics-rmi-ts.kl:system/usr/keylayout/synaptics-rmi-ts.kl
+
 # Keystore
 PRODUCT_PACKAGES += \
     keystore.msm8974
