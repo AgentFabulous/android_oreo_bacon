@@ -2476,8 +2476,13 @@ $(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) \
 	   $(if $(OEM_OTA_CONFIG), -o $(OEM_OTA_CONFIG)) \
 	   $(BUILT_TARGET_FILES_PACKAGE) $@
 
+AOSP_TARGET_PACKAGE := $(PRODUCT_OUT)/aosp_$(TARGET_DEVICE)-$(PLATFORM_VERSION)-$(shell date +%Y%m%d).$(USER).zip
+
 .PHONY: otapackage
 otapackage: $(INTERNAL_OTA_PACKAGE_TARGET)
+	$(hide) ln -f $(INTERNAL_OTA_PACKAGE_TARGET) $(AOSP_TARGET_PACKAGE)
+	$(hide) $(MD5SUM) $(AOSP_TARGET_PACKAGE) > $(AOSP_TARGET_PACKAGE).md5sum
+	@echo -e "Package complete: $(AOSP_TARGET_PACKAGE)"
 
 endif    # build_ota_package
 
