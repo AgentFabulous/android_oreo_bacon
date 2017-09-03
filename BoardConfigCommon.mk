@@ -20,10 +20,3 @@ BOARD_VENDOR := oppo
 BOARD_USES_CYANOGEN_HARDWARE := true
 BOARD_HARDWARE_CLASS += \
     hardware/cyanogen/cmhw
-
-# QCOM Power
-TARGET_POWERHAL_VARIANT := qcom
-
-# Releasetools
-TARGET_RECOVERY_UPDATER_LIBS := librecovery_updater_oppo
-TARGET_RELEASETOOLS_EXTENSIONS := device/oppo/common
