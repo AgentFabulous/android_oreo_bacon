@@ -228,13 +228,9 @@ import android.view.inputmethod.InputMethodManagerInternal;
 
 import com.android.internal.R;
 import com.android.internal.logging.MetricsLogger;
-<<<<<<< HEAD
 import com.android.internal.policy.IKeyguardDismissCallback;
-=======
 import com.android.internal.os.DeviceKeyHandler;
-import com.android.internal.policy.PhoneWindow;
 import com.android.internal.policy.IKeyguardService;
->>>>>>> f90c0ba... Dispatch keys to a device specific key handler
 import com.android.internal.policy.IShortcutService;
 import com.android.internal.policy.PhoneWindow;
 import com.android.internal.statusbar.IStatusBarService;

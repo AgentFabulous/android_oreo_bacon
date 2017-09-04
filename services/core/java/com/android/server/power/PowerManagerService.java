@@ -222,12 +222,10 @@ public final class PowerManagerService extends SystemService
     private static final int HALT_MODE_REBOOT = 1;
     private static final int HALT_MODE_REBOOT_SAFE_MODE = 2;
 
-<<<<<<< HEAD
     // File location for last reboot reason
     private static final String LAST_REBOOT_LOCATION = "/data/misc/reboot/last_reboot_reason";
-=======
+
     private static final float PROXIMITY_NEAR_THRESHOLD = 5.0f;
->>>>>>> b4aab73... PowerManager: Add proximity check on wake
 
     private final Context mContext;
     private final ServiceThread mHandlerThread;
