@@ -104,23 +104,23 @@ LOCAL_PATH:= $(ROOT_DIR)
 
 libmm-vdec-inc          += $(LOCAL_PATH)/inc 
 libmm-vdec-inc          += $(OMX_VIDEO_PATH)/vidc/common/inc
-libmm-vdec-inc          += $(call project-path-for,qcom-media)/$(TARGET_BOARD_PLATFORM)/mm-core/inc
+libmm-vdec-inc          += hardware/qcom/media/mm-core/inc
 #DRM include - Interface which loads the DRM library
 libmm-vdec-inc	        += $(OMX_VIDEO_PATH)/DivxDrmDecrypt/inc
-libmm-vdec-inc          += $(call project-path-for,qcom-display)/$(TARGET_BOARD_PLATFORM)/libgralloc
+libmm-vdec-inc          += hardware/qcom/display/libgralloc
 libmm-vdec-inc          += frameworks/native/include/media/openmax
 libmm-vdec-inc          += frameworks/native/include/media/hardware
 libmm-vdec-inc          += $(vdec-inc)
-libmm-vdec-inc          += $(call project-path-for,qcom-display)/$(TARGET_BOARD_PLATFORM)/libqdutils
-libmm-vdec-inc      += $(call project-path-for,qcom-media)/$(TARGET_BOARD_PLATFORM)/libc2dcolorconvert
-libmm-vdec-inc      += $(call project-path-for,qcom-display)/$(TARGET_BOARD_PLATFORM)/libcopybit
+libmm-vdec-inc          += hardware/qcom/display/libqdutils
+libmm-vdec-inc      += hardware/qcom/media/libc2dcolorconvert
+libmm-vdec-inc      += hardware/qcom/display/libcopybit
 libmm-vdec-inc      += frameworks/av/include/media/stagefright
 libmm-vdec-inc      += $(TARGET_OUT_HEADERS)/mm-video/SwVdec
 libmm-vdec-inc      += $(TARGET_OUT_HEADERS)/qcom/display/
 
 ifneq ($(call is-platform-sdk-version-at-least, 19),true)
 libOmxVdec-def += -DMETADATA_FOR_DYNAMIC_MODE
-libmm-vdec-inc += $(call project-path-for,qcom-media)/$(TARGET_BOARD_PLATFORM)/libstagefrighthw
+libmm-vdec-inc += hardware/qcom/media/libstagefrighthw
 endif
 
 ifeq ($(call is-platform-sdk-version-at-least, 19),true)
@@ -206,7 +206,7 @@ endif
 # ---------------------------------------------------------------------------------
 include $(CLEAR_VARS)
 
-mm-vdec-test-inc    := $(call project-path-for,qcom-media)/$(TARGET_BOARD_PLATFORM)/mm-core/inc
+mm-vdec-test-inc    := hardware/qcom/media/mm-core/inc
 mm-vdec-test-inc    += $(LOCAL_PATH)/inc
 mm-vdec-test-inc    += $(vdec-inc)
 
@@ -229,7 +229,7 @@ include $(BUILD_EXECUTABLE)
 # ---------------------------------------------------------------------------------
 include $(CLEAR_VARS)
 
-mm-vdec-drv-test-inc    := $(call project-path-for,qcom-media)/$(TARGET_BOARD_PLATFORM)/mm-core/inc
+mm-vdec-drv-test-inc    := hardware/qcom/media/mm-core/inc
 mm-vdec-drv-test-inc    += $(LOCAL_PATH)/inc
 mm-vdec-drv-test-inc    += $(vdec-inc)
 
