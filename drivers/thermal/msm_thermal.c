@@ -24,7 +24,7 @@
 #include <linux/platform_device.h>
 #include <linux/of.h>
 
-unsigned int temp_threshold = 70;
+unsigned int temp_threshold = 65;
 module_param(temp_threshold, int, 0755);
 
 static struct thermal_info {
